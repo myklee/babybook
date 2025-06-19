@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 
 const props = defineProps<{
-  type: 'feeding' | 'diaper'
+  type: 'feeding' | 'diaper' | 'sleep'
   feedingType?: 'breast' | 'formula' | 'solid'
   diaperType?: 'wet' | 'dirty' | 'both'
   babyId: string
@@ -22,6 +22,7 @@ const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 const notes = ref('')
 const customTimestamp = ref('')
+const customEndTimestamp = ref('')
 const isSaving = ref(false)
 
 onMounted(() => {
@@ -41,6 +42,7 @@ onMounted(() => {
   const hours = String(now.getHours()).padStart(2, '0')
   const minutes = String(now.getMinutes()).padStart(2, '0')
   customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
+  customEndTimestamp.value = ''
 })
 
 async function handleSubmit() {
@@ -56,10 +58,18 @@ async function handleSubmit() {
         notes.value,
         timestamp
       )
-    } else {
+    } else if (props.type === 'diaper') {
       await store.addDiaperChange(
         props.babyId,
         diaperType.value,
+        notes.value
+      )
+    } else if (props.type === 'sleep') {
+      const endTime = customEndTimestamp.value ? new Date(customEndTimestamp.value) : undefined
+      await store.addSleepSession(
+        props.babyId,
+        timestamp,
+        endTime,
         notes.value
       )
     }
@@ -78,15 +88,34 @@ async function handleSubmit() {
 <template>
   <div class="record-modal-overlay" @click="emit('close')">
     <div class="record-modal" @click.stop>
-      <h3>Record {{ type === 'feeding' ? 'Feeding' : 'Diaper Change' }}</h3>
+      <h3>Record
+        <span v-if="type === 'feeding'">Feeding</span>
+        <span v-else-if="type === 'diaper'">Diaper Change</span>
+        <span v-else-if="type === 'sleep'">Sleep Session</span>
+      </h3>
       
       <form @submit.prevent="handleSubmit">
-        <div class="form-group">
+        <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
           <label>Time</label>
           <input 
             type="datetime-local" 
             v-model="customTimestamp" 
             required
+          >
+        </div>
+        <div v-if="type === 'sleep'" class="form-group">
+          <label>Start Time</label>
+          <input 
+            type="datetime-local" 
+            v-model="customTimestamp" 
+            required
+          >
+        </div>
+        <div v-if="type === 'sleep'" class="form-group">
+          <label>End Time</label>
+          <input 
+            type="datetime-local" 
+            v-model="customEndTimestamp"
           >
         </div>
 

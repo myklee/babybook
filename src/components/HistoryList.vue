@@ -18,16 +18,24 @@ const diaperChanges = computed(() => {
   return store.getBabyDiaperChanges(props.babyId)
 })
 
+const sleepSessions = computed(() => {
+  return store.getBabySleepSessions(props.babyId)
+})
+
 // Edit modal state
 const showEditModal = ref(false)
 const editingRecord = ref<any>(null)
-const editingType = ref<'feeding' | 'diaper'>('feeding')
+const editingType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 
 function formatTime(dateString: string) {
   return format(new Date(dateString), 'h:mm a')
 }
 
-function openEditModal(record: any, type: 'feeding' | 'diaper') {
+function formatDate(dateString: string) {
+  return format(new Date(dateString), 'MMM d, h:mm a')
+}
+
+function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep') {
   editingRecord.value = record
   editingType.value = type
   showEditModal.value = true
@@ -85,6 +93,32 @@ function closeEditModal() {
             class="edit-btn" 
             @click="openEditModal(change, 'diaper')"
             title="Edit diaper change"
+          >
+            ✏️
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="history-section">
+      <h3>Recent Sleep Sessions</h3>
+      <div v-if="sleepSessions.length === 0" class="empty-state">
+        No sleep sessions recorded yet
+      </div>
+      <ul v-else class="history-list">
+        <li v-for="sleep in sleepSessions.slice(0, 5)" :key="sleep.id" class="history-item">
+          <div class="history-content">
+            <div class="time">{{ formatDate(sleep.start_time) }}<span v-if="sleep.end_time"> - {{ formatDate(sleep.end_time) }}</span></div>
+            <div class="details">
+              <span class="type">Sleep</span>
+              <span v-if="sleep.end_time" class="amount">{{ ((new Date(sleep.end_time).getTime() - new Date(sleep.start_time).getTime()) / 60000).toFixed(0) }} min</span>
+            </div>
+            <div v-if="sleep.notes" class="notes">{{ sleep.notes }}</div>
+          </div>
+          <button 
+            class="edit-btn" 
+            @click="openEditModal(sleep, 'sleep')"
+            title="Edit sleep session"
           >
             ✏️
           </button>

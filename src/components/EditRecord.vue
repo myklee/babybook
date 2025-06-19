@@ -4,7 +4,7 @@ import { useBabyStore } from '../stores/babyStore'
 
 const props = defineProps<{
   record: any
-  type: 'feeding' | 'diaper'
+  type: 'feeding' | 'diaper' | 'sleep'
 }>()
 
 const emit = defineEmits<{
@@ -20,6 +20,7 @@ const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 const notes = ref('')
 const customTimestamp = ref('')
+const customEndTimestamp = ref('')
 const isSaving = ref(false)
 
 onMounted(() => {
@@ -37,7 +38,7 @@ onMounted(() => {
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
     customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
-  } else {
+  } else if (props.type === 'diaper') {
     const diaperChange = props.record
     diaperType.value = diaperChange.type
     notes.value = diaperChange.notes || ''
@@ -50,6 +51,29 @@ onMounted(() => {
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
     customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
+  } else if (props.type === 'sleep') {
+    const sleep = props.record
+    notes.value = sleep.notes || ''
+    
+    // Format start and end time for datetime-local input
+    const start = new Date(sleep.start_time)
+    const end = sleep.end_time ? new Date(sleep.end_time) : null
+    const year = start.getFullYear()
+    const month = String(start.getMonth() + 1).padStart(2, '0')
+    const day = String(start.getDate()).padStart(2, '0')
+    const hours = String(start.getHours()).padStart(2, '0')
+    const minutes = String(start.getMinutes()).padStart(2, '0')
+    customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
+    if (end) {
+      const endYear = end.getFullYear()
+      const endMonth = String(end.getMonth() + 1).padStart(2, '0')
+      const endDay = String(end.getDate()).padStart(2, '0')
+      const endHours = String(end.getHours()).padStart(2, '0')
+      const endMinutes = String(end.getMinutes()).padStart(2, '0')
+      customEndTimestamp.value = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`
+    } else {
+      customEndTimestamp.value = ''
+    }
   }
 })
 
@@ -65,11 +89,18 @@ async function handleSubmit() {
         notes: notes.value,
         timestamp: timestamp.toISOString()
       })
-    } else {
+    } else if (props.type === 'diaper') {
       await store.updateDiaperChange(props.record.id, {
         type: diaperType.value,
         notes: notes.value,
         timestamp: timestamp.toISOString()
+      })
+    } else if (props.type === 'sleep') {
+      const endTime = customEndTimestamp.value ? new Date(customEndTimestamp.value) : null
+      await store.updateSleepSession(props.record.id, {
+        start_time: timestamp.toISOString(),
+        end_time: endTime ? endTime.toISOString() : null,
+        notes: notes.value
       })
     }
     
@@ -89,8 +120,10 @@ async function handleDelete() {
     try {
       if (props.type === 'feeding') {
         await store.deleteFeeding(props.record.id)
-      } else {
+      } else if (props.type === 'diaper') {
         await store.deleteDiaperChange(props.record.id)
+      } else if (props.type === 'sleep') {
+        await store.deleteSleepSession(props.record.id)
       }
       emit('close')
     } catch (error) {
@@ -106,10 +139,14 @@ async function handleDelete() {
 <template>
   <div class="edit-record-overlay" @click="emit('close')">
     <div class="edit-record-modal" @click.stop>
-      <h3>Edit {{ type === 'feeding' ? 'Feeding' : 'Diaper Change' }}</h3>
+      <h3>Edit
+        <span v-if="type === 'feeding'">Feeding</span>
+        <span v-else-if="type === 'diaper'">Diaper Change</span>
+        <span v-else-if="type === 'sleep'">Sleep Session</span>
+      </h3>
       
       <form @submit.prevent="handleSubmit">
-        <div class="form-group">
+        <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
           <label>Time</label>
           <input 
             type="datetime-local" 
@@ -117,7 +154,21 @@ async function handleDelete() {
             required
           >
         </div>
-
+        <div v-if="type === 'sleep'" class="form-group">
+          <label>Start Time</label>
+          <input 
+            type="datetime-local" 
+            v-model="customTimestamp" 
+            required
+          >
+        </div>
+        <div v-if="type === 'sleep'" class="form-group">
+          <label>End Time</label>
+          <input 
+            type="datetime-local" 
+            v-model="customEndTimestamp"
+          >
+        </div>
         <div v-if="type === 'feeding'" class="form-group">
           <label>Amount (ml)</label>
           <input 
@@ -128,7 +179,6 @@ async function handleDelete() {
             step="1"
           >
         </div>
-
         <div v-if="type === 'feeding'" class="form-group">
           <label>Type</label>
           <select v-model="feedingType">
@@ -137,7 +187,6 @@ async function handleDelete() {
             <option value="solid">Solid</option>
           </select>
         </div>
-
         <div v-if="type === 'diaper'" class="form-group">
           <label>Type</label>
           <select v-model="diaperType">
@@ -146,12 +195,10 @@ async function handleDelete() {
             <option value="both">Both</option>
           </select>
         </div>
-
         <div class="form-group">
           <label>Notes</label>
           <textarea v-model="notes" rows="2"></textarea>
         </div>
-
         <div class="form-actions">
           <button type="submit" class="btn btn-save" :disabled="isSaving">
             {{ isSaving ? 'Saving...' : 'Save Changes' }}

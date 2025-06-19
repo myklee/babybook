@@ -10,7 +10,7 @@ const store = useBabyStore()
 const newBabyName = ref('')
 const selectedBaby = ref<any>(null)
 const showRecordModal = ref(false)
-const recordType = ref<'feeding' | 'diaper'>('feeding')
+const recordType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 
@@ -42,7 +42,7 @@ function selectBaby(baby: any) {
 }
 
 // Open record modal
-function openRecordModal(type: 'feeding' | 'diaper', feedingTypeParam?: 'breast' | 'formula' | 'solid', diaperTypeParam?: 'wet' | 'dirty' | 'both') {
+function openRecordModal(type: 'feeding' | 'diaper' | 'sleep', feedingTypeParam?: 'breast' | 'formula' | 'solid', diaperTypeParam?: 'wet' | 'dirty' | 'both') {
   if (!selectedBaby.value) {
     alert('Please select a baby first')
     return
@@ -196,6 +196,12 @@ async function signOut() {
                 💩 Poop
               </button>
             </div>
+            <div class="sleep-actions">
+              <h4>Sleep</h4>
+              <button @click="openRecordModal('sleep')" class="btn btn-sleep">
+                😴 Record Sleep
+              </button>
+            </div>
           </div>
 
           <!-- History -->
@@ -329,6 +335,12 @@ async function signOut() {
   gap: 0.5rem;
 }
 
+.sleep-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .btn {
   padding: 0.75rem;
   border: none;
@@ -363,6 +375,15 @@ async function signOut() {
 
 .btn-small:hover {
   background-color: #f57c00;
+}
+
+.btn-sleep {
+  background-color: #607d8b;
+  color: white;
+}
+
+.btn-sleep:hover {
+  background-color: #455a64;
 }
 
 .loading {

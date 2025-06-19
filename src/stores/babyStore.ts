@@ -6,11 +6,13 @@ import type { Database } from '../lib/supabase'
 type Baby = Database['public']['Tables']['babies']['Row']
 type Feeding = Database['public']['Tables']['feedings']['Row']
 type DiaperChange = Database['public']['Tables']['diaper_changes']['Row']
+type SleepSession = Database['public']['Tables']['sleep_sessions']['Row']
 
 export const useBabyStore = defineStore('baby', () => {
   const babies = ref<Baby[]>([])
   const feedings = ref<Feeding[]>([])
   const diaperChanges = ref<DiaperChange[]>([])
+  const sleepSessions = ref<SleepSession[]>([])
   const isLoading = ref(false)
   const currentUser = ref<any>(null)
 
@@ -36,6 +38,7 @@ export const useBabyStore = defineStore('baby', () => {
         babies.value = []
         feedings.value = []
         diaperChanges.value = []
+        sleepSessions.value = []
       }
     })
   }
@@ -75,6 +78,15 @@ export const useBabyStore = defineStore('baby', () => {
 
       if (diaperChangesError) throw diaperChangesError
       diaperChanges.value = diaperChangesData || []
+
+      // Load sleep sessions
+      const { data: sleepData, error: sleepError } = await supabase
+        .from('sleep_sessions')
+        .select('*')
+        .eq('user_id', currentUser.value.id)
+        .order('start_time', { ascending: false })
+      if (sleepError) throw sleepError
+      sleepSessions.value = sleepData || []
 
     } catch (error) {
       console.error('Error loading data:', error)
@@ -147,6 +159,25 @@ export const useBabyStore = defineStore('baby', () => {
     return data
   }
 
+  // Add a new sleep session
+  async function addSleepSession(babyId: string, startTime: Date, endTime?: Date, notes?: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+    const { data, error } = await supabase
+      .from('sleep_sessions')
+      .insert({
+        baby_id: babyId,
+        start_time: startTime.toISOString(),
+        end_time: endTime ? endTime.toISOString() : null,
+        notes: notes || null,
+        user_id: currentUser.value.id
+      })
+      .select()
+      .single()
+    if (error) throw error
+    sleepSessions.value.unshift(data)
+    return data
+  }
+
   // Update a feeding
   async function updateFeeding(id: string, updates: Partial<Omit<Feeding, 'id' | 'baby_id' | 'user_id' | 'created_at'>>) {
     if (!currentUser.value) throw new Error('User not authenticated')
@@ -191,6 +222,24 @@ export const useBabyStore = defineStore('baby', () => {
     return data
   }
 
+  // Update a sleep session
+  async function updateSleepSession(id: string, updates: Partial<Omit<SleepSession, 'id' | 'baby_id' | 'user_id' | 'created_at'>>) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+    const { data, error } = await supabase
+      .from('sleep_sessions')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', currentUser.value.id)
+      .select()
+      .single()
+    if (error) throw error
+    const index = sleepSessions.value.findIndex(s => s.id === id)
+    if (index !== -1) {
+      sleepSessions.value[index] = data
+    }
+    return data
+  }
+
   // Delete a feeding
   async function deleteFeeding(id: string) {
     if (!currentUser.value) throw new Error('User not authenticated')
@@ -231,6 +280,22 @@ export const useBabyStore = defineStore('baby', () => {
     return true
   }
 
+  // Delete a sleep session
+  async function deleteSleepSession(id: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+    const { error } = await supabase
+      .from('sleep_sessions')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', currentUser.value.id)
+    if (error) throw error
+    const index = sleepSessions.value.findIndex(s => s.id === id)
+    if (index !== -1) {
+      sleepSessions.value.splice(index, 1)
+    }
+    return true
+  }
+
   // Get feedings for a specific baby
   function getBabyFeedings(babyId: string) {
     return feedings.value
@@ -243,6 +308,13 @@ export const useBabyStore = defineStore('baby', () => {
     return diaperChanges.value
       .filter(d => d.baby_id === babyId)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  }
+
+  // Get sleep sessions for a specific baby
+  function getBabySleepSessions(babyId: string) {
+    return sleepSessions.value
+      .filter(s => s.baby_id === babyId)
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
   }
 
   // Sign in with email/password
@@ -274,6 +346,7 @@ export const useBabyStore = defineStore('baby', () => {
     babies,
     feedings,
     diaperChanges,
+    sleepSessions,
     isLoading,
     currentUser,
     
@@ -282,12 +355,16 @@ export const useBabyStore = defineStore('baby', () => {
     addBaby,
     addFeeding,
     addDiaperChange,
+    addSleepSession,
     updateFeeding,
     updateDiaperChange,
+    updateSleepSession,
     deleteFeeding,
     deleteDiaperChange,
+    deleteSleepSession,
     getBabyFeedings,
     getBabyDiaperChanges,
+    getBabySleepSessions,
     
     // Auth
     signIn,

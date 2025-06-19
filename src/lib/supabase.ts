@@ -94,6 +94,35 @@ export interface Database {
           user_id?: string
         }
       }
+      sleep_sessions: {
+        Row: {
+          id: string
+          baby_id: string
+          start_time: string
+          end_time: string | null
+          notes: string | null
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          baby_id: string
+          start_time: string
+          end_time?: string | null
+          notes?: string | null
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          baby_id?: string
+          start_time?: string
+          end_time?: string | null
+          notes?: string | null
+          created_at?: string
+          user_id?: string
+        }
+      }
     }
   }
 } 
