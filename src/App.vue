@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useBabyStore } from './stores/babyStore'
 import HomePage from './views/HomePage.vue'
 
@@ -7,7 +7,16 @@ const store = useBabyStore()
 
 onMounted(async () => {
   await store.initializeStore()
+  window.addEventListener('focus', handleFocus)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('focus', handleFocus)
+})
+
+function handleFocus() {
+  store.initializeStore()
+}
 </script>
 
 <template>
