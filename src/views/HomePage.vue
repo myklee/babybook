@@ -20,7 +20,13 @@ const isLoading = computed(() => store.isLoading)
 
 // Initialize store on mount
 onMounted(async () => {
-  await store.initializeStore()
+  console.log('HomePage mounted, checking store...')
+  if (!store.currentUser) {
+    console.log('No user in store, initializing...')
+    await store.initializeStore()
+  } else {
+    console.log('User already in store:', store.currentUser.email)
+  }
 })
 
 // Add a new baby

@@ -6,16 +6,31 @@ import HomePage from './views/HomePage.vue'
 const store = useBabyStore()
 
 onMounted(async () => {
+  console.log('App mounted, initializing...')
   await store.initializeStore()
+  
+  // Add focus listener for auto-refresh
   window.addEventListener('focus', handleFocus)
+  
+  // Add visibility change listener for when tab becomes visible
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onUnmounted(() => {
   window.removeEventListener('focus', handleFocus)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 
 function handleFocus() {
+  console.log('Window focused, refreshing data...')
   store.initializeStore()
+}
+
+function handleVisibilityChange() {
+  if (!document.hidden) {
+    console.log('Tab became visible, refreshing data...')
+    store.initializeStore()
+  }
 }
 </script>
 

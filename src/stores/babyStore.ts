@@ -18,29 +18,55 @@ export const useBabyStore = defineStore('baby', () => {
 
   // Initialize store and load data
   async function initializeStore() {
-    await loadUser()
-    if (currentUser.value) {
-      await loadData()
-    }
-  }
-
-  // Load current user
-  async function loadUser() {
-    const { data: { user } } = await supabase.auth.getUser()
-    currentUser.value = user
-    
-    // Listen for auth changes
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      currentUser.value = session?.user || null
-      if (event === 'SIGNED_IN') {
+    console.log('Initializing store...')
+    try {
+      await loadUser()
+      if (currentUser.value) {
+        console.log('User authenticated, loading data...')
         await loadData()
-      } else if (event === 'SIGNED_OUT') {
+      } else {
+        console.log('No user found, clearing data...')
         babies.value = []
         feedings.value = []
         diaperChanges.value = []
         sleepSessions.value = []
       }
-    })
+    } catch (error) {
+      console.error('Error initializing store:', error)
+    }
+  }
+
+  // Load current user
+  async function loadUser() {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error) {
+        console.error('Error getting user:', error)
+        currentUser.value = null
+        return
+      }
+      
+      currentUser.value = user
+      console.log('User loaded:', user?.email)
+      
+      // Listen for auth changes
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email)
+        currentUser.value = session?.user || null
+        
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          await loadData()
+        } else if (event === 'SIGNED_OUT') {
+          babies.value = []
+          feedings.value = []
+          diaperChanges.value = []
+          sleepSessions.value = []
+        }
+      })
+    } catch (error) {
+      console.error('Error in loadUser:', error)
+      currentUser.value = null
+    }
   }
 
   // Load all data from Supabase
