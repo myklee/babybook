@@ -110,6 +110,42 @@ export const useBabyStore = defineStore('baby', () => {
     return diaperChange
   }
 
+  function updateFeeding(id: string, updates: Partial<Omit<Feeding, 'id' | 'babyId'>>) {
+    const index = feedings.value.findIndex(f => f.id === id)
+    if (index !== -1) {
+      feedings.value[index] = { ...feedings.value[index], ...updates }
+      return feedings.value[index]
+    }
+    return null
+  }
+
+  function updateDiaperChange(id: string, updates: Partial<Omit<DiaperChange, 'id' | 'babyId'>>) {
+    const index = diaperChanges.value.findIndex(d => d.id === id)
+    if (index !== -1) {
+      diaperChanges.value[index] = { ...diaperChanges.value[index], ...updates }
+      return diaperChanges.value[index]
+    }
+    return null
+  }
+
+  function deleteFeeding(id: string) {
+    const index = feedings.value.findIndex(f => f.id === id)
+    if (index !== -1) {
+      feedings.value.splice(index, 1)
+      return true
+    }
+    return false
+  }
+
+  function deleteDiaperChange(id: string) {
+    const index = diaperChanges.value.findIndex(d => d.id === id)
+    if (index !== -1) {
+      diaperChanges.value.splice(index, 1)
+      return true
+    }
+    return false
+  }
+
   function getBabyFeedings(babyId: string) {
     return feedings.value.filter(f => f.babyId === babyId)
   }
@@ -321,6 +357,10 @@ export const useBabyStore = defineStore('baby', () => {
     addBaby,
     addFeeding,
     addDiaperChange,
+    updateFeeding,
+    updateDiaperChange,
+    deleteFeeding,
+    deleteDiaperChange,
     getBabyFeedings,
     getBabyDiaperChanges,
     loadFromStorage,

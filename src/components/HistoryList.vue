@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useBabyStore } from '../stores/babyStore'
+import { computed, ref } from 'vue'
+import { useBabyStore, type Feeding, type DiaperChange } from '../stores/babyStore'
 import { format } from 'date-fns'
+import EditRecord from './EditRecord.vue'
 
 const props = defineProps<{
   babyId: string
@@ -19,8 +20,24 @@ const diaperChanges = computed(() => {
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 })
 
+// Edit modal state
+const showEditModal = ref(false)
+const editingRecord = ref<Feeding | DiaperChange | null>(null)
+const editingType = ref<'feeding' | 'diaper'>('feeding')
+
 function formatTime(date: Date) {
   return format(date, 'h:mm a')
+}
+
+function openEditModal(record: Feeding | DiaperChange, type: 'feeding' | 'diaper') {
+  editingRecord.value = record
+  editingType.value = type
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editingRecord.value = null
 }
 </script>
 
@@ -33,12 +50,21 @@ function formatTime(date: Date) {
       </div>
       <ul v-else class="history-list">
         <li v-for="feeding in feedings.slice(0, 5)" :key="feeding.id" class="history-item">
-          <div class="time">{{ formatTime(feeding.timestamp) }}</div>
-          <div class="details">
-            <span class="type">{{ feeding.type }}</span>
-            <span v-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
+          <div class="history-content">
+            <div class="time">{{ formatTime(feeding.timestamp) }}</div>
+            <div class="details">
+              <span class="type">{{ feeding.type }}</span>
+              <span v-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
+            </div>
+            <div v-if="feeding.notes" class="notes">{{ feeding.notes }}</div>
           </div>
-          <div v-if="feeding.notes" class="notes">{{ feeding.notes }}</div>
+          <button 
+            class="edit-btn" 
+            @click="openEditModal(feeding, 'feeding')"
+            title="Edit feeding"
+          >
+            ✏️
+          </button>
         </li>
       </ul>
     </div>
@@ -50,14 +76,32 @@ function formatTime(date: Date) {
       </div>
       <ul v-else class="history-list">
         <li v-for="change in diaperChanges.slice(0, 5)" :key="change.id" class="history-item">
-          <div class="time">{{ formatTime(change.timestamp) }}</div>
-          <div class="details">
-            <span class="type">{{ change.type }}</span>
+          <div class="history-content">
+            <div class="time">{{ formatTime(change.timestamp) }}</div>
+            <div class="details">
+              <span class="type">{{ change.type }}</span>
+            </div>
+            <div v-if="change.notes" class="notes">{{ change.notes }}</div>
           </div>
-          <div v-if="change.notes" class="notes">{{ change.notes }}</div>
+          <button 
+            class="edit-btn" 
+            @click="openEditModal(change, 'diaper')"
+            title="Edit diaper change"
+          >
+            ✏️
+          </button>
         </li>
       </ul>
     </div>
+
+    <!-- Edit Modal -->
+    <EditRecord
+      v-if="showEditModal && editingRecord"
+      :record="editingRecord"
+      :type="editingType"
+      @close="closeEditModal"
+      @saved="closeEditModal"
+    />
   </div>
 </template>
 
@@ -86,10 +130,17 @@ function formatTime(date: Date) {
 .history-item {
   padding: 0.5rem;
   border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 .history-item:last-child {
   border-bottom: none;
+}
+
+.history-content {
+  flex: 1;
 }
 
 .time {
@@ -116,6 +167,22 @@ function formatTime(date: Date) {
   font-size: 0.9rem;
   color: #666;
   margin-top: 0.25rem;
+}
+
+.edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  opacity: 0.7;
+}
+
+.edit-btn:hover {
+  background-color: #f0f0f0;
+  opacity: 1;
 }
 
 .empty-state {

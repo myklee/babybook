@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useBabyStore } from '../stores/babyStore'
 import { ref } from 'vue'
-import RecordForm from '../components/RecordForm.vue'
+import RecordModal from '../components/RecordModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 import DataManager from '../components/DataManager.vue'
 
@@ -10,12 +10,27 @@ const showAddBabyForm = ref(false)
 const showDataManager = ref(false)
 const newBabyName = ref('')
 
+// Modal state
+const showRecordModal = ref(false)
+const recordModalType = ref<'feeding' | 'diaper'>('feeding')
+const recordModalBabyId = ref('')
+
 function addBaby() {
   if (newBabyName.value.trim()) {
     store.addBaby(newBabyName.value.trim())
     newBabyName.value = ''
     showAddBabyForm.value = false
   }
+}
+
+function openRecordModal(babyId: string, type: 'feeding' | 'diaper') {
+  recordModalBabyId.value = babyId
+  recordModalType.value = type
+  showRecordModal.value = true
+}
+
+function closeRecordModal() {
+  showRecordModal.value = false
 }
 </script>
 
@@ -37,6 +52,27 @@ function addBaby() {
       <!-- Data Manager Section -->
       <div v-if="showDataManager" class="data-manager-section">
         <DataManager />
+      </div>
+
+      <div class="babies-grid">
+        <div v-for="baby in store.babies" :key="baby.id" class="baby-card">
+          <h2>{{ baby.name }}</h2>
+          <div class="actions">
+            <button 
+              class="btn btn-feeding" 
+              @click="openRecordModal(baby.id, 'feeding')"
+            >
+              Record Feeding
+            </button>
+            <button 
+              class="btn btn-diaper" 
+              @click="openRecordModal(baby.id, 'diaper')"
+            >
+              Record Diaper Change
+            </button>
+          </div>
+          <HistoryList :baby-id="baby.id" />
+        </div>
       </div>
 
       <div class="add-baby">
@@ -61,16 +97,15 @@ function addBaby() {
         </div>
       </div>
 
-      <div class="babies-grid">
-        <div v-for="baby in store.babies" :key="baby.id" class="baby-card">
-          <h2>{{ baby.name }}</h2>
-          <div class="actions">
-            <RecordForm :baby-id="baby.id" type="feeding" />
-            <RecordForm :baby-id="baby.id" type="diaper" />
-          </div>
-          <HistoryList :baby-id="baby.id" />
-        </div>
-      </div>
+      <!-- Record Modal -->
+      <RecordModal
+        v-if="showRecordModal"
+        :baby-id="recordModalBabyId"
+        :type="recordModalType"
+        :is-open="showRecordModal"
+        @close="closeRecordModal"
+        @saved="closeRecordModal"
+      />
     </main>
   </div>
 </template>
