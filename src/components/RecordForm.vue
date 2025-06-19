@@ -14,13 +14,15 @@ const showForm = ref(false)
 const amount = ref(0)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const notes = ref('')
+const customTimestamp = ref('')
 
 // Diaper form data
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 
 function handleSubmit() {
   if (props.type === 'feeding') {
-    store.addFeeding(props.babyId, amount.value, feedingType.value, notes.value)
+    const timestamp = customTimestamp.value ? new Date(customTimestamp.value) : undefined
+    store.addFeeding(props.babyId, amount.value, feedingType.value, notes.value, timestamp)
   } else {
     store.addDiaperChange(props.babyId, diaperType.value, notes.value)
   }
@@ -33,6 +35,22 @@ function resetForm() {
   feedingType.value = 'breast'
   diaperType.value = 'wet'
   notes.value = ''
+  customTimestamp.value = ''
+}
+
+// Set default timestamp to current time when form opens
+function openForm() {
+  showForm.value = true
+  if (props.type === 'feeding') {
+    // Set to current time in local timezone
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
+  }
 }
 </script>
 
@@ -42,13 +60,22 @@ function resetForm() {
       v-if="!showForm" 
       class="btn" 
       :class="type === 'feeding' ? 'btn-feeding' : 'btn-diaper'"
-      @click="showForm = true"
+      @click="openForm"
     >
       Record {{ type === 'feeding' ? 'Feeding' : 'Diaper Change' }}
     </button>
 
     <div v-else class="form-container">
       <form @submit.prevent="handleSubmit">
+        <div v-if="type === 'feeding'" class="form-group">
+          <label>Time Started</label>
+          <input 
+            type="datetime-local" 
+            v-model="customTimestamp" 
+            required
+          >
+        </div>
+
         <div v-if="type === 'feeding'" class="form-group">
           <label>Amount (ml)</label>
           <input 

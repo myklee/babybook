@@ -85,11 +85,11 @@ export const useBabyStore = defineStore('baby', () => {
     return baby
   }
 
-  function addFeeding(babyId: string, amount: number, type: Feeding['type'], notes?: string) {
+  function addFeeding(babyId: string, amount: number, type: Feeding['type'], notes?: string, timestamp?: Date) {
     const feeding: Feeding = {
       id: generateId(),
       babyId,
-      timestamp: new Date(),
+      timestamp: timestamp || new Date(),
       amount,
       type,
       notes
