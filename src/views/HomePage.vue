@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
 import RecordModal from '../components/RecordModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 
+const router = useRouter()
 const store = useBabyStore()
 
 // State
@@ -13,10 +15,23 @@ const showRecordModal = ref(false)
 const recordType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
+const showAddBabyForm = ref(false)
 
 // Auth state
 const isAuthenticated = computed(() => !!store.currentUser)
-const isLoading = computed(() => store.isLoading)
+const isLoading = computed(() => {
+  const loading = store.isLoading
+  console.log('isLoading computed:', loading)
+  return loading
+})
+
+// Watch for when data is loaded but loading state might be stuck
+watch(() => store.babies, (newBabies) => {
+  if (newBabies.length > 0 && store.isLoading) {
+    console.log('Data loaded but loading still true, forcing to false')
+    // This will trigger a reactivity update
+  }
+}, { immediate: true })
 
 // Initialize store on mount
 onMounted(async () => {
@@ -36,9 +51,18 @@ async function addBaby() {
   try {
     await store.addBaby(newBabyName.value.trim())
     newBabyName.value = ''
+    showAddBabyForm.value = false
   } catch (error) {
     console.error('Error adding baby:', error)
     alert('Failed to add baby. Please try again.')
+  }
+}
+
+// Toggle add baby form
+function toggleAddBabyForm() {
+  showAddBabyForm.value = !showAddBabyForm.value
+  if (!showAddBabyForm.value) {
+    newBabyName.value = ''
   }
 }
 
@@ -72,6 +96,15 @@ function closeRecordModal() {
 // Handle record saved
 function handleRecordSaved() {
   closeRecordModal()
+}
+
+// Navigation functions
+function goToFeedings() {
+  router.push('/feedings')
+}
+
+function goToHistory() {
+  router.push('/history')
 }
 
 // Sign in
@@ -133,21 +166,28 @@ async function signOut() {
       <div class="header">
         <h1>BabyBook</h1>
         <div class="user-info">
+          <button @click="goToHistory" class="btn btn-secondary">📊 Baby History</button>
+          <button @click="goToFeedings" class="btn btn-secondary">🍼 Feeding History</button>
           <span>{{ store.currentUser?.email }}</span>
           <button @click="signOut" class="btn btn-small">Sign Out</button>
         </div>
       </div>
 
       <!-- Loading State -->
-      <div v-if="isLoading" class="loading">
+      <div v-if="isLoading && store.babies.length === 0" class="loading">
         Loading...
       </div>
 
       <!-- Main Content -->
-      <div v-else class="main-content">
+      <div v-if="!isLoading || store.babies.length > 0" class="main-content">
         <!-- Baby Selection -->
         <div class="baby-selection">
-          <h3>Select a Baby</h3>
+          <div class="baby-selection-header">
+            <h3>Select a Baby</h3>
+            <button v-if="store.babies.length > 0" @click="toggleAddBabyForm" class="btn btn-add-baby">
+              {{ showAddBabyForm ? '✕' : '+' }}
+            </button>
+          </div>
           <div v-if="store.babies.length === 0" class="empty-state">
             <p>No babies added yet. Add your first baby below.</p>
           </div>
@@ -199,9 +239,10 @@ async function signOut() {
           <!-- History -->
           <HistoryList :baby-id="selectedBaby.id" />
         </div>
-        <!-- Add Baby Form (only if no babies) -->
-        <div v-if="store.babies.length === 0" class="add-baby-section">
-          <h3>Add New Baby</h3>
+        <!-- Add Baby Form (show if no babies OR if explicitly toggled) -->
+        <div v-if="store.babies.length === 0 || showAddBabyForm" class="add-baby-section">
+          <h3 v-if="store.babies.length === 0">Add New Baby</h3>
+          <h3 v-else>Add Another Baby</h3>
           <div class="add-baby-form">
             <input
               v-model="newBabyName"
@@ -210,6 +251,9 @@ async function signOut() {
               class="baby-name-input"
             >
             <button @click="addBaby" class="btn btn-primary">Add Baby</button>
+            <button v-if="store.babies.length > 0" @click="toggleAddBabyForm" class="btn btn-cancel">
+              Cancel
+            </button>
           </div>
         </div>
       </div>
@@ -252,6 +296,7 @@ async function signOut() {
 .user-info {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
 }
 
 .main {
@@ -373,26 +418,125 @@ async function signOut() {
 }
 
 .btn-small {
-  background-color: #ff9800;
-  font-size: 0.9rem;
   padding: 0.5rem 1rem;
+  font-size: 0.875rem;
 }
 
-.btn-small:hover {
+.btn-add-baby {
+  background-color: #4caf50;
+  padding: 0.5rem;
+  min-width: 40px;
+}
+
+.btn-cancel {
+  background-color: #666;
+}
+
+.btn-cancel:hover {
+  background-color: #555;
+}
+
+.btn-feeding {
+  background-color: #ff9800;
+}
+
+.btn-feeding:hover {
   background-color: #f57c00;
 }
 
+.btn-feeding.breast {
+  background-color: #ff9800;
+}
+
+.btn-feeding.formula {
+  background-color: #2196f3;
+}
+
+.btn-diaper {
+  background-color: #4caf50;
+}
+
+.btn-diaper:hover {
+  background-color: #388e3c;
+}
+
+.btn-diaper.wet {
+  background-color: #00bcd4;
+}
+
+.btn-diaper.dirty {
+  background-color: #795548;
+}
+
 .btn-sleep {
-  background-color: #607d8b;
-  color: white;
+  background-color: #9c27b0;
 }
 
 .btn-sleep:hover {
-  background-color: #455a64;
+  background-color: #7b1fa2;
 }
 
 .loading {
-  margin-top: 1rem;
   text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.baby-selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.baby-selection-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.baby-actions {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.baby-actions h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.baby-actions h4 {
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .user-info {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .quick-actions {
+    flex-direction: column;
+  }
+  
+  .feeding-actions,
+  .diaper-actions {
+    flex-direction: column;
+  }
+  
+  .add-baby-form {
+    flex-direction: column;
+  }
 }
 </style> 

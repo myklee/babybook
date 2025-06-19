@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useBabyStore } from './stores/babyStore'
-import HomePage from './views/HomePage.vue'
 
 const store = useBabyStore()
+const lastRefreshTime = ref(0)
+const REFRESH_COOLDOWN = 5000 // 5 seconds
 
 onMounted(async () => {
   console.log('App mounted, initializing...')
@@ -22,21 +23,33 @@ onUnmounted(() => {
 })
 
 function handleFocus() {
-  console.log('Window focused, refreshing data...')
-  store.initializeStore()
+  const now = Date.now()
+  if (now - lastRefreshTime.value > REFRESH_COOLDOWN) {
+    console.log('Window focused, refreshing data...')
+    store.initializeStore()
+    lastRefreshTime.value = now
+  } else {
+    console.log('Skipping refresh due to cooldown')
+  }
 }
 
 function handleVisibilityChange() {
   if (!document.hidden) {
-    console.log('Tab became visible, refreshing data...')
-    store.initializeStore()
+    const now = Date.now()
+    if (now - lastRefreshTime.value > REFRESH_COOLDOWN) {
+      console.log('Tab became visible, refreshing data...')
+      store.initializeStore()
+      lastRefreshTime.value = now
+    } else {
+      console.log('Skipping refresh due to cooldown')
+    }
   }
 }
 </script>
 
 <template>
   <div id="app">
-    <HomePage />
+    <router-view />
   </div>
 </template>
 
@@ -182,20 +195,6 @@ body {
   color: #666;
   font-size: 0.875rem;
   margin-top: 0.25rem;
-}
-
-.edit-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2rem;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.edit-btn:hover {
-  background-color: #f5f5f5;
 }
 
 /* Modal styles */

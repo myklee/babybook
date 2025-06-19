@@ -15,6 +15,7 @@ export const useBabyStore = defineStore('baby', () => {
   const sleepSessions = ref<SleepSession[]>([])
   const isLoading = ref(false)
   const currentUser = ref<any>(null)
+  const isDataLoading = ref(false) // Guard to prevent multiple simultaneous loads
 
   // Initialize store and load data
   async function initializeStore() {
@@ -55,7 +56,10 @@ export const useBabyStore = defineStore('baby', () => {
         currentUser.value = session?.user || null
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          await loadData()
+          // Only load data if not already loading
+          if (!isDataLoading.value) {
+            await loadData()
+          }
         } else if (event === 'SIGNED_OUT') {
           babies.value = []
           feedings.value = []
@@ -71,53 +75,110 @@ export const useBabyStore = defineStore('baby', () => {
 
   // Load all data from Supabase
   async function loadData() {
-    if (!currentUser.value) return
+    if (!currentUser.value) {
+      console.log('No current user, skipping data load')
+      return
+    }
     
+    // Prevent multiple simultaneous loads
+    if (isDataLoading.value) {
+      console.log('Data already loading, skipping...')
+      return
+    }
+    
+    console.log('Loading data for user:', currentUser.value.email)
     isLoading.value = true
+    isDataLoading.value = true
+    
+    // Add a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.warn('Data loading timeout, forcing loading state to false')
+      isLoading.value = false
+      isDataLoading.value = false
+    }, 10000) // 10 second timeout
+    
     try {
       // Load babies
+      console.log('Loading babies...')
       const { data: babiesData, error: babiesError } = await supabase
         .from('babies')
         .select('*')
         .eq('user_id', currentUser.value.id)
         .order('created_at', { ascending: true })
 
-      if (babiesError) throw babiesError
+      if (babiesError) {
+        console.error('Error loading babies:', babiesError)
+        throw babiesError
+      }
       babies.value = babiesData || []
+      console.log('Loaded babies:', babies.value.length)
 
       // Load feedings
+      console.log('Loading feedings...')
       const { data: feedingsData, error: feedingsError } = await supabase
         .from('feedings')
         .select('*')
         .eq('user_id', currentUser.value.id)
         .order('timestamp', { ascending: false })
 
-      if (feedingsError) throw feedingsError
+      if (feedingsError) {
+        console.error('Error loading feedings:', feedingsError)
+        throw feedingsError
+      }
       feedings.value = feedingsData || []
+      console.log('Loaded feedings:', feedings.value.length)
 
       // Load diaper changes
+      console.log('Loading diaper changes...')
       const { data: diaperChangesData, error: diaperChangesError } = await supabase
         .from('diaper_changes')
         .select('*')
         .eq('user_id', currentUser.value.id)
         .order('timestamp', { ascending: false })
 
-      if (diaperChangesError) throw diaperChangesError
+      if (diaperChangesError) {
+        console.error('Error loading diaper changes:', diaperChangesError)
+        throw diaperChangesError
+      }
       diaperChanges.value = diaperChangesData || []
+      console.log('Loaded diaper changes:', diaperChanges.value.length)
 
       // Load sleep sessions
-      const { data: sleepData, error: sleepError } = await supabase
-        .from('sleep_sessions')
-        .select('*')
-        .eq('user_id', currentUser.value.id)
-        .order('start_time', { ascending: false })
-      if (sleepError) throw sleepError
-      sleepSessions.value = sleepData || []
+      console.log('Loading sleep sessions...')
+      try {
+        const { data: sleepData, error: sleepError } = await supabase
+          .from('sleep_sessions')
+          .select('*')
+          .eq('user_id', currentUser.value.id)
+          .order('start_time', { ascending: false })
 
+        if (sleepError) {
+          console.error('Error loading sleep sessions:', sleepError)
+          // If table doesn't exist, just skip it
+          if (sleepError.message.includes('relation "sleep_sessions" does not exist')) {
+            console.log('Sleep sessions table does not exist, skipping...')
+            sleepSessions.value = []
+          } else {
+            throw sleepError
+          }
+        } else {
+          sleepSessions.value = sleepData || []
+          console.log('Loaded sleep sessions:', sleepSessions.value.length)
+        }
+      } catch (sleepTableError) {
+        console.error('Sleep sessions table error:', sleepTableError)
+        sleepSessions.value = []
+      }
+
+      console.log('Data loading complete')
     } catch (error) {
       console.error('Error loading data:', error)
+      // Don't clear existing data on error, just log it
     } finally {
+      clearTimeout(timeoutId)
       isLoading.value = false
+      isDataLoading.value = false
+      console.log('Loading state set to false')
     }
   }
 
