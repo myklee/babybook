@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useBabyStore, type Feeding, type DiaperChange } from '../stores/babyStore'
+import { useBabyStore } from '../stores/babyStore'
 import { format } from 'date-fns'
 import EditRecord from './EditRecord.vue'
 
@@ -12,24 +12,22 @@ const store = useBabyStore()
 
 const feedings = computed(() => {
   return store.getBabyFeedings(props.babyId)
-    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 })
 
 const diaperChanges = computed(() => {
   return store.getBabyDiaperChanges(props.babyId)
-    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 })
 
 // Edit modal state
 const showEditModal = ref(false)
-const editingRecord = ref<Feeding | DiaperChange | null>(null)
+const editingRecord = ref<any>(null)
 const editingType = ref<'feeding' | 'diaper'>('feeding')
 
-function formatTime(date: Date) {
-  return format(date, 'h:mm a')
+function formatTime(dateString: string) {
+  return format(new Date(dateString), 'h:mm a')
 }
 
-function openEditModal(record: Feeding | DiaperChange, type: 'feeding' | 'diaper') {
+function openEditModal(record: any, type: 'feeding' | 'diaper') {
   editingRecord.value = record
   editingType.value = type
   showEditModal.value = true

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useBabyStore, type Feeding, type DiaperChange } from '../stores/babyStore'
+import { useBabyStore } from '../stores/babyStore'
 
 const props = defineProps<{
-  record: Feeding | DiaperChange
+  record: any
   type: 'feeding' | 'diaper'
 }>()
 
@@ -20,16 +20,17 @@ const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 const notes = ref('')
 const customTimestamp = ref('')
+const isSaving = ref(false)
 
 onMounted(() => {
   if (props.type === 'feeding') {
-    const feeding = props.record as Feeding
+    const feeding = props.record
     amount.value = feeding.amount
     feedingType.value = feeding.type
     notes.value = feeding.notes || ''
     
-    // Format timestamp for datetime-local input
-    const date = feeding.timestamp
+    // Format stored ISO date string for datetime-local input
+    const date = new Date(feeding.timestamp)
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
@@ -37,12 +38,12 @@ onMounted(() => {
     const minutes = String(date.getMinutes()).padStart(2, '0')
     customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
   } else {
-    const diaperChange = props.record as DiaperChange
+    const diaperChange = props.record
     diaperType.value = diaperChange.type
     notes.value = diaperChange.notes || ''
     
-    // Format timestamp for datetime-local input
-    const date = diaperChange.timestamp
+    // Format stored ISO date string for datetime-local input
+    const date = new Date(diaperChange.timestamp)
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
@@ -52,36 +53,52 @@ onMounted(() => {
   }
 })
 
-function handleSubmit() {
-  const timestamp = customTimestamp.value ? new Date(customTimestamp.value) : new Date()
-  
-  if (props.type === 'feeding') {
-    store.updateFeeding(props.record.id, {
-      amount: amount.value,
-      type: feedingType.value,
-      notes: notes.value,
-      timestamp
-    })
-  } else {
-    store.updateDiaperChange(props.record.id, {
-      type: diaperType.value,
-      notes: notes.value,
-      timestamp
-    })
+async function handleSubmit() {
+  isSaving.value = true
+  try {
+    const timestamp = customTimestamp.value ? new Date(customTimestamp.value) : new Date()
+    
+    if (props.type === 'feeding') {
+      await store.updateFeeding(props.record.id, {
+        amount: amount.value,
+        type: feedingType.value,
+        notes: notes.value,
+        timestamp: timestamp.toISOString()
+      })
+    } else {
+      await store.updateDiaperChange(props.record.id, {
+        type: diaperType.value,
+        notes: notes.value,
+        timestamp: timestamp.toISOString()
+      })
+    }
+    
+    emit('saved')
+    emit('close')
+  } catch (error) {
+    console.error('Error updating record:', error)
+    alert('Failed to update record. Please try again.')
+  } finally {
+    isSaving.value = false
   }
-  
-  emit('saved')
-  emit('close')
 }
 
-function handleDelete() {
+async function handleDelete() {
   if (confirm('Are you sure you want to delete this record?')) {
-    if (props.type === 'feeding') {
-      store.deleteFeeding(props.record.id)
-    } else {
-      store.deleteDiaperChange(props.record.id)
+    isSaving.value = true
+    try {
+      if (props.type === 'feeding') {
+        await store.deleteFeeding(props.record.id)
+      } else {
+        await store.deleteDiaperChange(props.record.id)
+      }
+      emit('close')
+    } catch (error) {
+      console.error('Error deleting record:', error)
+      alert('Failed to delete record. Please try again.')
+    } finally {
+      isSaving.value = false
     }
-    emit('close')
   }
 }
 </script>
@@ -136,13 +153,13 @@ function handleDelete() {
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-save">
-            Save Changes
+          <button type="submit" class="btn btn-save" :disabled="isSaving">
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
           </button>
-          <button type="button" class="btn btn-delete" @click="handleDelete">
+          <button type="button" class="btn btn-delete" @click="handleDelete" :disabled="isSaving">
             Delete
           </button>
-          <button type="button" class="btn btn-cancel" @click="emit('close')">
+          <button type="button" class="btn btn-cancel" @click="emit('close')" :disabled="isSaving">
             Cancel
           </button>
         </div>

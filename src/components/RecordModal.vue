@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 
 const props = defineProps<{
-  babyId: string
   type: 'feeding' | 'diaper'
-  isOpen: boolean
+  feedingType?: 'breast' | 'formula' | 'solid'
+  diaperType?: 'wet' | 'dirty' | 'both'
+  babyId: string
 }>()
 
 const emit = defineEmits<{
@@ -21,66 +22,61 @@ const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 const notes = ref('')
 const customTimestamp = ref('')
+const isSaving = ref(false)
 
-// Computed property for current datetime in the correct format
-const currentDateTime = computed(() => {
+onMounted(() => {
+  // Pre-fill the type if provided
+  if (props.type === 'feeding' && props.feedingType) {
+    feedingType.value = props.feedingType
+  }
+  if (props.type === 'diaper' && props.diaperType) {
+    diaperType.value = props.diaperType
+  }
+  
+  // Pre-fill current date and time
   const now = new Date()
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   const hours = String(now.getHours()).padStart(2, '0')
   const minutes = String(now.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day}T${hours}:${minutes}`
+  customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
 })
 
-// Initialize form when modal opens
-function initializeForm() {
-  customTimestamp.value = currentDateTime.value
-  amount.value = 0
-  feedingType.value = 'breast'
-  diaperType.value = 'wet'
-  notes.value = ''
-}
-
-function handleSubmit() {
-  const timestamp = customTimestamp.value ? new Date(customTimestamp.value) : new Date()
-  
-  if (props.type === 'feeding') {
-    store.addFeeding(props.babyId, amount.value, feedingType.value, notes.value, timestamp)
-  } else {
-    store.addDiaperChange(props.babyId, diaperType.value, notes.value)
+async function handleSubmit() {
+  isSaving.value = true
+  try {
+    const timestamp = customTimestamp.value ? new Date(customTimestamp.value) : new Date()
+    
+    if (props.type === 'feeding') {
+      await store.addFeeding(
+        props.babyId,
+        amount.value,
+        feedingType.value,
+        notes.value,
+        timestamp
+      )
+    } else {
+      await store.addDiaperChange(
+        props.babyId,
+        diaperType.value,
+        notes.value
+      )
+    }
+    
+    emit('saved')
+    emit('close')
+  } catch (error) {
+    console.error('Error adding record:', error)
+    alert('Failed to add record. Please try again.')
+  } finally {
+    isSaving.value = false
   }
-  
-  emit('saved')
-  emit('close')
 }
-
-function handleClose() {
-  emit('close')
-}
-
-// Watch for modal opening to initialize form
-watch(() => props.isOpen, (newValue) => {
-  if (newValue) {
-    // Use nextTick to ensure the modal is rendered before setting the value
-    import('vue').then(({ nextTick }) => {
-      nextTick(() => {
-        initializeForm()
-      })
-    })
-  }
-})
-
-// Also initialize on mount if modal is already open
-onMounted(() => {
-  if (props.isOpen) {
-    initializeForm()
-  }
-})
 </script>
 
 <template>
-  <div v-if="isOpen" class="record-modal-overlay" @click="handleClose">
+  <div class="record-modal-overlay" @click="emit('close')">
     <div class="record-modal" @click.stop>
       <h3>Record {{ type === 'feeding' ? 'Feeding' : 'Diaper Change' }}</h3>
       
@@ -125,14 +121,14 @@ onMounted(() => {
 
         <div class="form-group">
           <label>Notes</label>
-          <textarea v-model="notes" rows="3" placeholder="Optional notes..."></textarea>
+          <textarea v-model="notes" rows="2"></textarea>
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-save">
-            Save Record
+          <button type="submit" class="btn btn-save" :disabled="isSaving">
+            {{ isSaving ? 'Saving...' : 'Save' }}
           </button>
-          <button type="button" class="btn btn-cancel" @click="handleClose">
+          <button type="button" class="btn btn-cancel" @click="emit('close')" :disabled="isSaving">
             Cancel
           </button>
         </div>

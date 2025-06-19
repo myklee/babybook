@@ -1,359 +1,284 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
+import { supabase } from '../lib/supabase'
+import type { Database } from '../lib/supabase'
 
-export interface Baby {
-  id: string
-  name: string
-}
-
-export interface Feeding {
-  id: string
-  babyId: string
-  timestamp: Date
-  amount: number
-  type: 'breast' | 'formula' | 'solid'
-  notes?: string
-}
-
-export interface DiaperChange {
-  id: string
-  babyId: string
-  timestamp: Date
-  type: 'wet' | 'dirty' | 'both'
-  notes?: string
-}
-
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2)
-}
-
-const STORAGE_KEY = 'babybook-data'
-
-interface StorageData {
-  babies: Baby[]
-  feedings: Feeding[]
-  diaperChanges: DiaperChange[]
-}
+type Baby = Database['public']['Tables']['babies']['Row']
+type Feeding = Database['public']['Tables']['feedings']['Row']
+type DiaperChange = Database['public']['Tables']['diaper_changes']['Row']
 
 export const useBabyStore = defineStore('baby', () => {
   const babies = ref<Baby[]>([])
   const feedings = ref<Feeding[]>([])
   const diaperChanges = ref<DiaperChange[]>([])
+  const isLoading = ref(false)
+  const currentUser = ref<any>(null)
 
-  // Load data from localStorage on store initialization
-  function loadFromStorage() {
-    const storedData = localStorage.getItem(STORAGE_KEY)
-    if (storedData) {
-      const data: StorageData = JSON.parse(storedData)
-      babies.value = data.babies
-      // Convert stored ISO date strings back to Date objects
-      feedings.value = data.feedings.map(f => ({
-        ...f,
-        timestamp: new Date(f.timestamp)
-      }))
-      diaperChanges.value = data.diaperChanges.map(d => ({
-        ...d,
-        timestamp: new Date(d.timestamp)
-      }))
+  // Initialize store and load data
+  async function initializeStore() {
+    await loadUser()
+    if (currentUser.value) {
+      await loadData()
     }
   }
 
-  // Save data to localStorage whenever it changes
-  function saveToStorage() {
-    const data: StorageData = {
-      babies: babies.value,
-      feedings: feedings.value,
-      diaperChanges: diaperChanges.value
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  // Load current user
+  async function loadUser() {
+    const { data: { user } } = await supabase.auth.getUser()
+    currentUser.value = user
+    
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      currentUser.value = session?.user || null
+      if (event === 'SIGNED_IN') {
+        await loadData()
+      } else if (event === 'SIGNED_OUT') {
+        babies.value = []
+        feedings.value = []
+        diaperChanges.value = []
+      }
+    })
   }
 
-  // Watch for changes in the data and save to localStorage
-  watch([babies, feedings, diaperChanges], () => {
-    saveToStorage()
-  }, { deep: true })
+  // Load all data from Supabase
+  async function loadData() {
+    if (!currentUser.value) return
+    
+    isLoading.value = true
+    try {
+      // Load babies
+      const { data: babiesData, error: babiesError } = await supabase
+        .from('babies')
+        .select('*')
+        .eq('user_id', currentUser.value.id)
+        .order('created_at', { ascending: true })
 
-  // Load data from localStorage when store is created
-  loadFromStorage()
+      if (babiesError) throw babiesError
+      babies.value = babiesData || []
 
-  function addBaby(name: string) {
-    const baby: Baby = {
-      id: generateId(),
-      name
+      // Load feedings
+      const { data: feedingsData, error: feedingsError } = await supabase
+        .from('feedings')
+        .select('*')
+        .eq('user_id', currentUser.value.id)
+        .order('timestamp', { ascending: false })
+
+      if (feedingsError) throw feedingsError
+      feedings.value = feedingsData || []
+
+      // Load diaper changes
+      const { data: diaperChangesData, error: diaperChangesError } = await supabase
+        .from('diaper_changes')
+        .select('*')
+        .eq('user_id', currentUser.value.id)
+        .order('timestamp', { ascending: false })
+
+      if (diaperChangesError) throw diaperChangesError
+      diaperChanges.value = diaperChangesData || []
+
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      isLoading.value = false
     }
-    babies.value.push(baby)
-    return baby
   }
 
-  function addFeeding(babyId: string, amount: number, type: Feeding['type'], notes?: string, timestamp?: Date) {
-    const feeding: Feeding = {
-      id: generateId(),
-      babyId,
-      timestamp: timestamp || new Date(),
-      amount,
-      type,
-      notes
-    }
-    feedings.value.push(feeding)
-    return feeding
+  // Add a new baby
+  async function addBaby(name: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase
+      .from('babies')
+      .insert({
+        name,
+        user_id: currentUser.value.id
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    
+    babies.value.push(data)
+    return data
   }
 
-  function addDiaperChange(babyId: string, type: DiaperChange['type'], notes?: string) {
-    const diaperChange: DiaperChange = {
-      id: generateId(),
-      babyId,
-      timestamp: new Date(),
-      type,
-      notes
-    }
-    diaperChanges.value.push(diaperChange)
-    return diaperChange
+  // Add a new feeding
+  async function addFeeding(babyId: string, amount: number, type: Feeding['type'], notes?: string, timestamp?: Date) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase
+      .from('feedings')
+      .insert({
+        baby_id: babyId,
+        amount,
+        type,
+        notes: notes || null,
+        timestamp: timestamp?.toISOString() || new Date().toISOString(),
+        user_id: currentUser.value.id
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    
+    feedings.value.unshift(data)
+    return data
   }
 
-  function updateFeeding(id: string, updates: Partial<Omit<Feeding, 'id' | 'babyId'>>) {
+  // Add a new diaper change
+  async function addDiaperChange(babyId: string, type: DiaperChange['type'], notes?: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase
+      .from('diaper_changes')
+      .insert({
+        baby_id: babyId,
+        type,
+        notes: notes || null,
+        timestamp: new Date().toISOString(),
+        user_id: currentUser.value.id
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    
+    diaperChanges.value.unshift(data)
+    return data
+  }
+
+  // Update a feeding
+  async function updateFeeding(id: string, updates: Partial<Omit<Feeding, 'id' | 'baby_id' | 'user_id' | 'created_at'>>) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase
+      .from('feedings')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', currentUser.value.id)
+      .select()
+      .single()
+
+    if (error) throw error
+    
     const index = feedings.value.findIndex(f => f.id === id)
     if (index !== -1) {
-      feedings.value[index] = { ...feedings.value[index], ...updates }
-      return feedings.value[index]
+      feedings.value[index] = data
     }
-    return null
+    
+    return data
   }
 
-  function updateDiaperChange(id: string, updates: Partial<Omit<DiaperChange, 'id' | 'babyId'>>) {
+  // Update a diaper change
+  async function updateDiaperChange(id: string, updates: Partial<Omit<DiaperChange, 'id' | 'baby_id' | 'user_id' | 'created_at'>>) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase
+      .from('diaper_changes')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', currentUser.value.id)
+      .select()
+      .single()
+
+    if (error) throw error
+    
     const index = diaperChanges.value.findIndex(d => d.id === id)
     if (index !== -1) {
-      diaperChanges.value[index] = { ...diaperChanges.value[index], ...updates }
-      return diaperChanges.value[index]
+      diaperChanges.value[index] = data
     }
-    return null
+    
+    return data
   }
 
-  function deleteFeeding(id: string) {
+  // Delete a feeding
+  async function deleteFeeding(id: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    const { error } = await supabase
+      .from('feedings')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', currentUser.value.id)
+
+    if (error) throw error
+    
     const index = feedings.value.findIndex(f => f.id === id)
     if (index !== -1) {
       feedings.value.splice(index, 1)
-      return true
     }
-    return false
+    
+    return true
   }
 
-  function deleteDiaperChange(id: string) {
+  // Delete a diaper change
+  async function deleteDiaperChange(id: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    const { error } = await supabase
+      .from('diaper_changes')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', currentUser.value.id)
+
+    if (error) throw error
+    
     const index = diaperChanges.value.findIndex(d => d.id === id)
     if (index !== -1) {
       diaperChanges.value.splice(index, 1)
-      return true
     }
-    return false
+    
+    return true
   }
 
+  // Get feedings for a specific baby
   function getBabyFeedings(babyId: string) {
-    return feedings.value.filter(f => f.babyId === babyId)
+    return feedings.value
+      .filter(f => f.baby_id === babyId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
   }
 
+  // Get diaper changes for a specific baby
   function getBabyDiaperChanges(babyId: string) {
-    return diaperChanges.value.filter(d => d.babyId === babyId)
+    return diaperChanges.value
+      .filter(d => d.baby_id === babyId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
   }
 
-  // CSV Export functionality
-  function exportToCSV() {
-    const timestamp = new Date().toISOString().split('T')[0]
-    
-    // Export babies
-    const babiesCSV = exportBabiesToCSV()
-    downloadCSV(babiesCSV, `babybook-babies-${timestamp}.csv`)
-    
-    // Export feedings
-    const feedingsCSV = exportFeedingsToCSV()
-    downloadCSV(feedingsCSV, `babybook-feedings-${timestamp}.csv`)
-    
-    // Export diaper changes
-    const diaperChangesCSV = exportDiaperChangesToCSV()
-    downloadCSV(diaperChangesCSV, `babybook-diaper-changes-${timestamp}.csv`)
-  }
-
-  function exportBabiesToCSV(): string {
-    const headers = ['ID', 'Name']
-    const rows = babies.value.map(baby => [baby.id, baby.name])
-    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
-  }
-
-  function exportFeedingsToCSV(): string {
-    const headers = ['ID', 'Baby ID', 'Baby Name', 'Timestamp', 'Amount', 'Type', 'Notes']
-    const rows = feedings.value.map(feeding => {
-      const baby = babies.value.find(b => b.id === feeding.babyId)
-      return [
-        feeding.id,
-        feeding.babyId,
-        baby?.name || 'Unknown',
-        feeding.timestamp.toISOString(),
-        feeding.amount,
-        feeding.type,
-        feeding.notes || ''
-      ]
+  // Sign in with email/password
+  async function signIn(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
     })
-    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+    if (error) throw error
   }
 
-  function exportDiaperChangesToCSV(): string {
-    const headers = ['ID', 'Baby ID', 'Baby Name', 'Timestamp', 'Type', 'Notes']
-    const rows = diaperChanges.value.map(change => {
-      const baby = babies.value.find(b => b.id === change.babyId)
-      return [
-        change.id,
-        change.babyId,
-        baby?.name || 'Unknown',
-        change.timestamp.toISOString(),
-        change.type,
-        change.notes || ''
-      ]
+  // Sign up with email/password
+  async function signUp(email: string, password: string) {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password
     })
-    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+    if (error) throw error
   }
 
-  function downloadCSV(csvContent: string, filename: string) {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', filename)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  // CSV Import functionality
-  async function importFromCSV(file: File): Promise<{ success: boolean; message: string }> {
-    try {
-      const text = await file.text()
-      const lines = text.split('\n').filter(line => line.trim())
-      if (lines.length < 2) {
-        return { success: false, message: 'Invalid CSV file: no data found' }
-      }
-
-      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
-      const data = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.replace(/"/g, '').trim())
-        const row: Record<string, string> = {}
-        headers.forEach((header, index) => {
-          row[header] = values[index] || ''
-        })
-        return row
-      })
-
-      // Determine file type based on headers
-      if (headers.includes('Amount') && headers.includes('Type')) {
-        // This is a feedings file
-        return importFeedingsFromCSV(data)
-      } else if (headers.includes('Type') && !headers.includes('Amount')) {
-        // This is a diaper changes file
-        return importDiaperChangesFromCSV(data)
-      } else if (headers.includes('Name') && headers.length === 2) {
-        // This is a babies file
-        return importBabiesFromCSV(data)
-      } else {
-        return { success: false, message: 'Unknown CSV format' }
-      }
-    } catch (error) {
-      return { success: false, message: `Error reading file: ${error}` }
-    }
-  }
-
-  function importBabiesFromCSV(data: Record<string, string>[]): { success: boolean; message: string } {
-    try {
-      // Clear existing babies
-      babies.value = []
-      
-      const newBabies = data.map(row => ({
-        id: row.ID || generateId(),
-        name: row.Name
-      })).filter(baby => baby.name)
-
-      babies.value.push(...newBabies)
-      return { success: true, message: `Imported ${newBabies.length} babies` }
-    } catch (error) {
-      return { success: false, message: `Error importing babies: ${error}` }
-    }
-  }
-
-  function importFeedingsFromCSV(data: Record<string, string>[]): { success: boolean; message: string } {
-    try {
-      // Clear existing feedings
-      feedings.value = []
-      
-      const newFeedings = data.map(row => ({
-        id: row.ID || generateId(),
-        babyId: row['Baby ID'] || row['BabyID'],
-        timestamp: new Date(row.Timestamp),
-        amount: parseFloat(row.Amount) || 0,
-        type: row.Type as Feeding['type'],
-        notes: row.Notes
-      })).filter(feeding => feeding.babyId && feeding.timestamp && !isNaN(feeding.timestamp.getTime()))
-
-      feedings.value.push(...newFeedings)
-      return { success: true, message: `Imported ${newFeedings.length} feedings` }
-    } catch (error) {
-      return { success: false, message: `Error importing feedings: ${error}` }
-    }
-  }
-
-  function importDiaperChangesFromCSV(data: Record<string, string>[]): { success: boolean; message: string } {
-    try {
-      // Clear existing diaper changes
-      diaperChanges.value = []
-      
-      const newDiaperChanges = data.map(row => ({
-        id: row.ID || generateId(),
-        babyId: row['Baby ID'] || row['BabyID'],
-        timestamp: new Date(row.Timestamp),
-        type: row.Type as DiaperChange['type'],
-        notes: row.Notes
-      })).filter(change => change.babyId && change.timestamp && !isNaN(change.timestamp.getTime()))
-
-      diaperChanges.value.push(...newDiaperChanges)
-      return { success: true, message: `Imported ${newDiaperChanges.length} diaper changes` }
-    } catch (error) {
-      return { success: false, message: `Error importing diaper changes: ${error}` }
-    }
-  }
-
-  // Import all data at once (for complete backup restore)
-  async function importAllData(files: File[]): Promise<{ success: boolean; message: string }> {
-    try {
-      // Clear all existing data first
-      babies.value = []
-      feedings.value = []
-      diaperChanges.value = []
-
-      let importedBabies = 0
-      let importedFeedings = 0
-      let importedDiaperChanges = 0
-
-      for (const file of files) {
-        const result = await importFromCSV(file)
-        if (result.success) {
-          // Count the imported items
-          if (file.name.includes('babies')) {
-            importedBabies = babies.value.length
-          } else if (file.name.includes('feedings')) {
-            importedFeedings = feedings.value.length
-          } else if (file.name.includes('diaper')) {
-            importedDiaperChanges = diaperChanges.value.length
-          }
-        }
-      }
-
-      const message = `Import complete: ${importedBabies} babies, ${importedFeedings} feedings, ${importedDiaperChanges} diaper changes`
-      return { success: true, message }
-    } catch (error) {
-      return { success: false, message: `Error importing data: ${error}` }
-    }
+  // Sign out
+  async function signOut() {
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
   }
 
   return {
+    // State
     babies,
     feedings,
     diaperChanges,
+    isLoading,
+    currentUser,
+    
+    // Actions
+    initializeStore,
     addBaby,
     addFeeding,
     addDiaperChange,
@@ -363,9 +288,10 @@ export const useBabyStore = defineStore('baby', () => {
     deleteDiaperChange,
     getBabyFeedings,
     getBabyDiaperChanges,
-    loadFromStorage,
-    exportToCSV,
-    importFromCSV,
-    importAllData,
+    
+    // Auth
+    signIn,
+    signUp,
+    signOut
   }
 }) 

@@ -1,117 +1,224 @@
 <script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
-import { ref } from 'vue'
 import RecordModal from '../components/RecordModal.vue'
 import HistoryList from '../components/HistoryList.vue'
-import DataManager from '../components/DataManager.vue'
 
 const store = useBabyStore()
-const showAddBabyForm = ref(false)
-const showDataManager = ref(false)
+
+// State
 const newBabyName = ref('')
-
-// Modal state
+const selectedBaby = ref<any>(null)
 const showRecordModal = ref(false)
-const recordModalType = ref<'feeding' | 'diaper'>('feeding')
-const recordModalBabyId = ref('')
+const recordType = ref<'feeding' | 'diaper'>('feeding')
+const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
+const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 
-function addBaby() {
-  if (newBabyName.value.trim()) {
-    store.addBaby(newBabyName.value.trim())
+// Auth state
+const isAuthenticated = computed(() => !!store.currentUser)
+const isLoading = computed(() => store.isLoading)
+
+// Initialize store on mount
+onMounted(async () => {
+  await store.initializeStore()
+})
+
+// Add a new baby
+async function addBaby() {
+  if (!newBabyName.value.trim()) return
+  
+  try {
+    await store.addBaby(newBabyName.value.trim())
     newBabyName.value = ''
-    showAddBabyForm.value = false
+  } catch (error) {
+    console.error('Error adding baby:', error)
+    alert('Failed to add baby. Please try again.')
   }
 }
 
-function openRecordModal(babyId: string, type: 'feeding' | 'diaper') {
-  recordModalBabyId.value = babyId
-  recordModalType.value = type
+// Select a baby
+function selectBaby(baby: any) {
+  selectedBaby.value = baby
+}
+
+// Open record modal
+function openRecordModal(type: 'feeding' | 'diaper', feedingTypeParam?: 'breast' | 'formula' | 'solid', diaperTypeParam?: 'wet' | 'dirty' | 'both') {
+  if (!selectedBaby.value) {
+    alert('Please select a baby first')
+    return
+  }
+  
+  recordType.value = type
+  if (type === 'feeding' && feedingTypeParam) {
+    feedingType.value = feedingTypeParam
+  }
+  if (type === 'diaper' && diaperTypeParam) {
+    diaperType.value = diaperTypeParam
+  }
   showRecordModal.value = true
 }
 
+// Close record modal
 function closeRecordModal() {
   showRecordModal.value = false
+}
+
+// Handle record saved
+function handleRecordSaved() {
+  closeRecordModal()
+}
+
+// Sign in
+async function signIn() {
+  const email = prompt('Enter your email:')
+  const password = prompt('Enter your password:')
+  
+  if (email && password) {
+    try {
+      await store.signIn(email, password)
+    } catch (error) {
+      console.error('Sign in error:', error)
+      alert('Failed to sign in. Please check your credentials.')
+    }
+  }
+}
+
+// Sign up
+async function signUp() {
+  const email = prompt('Enter your email:')
+  const password = prompt('Enter your password:')
+  
+  if (email && password) {
+    try {
+      await store.signUp(email, password)
+      alert('Account created! Please check your email to verify your account.')
+    } catch (error) {
+      console.error('Sign up error:', error)
+      alert('Failed to create account. Please try again.')
+    }
+  }
+}
+
+// Sign out
+async function signOut() {
+  try {
+    await store.signOut()
+  } catch (error) {
+    console.error('Sign out error:', error)
+  }
 }
 </script>
 
 <template>
-  <div class="homepage">
-    <header class="header">
-      <h1>Baby Book</h1>
-      <div class="header-actions">
-        <button 
-          class="btn btn-data" 
-          @click="showDataManager = !showDataManager"
-        >
-          {{ showDataManager ? 'Hide' : 'Show' }} Data Manager
-        </button>
+  <div class="home-page">
+    <!-- Authentication Section -->
+    <div v-if="!isAuthenticated" class="auth-section">
+      <h2>Welcome to BabyBook</h2>
+      <p>Please sign in to start tracking your baby's activities.</p>
+      <div class="auth-buttons">
+        <button @click="signIn" class="btn btn-primary">Sign In</button>
+        <button @click="signUp" class="btn btn-secondary">Sign Up</button>
       </div>
-    </header>
+    </div>
 
-    <main class="main">
-      <!-- Data Manager Section -->
-      <div v-if="showDataManager" class="data-manager-section">
-        <DataManager />
-      </div>
-
-      <div class="babies-grid">
-        <div v-for="baby in store.babies" :key="baby.id" class="baby-card">
-          <h2>{{ baby.name }}</h2>
-          <div class="actions">
-            <button 
-              class="btn btn-feeding" 
-              @click="openRecordModal(baby.id, 'feeding')"
-            >
-              Record Feeding
-            </button>
-            <button 
-              class="btn btn-diaper" 
-              @click="openRecordModal(baby.id, 'diaper')"
-            >
-              Record Diaper Change
-            </button>
-          </div>
-          <HistoryList :baby-id="baby.id" />
+    <!-- Main App Content -->
+    <div v-else class="app-content">
+      <!-- Header -->
+      <div class="header">
+        <h1>BabyBook</h1>
+        <div class="user-info">
+          <span>{{ store.currentUser?.email }}</span>
+          <button @click="signOut" class="btn btn-small">Sign Out</button>
         </div>
       </div>
 
-      <div class="add-baby">
-        <button 
-          v-if="!showAddBabyForm" 
-          class="btn btn-add" 
-          @click="showAddBabyForm = true"
-        >
-          Add Baby
-        </button>
-        <div v-else class="add-baby-form">
-          <input 
-            v-model="newBabyName" 
-            type="text" 
-            placeholder="Enter baby's name"
-            @keyup.enter="addBaby"
-          >
-          <div class="form-actions">
-            <button class="btn btn-add" @click="addBaby">Add</button>
-            <button class="btn btn-cancel" @click="showAddBabyForm = false">Cancel</button>
-          </div>
-        </div>
+      <!-- Loading State -->
+      <div v-if="isLoading" class="loading">
+        Loading...
       </div>
 
-      <!-- Record Modal -->
-      <RecordModal
-        v-if="showRecordModal"
-        :baby-id="recordModalBabyId"
-        :type="recordModalType"
-        :is-open="showRecordModal"
-        @close="closeRecordModal"
-        @saved="closeRecordModal"
-      />
-    </main>
+      <!-- Main Content -->
+      <div v-else class="main-content">
+        <!-- Baby Selection -->
+        <div class="baby-selection">
+          <h3>Select a Baby</h3>
+          <div v-if="store.babies.length === 0" class="empty-state">
+            <p>No babies added yet. Add your first baby below.</p>
+          </div>
+          <div v-else class="baby-list">
+            <button
+              v-for="baby in store.babies"
+              :key="baby.id"
+              @click="selectBaby(baby)"
+              :class="['baby-btn', { active: selectedBaby?.id === baby.id }]"
+            >
+              {{ baby.name }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Add Baby Form -->
+        <div class="add-baby-section">
+          <h3>Add New Baby</h3>
+          <div class="add-baby-form">
+            <input
+              v-model="newBabyName"
+              @keyup.enter="addBaby"
+              placeholder="Baby's name"
+              class="baby-name-input"
+            >
+            <button @click="addBaby" class="btn btn-primary">Add Baby</button>
+          </div>
+        </div>
+
+        <!-- Selected Baby Actions -->
+        <div v-if="selectedBaby" class="baby-actions">
+          <h3>{{ selectedBaby.name }}'s Activities</h3>
+          
+          <!-- Quick Action Buttons -->
+          <div class="quick-actions">
+            <div class="feeding-actions">
+              <h4>Feedings</h4>
+              <button @click="openRecordModal('feeding', 'breast')" class="btn btn-feeding breast">
+                🍼 Breast
+              </button>
+              <button @click="openRecordModal('feeding', 'formula')" class="btn btn-feeding formula">
+                🥛 Formula
+              </button>
+            </div>
+            
+            <div class="diaper-actions">
+              <h4>Diaper Changes</h4>
+              <button @click="openRecordModal('diaper', undefined, 'wet')" class="btn btn-diaper wet">
+                💧 Pee
+              </button>
+              <button @click="openRecordModal('diaper', undefined, 'dirty')" class="btn btn-diaper dirty">
+                💩 Poop
+              </button>
+            </div>
+          </div>
+
+          <!-- History -->
+          <HistoryList :baby-id="selectedBaby.id" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Record Modal -->
+    <RecordModal
+      v-if="showRecordModal && selectedBaby"
+      :type="recordType"
+      :feeding-type="feedingType"
+      :diaper-type="diaperType"
+      :baby-id="selectedBaby.id"
+      @close="closeRecordModal"
+      @saved="handleRecordSaved"
+    />
   </div>
 </template>
 
 <style scoped>
-.homepage {
+.home-page {
   min-height: 100vh;
   background-color: #f5f5f5;
 }
@@ -131,7 +238,7 @@ function closeRecordModal() {
   color: #333;
 }
 
-.header-actions {
+.user-info {
   display: flex;
   gap: 0.5rem;
 }
@@ -142,7 +249,7 @@ function closeRecordModal() {
   padding: 1rem;
 }
 
-.data-manager-section {
+.auth-section {
   margin-bottom: 2rem;
   background-color: white;
   border-radius: 8px;
@@ -150,48 +257,75 @@ function closeRecordModal() {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.add-baby {
+.auth-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.app-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.baby-selection {
+  margin-bottom: 1rem;
+}
+
+.baby-list {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.baby-btn {
+  padding: 0.75rem;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.baby-btn.active {
+  background-color: #9c27b0;
+}
+
+.add-baby-section {
   margin-bottom: 1rem;
 }
 
 .add-baby-form {
-  background-color: white;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 0.5rem;
 }
 
-.add-baby-form input {
+.baby-name-input {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 1rem;
-  margin-bottom: 0.5rem;
 }
 
-.babies-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.baby-card {
-  background-color: white;
-  border-radius: 8px;
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.baby-card h2 {
-  margin: 0 0 1rem 0;
-  color: #333;
-}
-
-.actions {
+.quick-actions {
   display: flex;
-  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.feeding-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.diaper-actions {
+  display: flex;
   gap: 0.5rem;
 }
 
@@ -205,61 +339,34 @@ function closeRecordModal() {
   transition: background-color 0.2s;
 }
 
-.btn-add {
+.btn-primary {
   background-color: #9c27b0;
 }
 
-.btn-add:hover {
+.btn-primary:hover {
   background-color: #7b1fa2;
 }
 
-.btn-feeding {
+.btn-secondary {
   background-color: #2196f3;
 }
 
-.btn-feeding:hover {
+.btn-secondary:hover {
   background-color: #1976d2;
 }
 
-.btn-diaper {
-  background-color: #4caf50;
-}
-
-.btn-diaper:hover {
-  background-color: #388e3c;
-}
-
-.btn-cancel {
-  background-color: #9e9e9e;
-}
-
-.btn-cancel:hover {
-  background-color: #757575;
-}
-
-.btn-data {
+.btn-small {
   background-color: #ff9800;
   font-size: 0.9rem;
   padding: 0.5rem 1rem;
 }
 
-.btn-data:hover {
+.btn-small:hover {
   background-color: #f57c00;
 }
 
-.form-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-@media (max-width: 600px) {
-  .header {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .babies-grid {
-    grid-template-columns: 1fr;
-  }
+.loading {
+  margin-top: 1rem;
+  text-align: center;
 }
 </style> 

@@ -1,145 +1,147 @@
-# Baby Book App
+# BabyBook
 
-A Vue.js application for tracking baby feedings and diaper changes with local storage persistence and CSV export/import functionality.
+A Vue 3 baby tracking app for monitoring feedings and diaper changes with Supabase backend.
 
 ## Features
 
+- **User Authentication**: Sign up/sign in with email and password
 - **Baby Management**: Add and manage multiple babies
-- **Feeding Tracking**: Record breast, formula, and solid feedings with amounts and notes
-- **Diaper Changes**: Track wet, dirty, or both diaper changes with notes
-- **Data Persistence**: All data is automatically saved to localStorage
-- **CSV Export/Import**: Backup and restore your data with CSV files
+- **Feeding Tracking**: Record breast milk, formula, and solid food feedings
+- **Diaper Changes**: Track wet, dirty, and both types of diaper changes
+- **Real-time Data**: All data is stored in Supabase and syncs across devices
+- **Edit & Delete**: Modify or remove any recorded activities
 - **Responsive Design**: Works on desktop and mobile devices
-- **PWA Ready**: Progressive Web App support for mobile installation
 
 ## Tech Stack
 
-- **Vue 3** - Frontend framework with Composition API
-- **TypeScript** - Type safety and better development experience
-- **Pinia** - State management
-- **Vite** - Build tool and development server
-- **Tailwind CSS** - Utility-first CSS framework
-- **Vite PWA Plugin** - Progressive Web App functionality
+- **Frontend**: Vue 3 + TypeScript + Vite
+- **State Management**: Pinia
+- **Backend**: Supabase (PostgreSQL + Auth + Real-time)
+- **Styling**: CSS with modern design
 
-## Installation
+## Setup Instructions
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/babybook.git
-   cd babybook
-   ```
+### 1. Clone the Repository
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+git clone <your-repo-url>
+cd babybook
+```
 
-3. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+### 2. Install Dependencies
 
-4. **Open your browser**
-   Navigate to `http://localhost:5174`
+```bash
+npm install
+```
+
+### 3. Set up Supabase
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to your project settings and copy the following values:
+   - Project URL
+   - Anon/Public key
+
+3. Create a `.env` file in the root directory:
+
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 4. Set up the Database
+
+1. In your Supabase dashboard, go to the SQL Editor
+2. Run the SQL from `supabase/migrations/001_initial_schema.sql`
+3. This will create the necessary tables and security policies
+
+### 5. Configure Authentication
+
+1. In your Supabase dashboard, go to Authentication > Settings
+2. Configure your site URL (e.g., `http://localhost:5173` for development)
+3. Optionally, configure email templates for better user experience
+
+### 6. Run the Development Server
+
+```bash
+npm run dev
+```
+
+The app will be available at `http://localhost:5173`
 
 ## Usage
 
-### Adding Babies
-- Click the "Add Baby" button
-- Enter the baby's name
-- Click "Add" to create the baby
+1. **Sign Up/In**: Create an account or sign in with existing credentials
+2. **Add Babies**: Add your babies with their names
+3. **Select a Baby**: Choose which baby you want to track activities for
+4. **Record Activities**:
+   - **Feedings**: Click "Breast" or "Formula" buttons for quick recording
+   - **Diaper Changes**: Click "Pee" or "Poop" buttons for quick recording
+5. **Edit/Delete**: Click the edit button (✏️) on any activity to modify or delete it
+6. **View History**: See recent feedings and diaper changes for the selected baby
 
-### Recording Feedings
-- For each baby, click the "Add Feeding" button
-- Select the feeding type (breast, formula, or solid)
-- Enter the amount
-- Add optional notes
-- Click "Save"
+## Database Schema
 
-### Recording Diaper Changes
-- For each baby, click the "Add Diaper Change" button
-- Select the type (wet, dirty, or both)
-- Add optional notes
-- Click "Save"
+### Babies Table
+- `id`: Unique identifier (UUID)
+- `name`: Baby's name
+- `user_id`: Reference to authenticated user
+- `created_at`: Timestamp when baby was added
 
-### Data Management
-- Click "Show Data Manager" in the header
-- **Export Data**: Click "Export All Data" to download CSV files
-- **Import Data**: Select CSV files to import (overwrites existing data)
+### Feedings Table
+- `id`: Unique identifier (UUID)
+- `baby_id`: Reference to baby
+- `timestamp`: When the feeding occurred
+- `amount`: Amount in milliliters
+- `type`: Type of feeding ('breast', 'formula', 'solid')
+- `notes`: Optional notes
+- `user_id`: Reference to authenticated user
+- `created_at`: Timestamp when record was created
 
-## Data Export/Import
+### Diaper Changes Table
+- `id`: Unique identifier (UUID)
+- `baby_id`: Reference to baby
+- `timestamp`: When the diaper change occurred
+- `type`: Type of change ('wet', 'dirty', 'both')
+- `notes`: Optional notes
+- `user_id`: Reference to authenticated user
+- `created_at`: Timestamp when record was created
 
-### Export
-The app exports three separate CSV files:
-- `babybook-babies-YYYY-MM-DD.csv` - Baby information
-- `babybook-feedings-YYYY-MM-DD.csv` - Feeding records
-- `babybook-diaper-changes-YYYY-MM-DD.csv` - Diaper change records
+## Security
 
-### Import
-- **Single File**: Import individual CSV files for specific data types
-- **Multiple Files**: Import all three files at once for complete backup restore
-- **Note**: Importing will overwrite existing data
+- Row Level Security (RLS) is enabled on all tables
+- Users can only access their own data
+- All database operations require authentication
+- Passwords are securely hashed by Supabase Auth
 
-## Building for Production
+## Deployment
 
-```bash
-npm run build
-```
+### GitHub Pages
 
-The built files will be in the `dist` directory.
+1. Push your code to GitHub
+2. Set up GitHub Actions for automatic deployment
+3. Configure the base URL in `vite.config.ts` for your repository
 
-## Development
+### Other Platforms
 
-```bash
-# Start development server
-npm run dev
+The app can be deployed to any static hosting platform:
+- Vercel
+- Netlify
+- Firebase Hosting
+- AWS S3 + CloudFront
 
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-```
-
-## Project Structure
-
-```
-src/
-├── App.vue                 # Main app container
-├── views/
-│   └── HomePage.vue        # Main application view
-├── components/
-│   ├── RecordForm.vue      # Form for adding records
-│   ├── HistoryList.vue     # Display of historical records
-│   └── DataManager.vue     # CSV import/export functionality
-├── stores/
-│   └── babyStore.ts        # Pinia store with localStorage persistence
-└── assets/                 # Static assets
-```
-
-## Data Storage
-
-All data is stored in the browser's localStorage and includes:
-- Baby information (ID, name)
-- Feeding records (ID, baby ID, timestamp, amount, type, notes)
-- Diaper change records (ID, baby ID, timestamp, type, notes)
+Remember to:
+- Set environment variables in your hosting platform
+- Configure CORS settings in Supabase if needed
+- Update the site URL in Supabase Auth settings
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-If you encounter any issues or have questions, please open an issue on GitHub.
-
----
-
-Made with ❤️ for parents tracking their little ones' daily activities.
+MIT License - see LICENSE file for details
