@@ -157,20 +157,6 @@ async function signOut() {
           </div>
         </div>
 
-        <!-- Add Baby Form -->
-        <div class="add-baby-section">
-          <h3>Add New Baby</h3>
-          <div class="add-baby-form">
-            <input
-              v-model="newBabyName"
-              @keyup.enter="addBaby"
-              placeholder="Baby's name"
-              class="baby-name-input"
-            >
-            <button @click="addBaby" class="btn btn-primary">Add Baby</button>
-          </div>
-        </div>
-
         <!-- Selected Baby Actions -->
         <div v-if="selectedBaby" class="baby-actions">
           <h3>{{ selectedBaby.name }}'s Activities</h3>
@@ -206,6 +192,19 @@ async function signOut() {
 
           <!-- History -->
           <HistoryList :baby-id="selectedBaby.id" />
+        </div>
+        <!-- Add Baby Form (only if no babies) -->
+        <div v-if="store.babies.length === 0" class="add-baby-section">
+          <h3>Add New Baby</h3>
+          <div class="add-baby-form">
+            <input
+              v-model="newBabyName"
+              @keyup.enter="addBaby"
+              placeholder="Baby's name"
+              class="baby-name-input"
+            >
+            <button @click="addBaby" class="btn btn-primary">Add Baby</button>
+          </div>
         </div>
       </div>
     </div>
