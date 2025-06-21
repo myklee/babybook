@@ -10,21 +10,14 @@ const router = useRouter()
 const store = useBabyStore()
 
 // State
-const newBabyName = ref('')
 const selectedBaby = ref<any>(null)
 const showRecordModal = ref(false)
 const recordType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
-const showAddBabyForm = ref(false)
 
 // Auth state
 const isAuthenticated = computed(() => !!store.currentUser)
-const isLoading = computed(() => {
-  const loading = store.isLoading
-  console.log('isLoading computed:', loading)
-  return loading
-})
 
 // Watch for when data is loaded but loading state might be stuck
 watch(() => store.babies, (newBabies) => {
@@ -53,28 +46,6 @@ watch(() => store.babies, (newBabies) => {
     selectBaby(newBabies[0]);
   }
 });
-
-// Add a new baby
-async function addBaby() {
-  if (!newBabyName.value.trim()) return
-  
-  try {
-    await store.addBaby(newBabyName.value.trim())
-    newBabyName.value = ''
-    showAddBabyForm.value = false
-  } catch (error) {
-    console.error('Error adding baby:', error)
-    alert('Failed to add baby. Please try again.')
-  }
-}
-
-// Toggle add baby form
-function toggleAddBabyForm() {
-  showAddBabyForm.value = !showAddBabyForm.value
-  if (!showAddBabyForm.value) {
-    newBabyName.value = ''
-  }
-}
 
 // Select a baby
 function selectBaby(baby: any) {
@@ -108,15 +79,6 @@ function handleRecordSaved() {
   closeRecordModal()
 }
 
-// Navigation functions
-function goToFeedings() {
-  router.push('/feedings')
-}
-
-function goToHistory() {
-  router.push('/history')
-}
-
 // Sign in
 async function signIn() {
   const email = prompt('Enter your email:')
@@ -145,15 +107,6 @@ async function signUp() {
       console.error('Sign up error:', error)
       alert('Failed to create account. Please try again.')
     }
-  }
-}
-
-// Sign out
-async function signOut() {
-  try {
-    await store.signOut()
-  } catch (error) {
-    console.error('Sign out error:', error)
   }
 }
 </script>

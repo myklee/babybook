@@ -89,10 +89,6 @@ function goBack() {
 function formatDateTime(dateString: string) {
   return format(new Date(dateString), 'MMM d, yyyy h:mm a')
 }
-
-function formatDate(dateString: string) {
-  return format(new Date(dateString), 'MMM d, yyyy')
-}
 </script>
 
 <template>
