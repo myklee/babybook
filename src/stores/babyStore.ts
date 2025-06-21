@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/supabase'
+import { startOfToday, set } from 'date-fns'
 
 type Baby = Database['public']['Tables']['babies']['Row'] & { image_url?: string | null }
 type Feeding = Database['public']['Tables']['feedings']['Row']
@@ -558,6 +559,34 @@ export const useBabyStore = defineStore('baby', () => {
     if (error) throw error
   }
 
+  function getTodaysFeedingsTotal(babyId: string) {
+    const now = new Date();
+    const today = startOfToday();
+    let eightAm;
+
+    // If it's already past 8 AM today, the window started at 8 AM today.
+    if (now.getHours() >= 8) {
+        eightAm = set(today, { hours: 8, minutes: 0, seconds: 0, milliseconds: 0 });
+    } else {
+        // If it's before 8 AM today, the window started at 8 AM *yesterday*.
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        eightAm = set(yesterday, { hours: 8, minutes: 0, seconds: 0, milliseconds: 0 });
+    }
+
+    const relevantFeedings = feedings.value.filter(feeding => {
+        const feedingTimestamp = new Date(feeding.timestamp);
+        return (
+            feeding.baby_id === babyId &&
+            (feeding.type === 'breast' || feeding.type === 'formula') &&
+            feeding.amount != null &&
+            feedingTimestamp >= eightAm
+        );
+    });
+
+    return relevantFeedings.reduce((sum, feeding) => sum + (feeding.amount || 0), 0);
+  }
+
   return {
     // State
     babies,
@@ -587,6 +616,7 @@ export const useBabyStore = defineStore('baby', () => {
     // Auth
     signIn,
     signUp,
-    signOut
+    signOut,
+    getTodaysFeedingsTotal
   }
 }) 

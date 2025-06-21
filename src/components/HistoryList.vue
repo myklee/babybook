@@ -14,6 +14,10 @@ const props = defineProps<{
 
 const store = useBabyStore()
 
+const feedingsTotalSince8AM = computed(() => {
+  return store.getTodaysFeedingsTotal(props.babyId);
+});
+
 const feedings = computed(() => {
   return store.getBabyFeedings(props.babyId)
 })
@@ -65,7 +69,12 @@ function closeEditModal() {
 <template>
   <div class="history">
     <div class="history-section">
-      <h3>Recent Feedings</h3>
+      <div class="section-header">
+        <h3>Recent Feedings</h3>
+        <span v-if="feedingsTotalSince8AM > 0" class="header-stat">
+          {{ feedingsTotalSince8AM }}ml since 8am
+        </span>
+      </div>
       <div v-if="feedings.length === 0" class="empty-state">
         No feedings recorded yet
       </div>
@@ -139,12 +148,25 @@ function closeEditModal() {
   width: 100%;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+
 .history-section h3 {
   margin: 0 0 0.5rem 0;
   color: #a0a0e0;
   font-size: 0.9rem;
   text-transform: uppercase;
   padding-left: 0.5rem;
+}
+
+.header-stat {
+  font-size: 0.8rem;
+  color: #a0a0e0;
+  font-weight: 400;
 }
 
 .history-list {
