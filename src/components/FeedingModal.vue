@@ -3,9 +3,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 
 const props = defineProps<{
-  type: 'feeding' | 'diaper' | 'sleep'
   feedingType?: 'breast' | 'formula' | 'solid'
-  diaperType?: 'wet' | 'dirty' | 'both'
   babyId: string
   babyName: string
 }>()
@@ -20,22 +18,18 @@ const store = useBabyStore()
 // Form data
 const amount = ref(0)
 const feedingTypeRef = ref<'breast' | 'formula' | 'solid'>('breast')
-const diaperTypeRef = ref<'wet' | 'dirty' | 'both'>('wet')
 const notes = ref('')
 const customDate = ref('')
 const customTime = ref('')
-const customEndDate = ref('')
-const customEndTime = ref('')
 const isSaving = ref(false)
 const timeInput = ref<HTMLInputElement | null>(null)
 
 onMounted(async () => {
+  console.log('FeedingModal mounted with babyName:', props.babyName)
+  
   // Pre-fill the type if provided
-  if (props.type === 'feeding' && props.feedingType) {
+  if (props.feedingType) {
     feedingTypeRef.value = props.feedingType
-  }
-  if (props.type === 'diaper' && props.diaperType) {
-    diaperTypeRef.value = props.diaperType
   }
 
   // Pre-fill current date and time
@@ -49,9 +43,6 @@ onMounted(async () => {
   customDate.value = `${year}-${month}-${day}`
   customTime.value = `${hours}:${minutes}`
 
-  customEndDate.value = ''
-  customEndTime.value = ''
-
   await nextTick()
   timeInput.value?.focus()
 })
@@ -59,39 +50,20 @@ onMounted(async () => {
 async function handleSubmit() {
   isSaving.value = true
   try {
-    if (props.type === 'feeding') {
-      const timestamp = customDate.value && customTime.value ? new Date(`${customDate.value}T${customTime.value}`) : new Date()
-      await store.addFeeding(
-        props.babyId,
-        amount.value,
-        feedingTypeRef.value,
-        notes.value,
-        timestamp
-      )
-    } else if (props.type === 'diaper') {
-      const timestamp = customDate.value && customTime.value ? new Date(`${customDate.value}T${customTime.value}`) : new Date()
-      await store.addDiaperChange(
-        props.babyId,
-        diaperTypeRef.value,
-        notes.value,
-        timestamp
-      )
-    } else if (props.type === 'sleep') {
-      const startTime = customDate.value && customTime.value ? new Date(`${customDate.value}T${customTime.value}`) : new Date()
-      const endTime = customEndDate.value && customEndTime.value ? new Date(`${customEndDate.value}T${customEndTime.value}`) : undefined
-      await store.addSleepSession(
-        props.babyId,
-        startTime,
-        endTime,
-        notes.value
-      )
-    }
+    const timestamp = customDate.value && customTime.value ? new Date(`${customDate.value}T${customTime.value}`) : new Date()
+    await store.addFeeding(
+      props.babyId,
+      amount.value,
+      feedingTypeRef.value,
+      notes.value,
+      timestamp
+    )
 
     emit('saved')
     emit('close')
   } catch (error) {
-    console.error('Error adding record:', error)
-    alert('Failed to add record. Please try again.')
+    console.error('Error adding feeding:', error)
+    alert('Failed to add feeding. Please try again.')
   } finally {
     isSaving.value = false
   }
@@ -99,17 +71,12 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="record-modal-overlay" @click="emit('close')">
-    <div class="record-modal" @click.stop>
-      <h3>Record
-        <span v-if="type === 'feeding'">Feeding</span>
-        <span v-else-if="type === 'diaper'">Diaper Change</span>
-        <span v-else-if="type === 'sleep'">Sleep Session</span>
-        for {{ babyName }}
-      </h3>
+  <div class="feeding-modal-overlay" @click="emit('close')">
+    <div class="feeding-modal" @click.stop>
+      <h3>Record Feeding for {{ babyName }}</h3>
       
       <form @submit.prevent="handleSubmit">
-        <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
+        <div class="form-group">
           <label>Time</label>
           <div class="datetime-group">
             <input 
@@ -125,38 +92,8 @@ async function handleSubmit() {
             >
           </div>
         </div>
-        
-        <div v-if="type === 'sleep'" class="form-group">
-          <label>Start Time</label>
-          <div class="datetime-group">
-            <input 
-              type="date" 
-              v-model="customDate" 
-              required
-            >
-            <input
-              ref="timeInput"
-              type="time" 
-              v-model="customTime" 
-              required
-            >
-          </div>
-        </div>
-        <div v-if="type === 'sleep'" class="form-group">
-          <label>End Time</label>
-          <div class="datetime-group">
-            <input 
-              type="date" 
-              v-model="customEndDate"
-            >
-            <input
-              type="time" 
-              v-model="customEndTime"
-            >
-          </div>
-        </div>
 
-        <div v-if="type === 'feeding'" class="form-group">
+        <div class="form-group">
           <label>Amount (ml)</label>
           <input 
             type="number" 
@@ -167,21 +104,12 @@ async function handleSubmit() {
           >
         </div>
 
-        <div v-if="type === 'feeding'" class="form-group">
+        <div class="form-group">
           <label>Type</label>
           <select v-model="feedingTypeRef">
             <option value="breast">Breast</option>
             <option value="formula">Formula</option>
             <option value="solid">Solid</option>
-          </select>
-        </div>
-
-        <div v-if="type === 'diaper'" class="form-group">
-          <label>Type</label>
-          <select v-model="diaperTypeRef">
-            <option value="wet">Wet</option>
-            <option value="dirty">Dirty</option>
-            <option value="both">Both</option>
           </select>
         </div>
 
@@ -204,7 +132,7 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.record-modal-overlay {
+.feeding-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -226,7 +154,7 @@ async function handleSubmit() {
   flex: 1;
 }
 
-.record-modal {
+.feeding-modal {
   background-color: white;
   border-radius: 8px;
   padding: 1.5rem;
@@ -235,20 +163,24 @@ async function handleSubmit() {
   max-height: 90vh;
   overflow-y: auto;
 }
-.record-modal h3 {
+
+.feeding-modal h3 {
   margin: 0 0 1rem 0;
   color: #333;
   font-size: 1.2rem;
 }
+
 .form-group {
   margin-bottom: 1rem;
 }
+
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
   color: #333;
   font-weight: 500;
 }
+
 .form-group input,
 .form-group select,
 .form-group textarea {
@@ -259,10 +191,12 @@ async function handleSubmit() {
   font-size: 1rem;
   box-sizing: border-box;
 }
+
 .form-group textarea {
   resize: vertical;
   min-height: 80px;
 }
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -270,11 +204,13 @@ async function handleSubmit() {
   border-color: #9c27b0;
   box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.2);
 }
+
 .form-actions {
   display: flex;
   gap: 0.75rem;
   margin-top: 1.5rem;
 }
+
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;
@@ -286,15 +222,19 @@ async function handleSubmit() {
   flex: 1;
   font-size: 1rem;
 }
+
 .btn-save {
   background-color: #9c27b0;
 }
+
 .btn-save:hover {
   background-color: #7b1fa2;
 }
+
 .btn-cancel {
   background-color: #9e9e9e;
 }
+
 .btn-cancel:hover {
   background-color: #757575;
 }

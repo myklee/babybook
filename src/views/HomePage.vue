@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
-import RecordModal from '../components/RecordModal.vue'
+import FeedingModal from '../components/FeedingModal.vue'
+import DiaperModal from '../components/DiaperModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 
 const store = useBabyStore()
 
 // State
 const selectedBaby = ref<any>(null)
-const showRecordModal = ref(false)
-const recordType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
+const showFeedingModal = ref(false)
+const showDiaperModal = ref(false)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 
@@ -49,31 +50,15 @@ function selectBaby(baby: any) {
   selectedBaby.value = baby
 }
 
-// Open record modal
-function openRecordModal(type: 'feeding' | 'diaper', feedingTypeParam?: 'breast' | 'formula', diaperTypeParam?: 'wet' | 'dirty') {
-  if (!selectedBaby.value) {
-    alert('Please select a baby first')
-    return
-  }
-  
-  recordType.value = type
-  if (type === 'feeding' && feedingTypeParam) {
-    feedingType.value = feedingTypeParam
-  }
-  if (type === 'diaper' && diaperTypeParam) {
-    diaperType.value = diaperTypeParam
-  }
-  showRecordModal.value = true
+// Functions
+function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
+  feedingType.value = type
+  showFeedingModal.value = true
 }
 
-// Close record modal
-function closeRecordModal() {
-  showRecordModal.value = false
-}
-
-// Handle record saved
-function handleRecordSaved() {
-  closeRecordModal()
+function openDiaperModal(type: 'wet' | 'dirty' | 'both') {
+  diaperType.value = type
+  showDiaperModal.value = true
 }
 
 // Sign in
@@ -127,19 +112,19 @@ async function signUp() {
       </div>
 
       <div class="action-grid">
-        <button class="action-btn breast" @click="openRecordModal('feeding', 'breast')">
+        <button class="action-btn breast" @click="openFeedingModal('breast')">
           <img src="../assets/icons/flask-conical.svg" class="icon" alt="Breast" />
           <span>Breast</span>
         </button>
-        <button class="action-btn formula" @click="openRecordModal('feeding', 'formula')">
+        <button class="action-btn formula" @click="openFeedingModal('formula')">
           <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Formula" />
           <span>Formula</span>
         </button>
-        <button class="action-btn poop" @click="openRecordModal('diaper', undefined, 'dirty')">
+        <button class="action-btn poop" @click="openDiaperModal('dirty')">
           <img src="../assets/icons/hugeicons_poop.svg" class="icon" alt="Poop" />
           <span>Poop</span>
         </button>
-        <button class="action-btn pee" @click="openRecordModal('diaper', undefined, 'wet')">
+        <button class="action-btn pee" @click="openDiaperModal('wet')">
           <img src="../assets/icons/droplets.svg" class="icon" alt="Pee" />
           <span>Pee</span>
         </button>
@@ -156,14 +141,20 @@ async function signUp() {
        </div>
      </div>
 
-    <RecordModal
-      v-if="showRecordModal && selectedBaby"
-      :baby-id="selectedBaby.id"
-      :type="recordType"
-      :feeding-type="feedingType"
-      :diaper-type="diaperType"
-      @close="closeRecordModal"
-      @saved="handleRecordSaved"
+    <FeedingModal
+      v-if="showFeedingModal && selectedBaby"
+      :babyId="selectedBaby.id"
+      :babyName="selectedBaby.name"
+      :feedingType="feedingType"
+      @close="showFeedingModal = false"
+    />
+
+    <DiaperModal
+      v-if="showDiaperModal && selectedBaby"
+      :babyId="selectedBaby.id"
+      :babyName="selectedBaby.name"
+      :diaperType="diaperType"
+      @close="showDiaperModal = false"
     />
 
     <!-- Hidden original content for reference or later use -->
