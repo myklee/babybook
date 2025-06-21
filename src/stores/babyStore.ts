@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/supabase'
 
-type Baby = Database['public']['Tables']['babies']['Row']
+type Baby = Database['public']['Tables']['babies']['Row'] & { image_url?: string | null }
 type Feeding = Database['public']['Tables']['feedings']['Row']
 type DiaperChange = Database['public']['Tables']['diaper_changes']['Row']
 type SleepSession = Database['public']['Tables']['sleep_sessions']['Row']
@@ -183,21 +183,121 @@ export const useBabyStore = defineStore('baby', () => {
   }
 
   // Add a new baby
-  async function addBaby(name: string) {
+  async function addBaby(name: string, imageFile?: File) {
     if (!currentUser.value) throw new Error('User not authenticated')
+
+    let imageUrl: string | undefined = undefined
+    if (imageFile) {
+      const fileExt = imageFile.name.split('.').pop()?.toLowerCase()
+      const timestamp = Date.now()
+      const newImageKey = `new-baby-${timestamp}.${fileExt}`
+      
+      console.log('Uploading file:', newImageKey, 'Size:', imageFile.size, 'Type:', imageFile.type)
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('baby-images')
+        .upload(newImageKey, imageFile, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        throw uploadError
+      }
+
+      console.log('Upload successful:', uploadData)
+      const { data: { publicUrl } } = supabase.storage.from('baby-images').getPublicUrl(uploadData.path)
+      imageUrl = publicUrl
+    }
 
     const { data, error } = await supabase
       .from('babies')
       .insert({
         name,
-        user_id: currentUser.value.id
+        user_id: currentUser.value.id,
+        image_url: imageUrl
       })
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Database insert error:', error)
+      throw error
+    }
     
     babies.value.push(data)
+    return data
+  }
+
+  // Update a baby
+  async function updateBaby(id: string, updates: { name?: string; imageFile?: File }) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    let imageUrl: string | undefined
+
+    if (updates.imageFile) {
+      // Remove old image if it exists
+      const currentBaby = babies.value.find(b => b.id === id)
+      if (currentBaby?.image_url) {
+        const oldImageKey = currentBaby.image_url.split('/').pop()
+        if (oldImageKey) {
+          await supabase.storage.from('baby-images').remove([oldImageKey])
+        }
+      }
+
+      const file = updates.imageFile
+      const fileExt = file.name.split('.').pop()?.toLowerCase()
+      const timestamp = Date.now()
+      const newImageKey = `baby-${id}-${timestamp}.${fileExt}`
+      
+      console.log('Uploading file:', newImageKey, 'Size:', file.size, 'Type:', file.type)
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('baby-images')
+        .upload(newImageKey, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        throw uploadError
+      }
+
+      console.log('Upload successful:', uploadData)
+      const { data: { publicUrl } } = supabase.storage.from('baby-images').getPublicUrl(uploadData.path)
+      imageUrl = publicUrl
+    }
+
+    const dbUpdates: { name?: string; image_url?: string } = {}
+    if (updates.name) {
+      dbUpdates.name = updates.name
+    }
+    if (imageUrl) {
+      dbUpdates.image_url = imageUrl
+    }
+    
+    console.log('Updating baby with:', dbUpdates)
+    
+    const { data, error } = await supabase
+      .from('babies')
+      .update(dbUpdates)
+      .eq('id', id)
+      .eq('user_id', currentUser.value.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Database update error:', error)
+      throw error
+    }
+
+    const index = babies.value.findIndex(b => b.id === id)
+    if (index !== -1) {
+      babies.value[index] = data
+    }
+
     return data
   }
 
@@ -442,6 +542,7 @@ export const useBabyStore = defineStore('baby', () => {
     // Actions
     initializeStore,
     addBaby,
+    updateBaby,
     addFeeding,
     addDiaperChange,
     addSleepSession,

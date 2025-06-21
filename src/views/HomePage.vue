@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
+import EditBabyModal from '../components/EditBabyModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 
 const store = useBabyStore()
@@ -11,6 +12,8 @@ const store = useBabyStore()
 const selectedBaby = ref<any>(null)
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
+const showEditBabyModal = ref(false)
+const editingBaby = ref<any>(null)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 
@@ -61,6 +64,16 @@ function openDiaperModal(type: 'wet' | 'dirty' | 'both') {
   showDiaperModal.value = true
 }
 
+function openEditBabyModal(baby: any) {
+  editingBaby.value = baby
+  showEditBabyModal.value = true
+}
+
+function onModalSaved() {
+  // Refresh data after editing
+  store.initializeStore()
+}
+
 // Sign in
 async function signIn() {
   const email = prompt('Enter your email:')
@@ -106,8 +119,15 @@ async function signUp() {
           :class="{ 'selected': selectedBaby?.id === baby.id }"
           @click="selectBaby(baby)"
         >
-          <img :src="`/${encodeURIComponent(baby.name.toLowerCase())}.png`" :alt="baby.name" class="baby-photo" />
+          <img 
+            :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" 
+            :alt="baby.name" 
+            class="baby-photo" 
+          />
           <span class="baby-name">{{ baby.name }}</span>
+          <button v-if="selectedBaby?.id === baby.id" class="edit-baby-btn" @click.stop="openEditBabyModal(baby)">
+            Edit
+          </button>
         </div>
       </div>
 
@@ -157,6 +177,13 @@ async function signUp() {
       @close="showDiaperModal = false"
     />
 
+    <EditBabyModal 
+      v-if="showEditBabyModal && editingBaby"
+      :baby="editingBaby"
+      @close="showEditBabyModal = false"
+      @saved="onModalSaved"
+    />
+
     <!-- Hidden original content for reference or later use -->
     <div style="display: none;">
       <!-- ... (original content can be kept here if needed) ... -->
@@ -204,15 +231,16 @@ async function signUp() {
   border-radius: 1.5rem;
   cursor: pointer;
   text-align: center;
-  background-color: black;
+  background-color: transparent;
   border: 2px solid transparent;
   transition: all 0.2s ease-in-out;
   min-width: 80px;
 }
 
 .baby-selector.selected {
-  background-color: #e0e0e0;
-  color: #1a1a2e;
+  background-color: black;
+  color: white;
+  border-color: white;
 }
 
 .baby-photo {
@@ -226,6 +254,34 @@ async function signUp() {
 .baby-name {
   font-size: clamp(0.875rem, 2.5vw, 1.25rem);
   font-weight: 500;
+}
+
+.edit-baby-btn {
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+}
+
+.edit-baby-btn:hover {
+  opacity: 1;
+  background-color: currentColor;
+  color: #333;
+}
+
+.baby-selector.selected .edit-baby-btn {
+  color: white;
+}
+
+.baby-selector.selected .edit-baby-btn:hover {
+  background-color: white;
+  color: black;
 }
 
 .action-grid {
