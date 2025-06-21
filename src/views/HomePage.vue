@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
 import RecordModal from '../components/RecordModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 
-// A comment to force a refresh
-const router = useRouter()
 const store = useBabyStore()
 
 // State
