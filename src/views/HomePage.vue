@@ -132,15 +132,15 @@ async function signOut() {
           :class="{ 'selected': selectedBaby?.id === baby.id }"
           @click="selectBaby(baby)"
         >
+          <button class="edit-baby-btn" @click.stop="openEditBabyModal(baby)">
+            <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
+          </button>
           <img 
             :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" 
             :alt="baby.name" 
             class="baby-photo" 
           />
           <span class="baby-name">{{ baby.name }}</span>
-          <button v-if="selectedBaby?.id === baby.id" class="edit-baby-btn" @click.stop="openEditBabyModal(baby)">
-            Edit
-          </button>
         </div>
       </div>
 
@@ -267,25 +267,27 @@ async function signOut() {
 }
 
 .baby-selector {
-  padding: clamp(0.5rem, 2vw, 1rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 1rem;
   border-radius: 1.5rem;
   cursor: pointer;
-  text-align: center;
   background-color: transparent;
   border: 2px solid transparent;
   transition: all 0.2s ease-in-out;
-  min-width: 80px;
+  min-width: 120px;
 }
 
 .baby-selector.selected {
   background-color: black;
-  color: white;
   border-color: white;
 }
 
 .baby-photo {
-  width: clamp(60px, 15vw, 100px);
-  height: clamp(60px, 15vw, 100px);
+  width: clamp(80px, 15vw, 100px);
+  height: clamp(80px, 15vw, 100px);
   border-radius: 50%;
   object-fit: cover;
   margin-bottom: 0.5rem;
@@ -297,31 +299,31 @@ async function signOut() {
 }
 
 .edit-baby-btn {
-  background: none;
-  border: 1px solid currentColor;
-  color: inherit;
-  font-size: 0.8rem;
-  padding: 2px 8px;
-  border-radius: 12px;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   opacity: 0.7;
   transition: all 0.2s;
-  margin-top: 0.5rem;
+}
+
+.edit-baby-btn img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1);
 }
 
 .edit-baby-btn:hover {
   opacity: 1;
-  background-color: currentColor;
-  color: #333;
-}
-
-.baby-selector.selected .edit-baby-btn {
-  color: white;
-}
-
-.baby-selector.selected .edit-baby-btn:hover {
-  background-color: white;
-  color: black;
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 .action-grid {
