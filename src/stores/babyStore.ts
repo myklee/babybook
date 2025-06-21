@@ -225,25 +225,27 @@ export const useBabyStore = defineStore('baby', () => {
   }
 
   // Add a new diaper change
-  async function addDiaperChange(babyId: string, type: DiaperChange['type'], notes?: string) {
+  async function addDiaperChange(babyId: string, type: DiaperChange['type'], notes?: string, timestamp?: Date) {
     if (!currentUser.value) throw new Error('User not authenticated')
+
+    const newChange = {
+      baby_id: babyId,
+      type,
+      notes,
+      user_id: currentUser.value.id,
+      timestamp: timestamp ? timestamp.toISOString() : new Date().toISOString()
+    }
 
     const { data, error } = await supabase
       .from('diaper_changes')
-      .insert({
-        baby_id: babyId,
-        type,
-        notes: notes || null,
-        timestamp: new Date().toISOString(),
-        user_id: currentUser.value.id
-      })
+      .insert([newChange])
       .select()
-      .single()
 
     if (error) throw error
     
-    diaperChanges.value.unshift(data)
-    return data
+    if (data) {
+      diaperChanges.value.push(data[0])
+    }
   }
 
   // Add a new sleep session
