@@ -168,7 +168,7 @@ async function signUp() {
 .home-page {
   background-color: #1a1a2e;
   min-height: 100vh;
-  padding: 2rem;
+  padding: 1rem;
   color: white;
   display: flex;
   flex-direction: column;
@@ -177,33 +177,37 @@ async function signUp() {
 
 .app-content {
   width: 100%;
-  max-width: 400px;
+  max-width: 600px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 0 1rem;
 }
 
 .main-title {
-  font-size: 3rem;
+  font-size: clamp(2rem, 5vw, 3rem);
   font-weight: bold;
   margin-bottom: 2rem;
+  text-align: center;
 }
 
 .baby-selectors {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  gap: clamp(0.5rem, 2vw, 1rem);
   margin-bottom: 2rem;
+  flex-wrap: wrap;
 }
 
 .baby-selector {
-  padding: 1rem;
+  padding: clamp(0.5rem, 2vw, 1rem);
   border-radius: 1.5rem;
   cursor: pointer;
   text-align: center;
   background-color: black;
   border: 2px solid transparent;
   transition: all 0.2s ease-in-out;
+  min-width: 80px;
 }
 
 .baby-selector.selected {
@@ -212,44 +216,50 @@ async function signUp() {
 }
 
 .baby-photo {
-  width: 100px;
-  height: 100px;
+  width: clamp(60px, 15vw, 100px);
+  height: clamp(60px, 15vw, 100px);
   border-radius: 50%;
   object-fit: cover;
   margin-bottom: 0.5rem;
 }
 
 .baby-name {
-  font-size: 1.25rem;
+  font-size: clamp(0.875rem, 2.5vw, 1.25rem);
   font-weight: 500;
 }
 
 .action-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  gap: clamp(0.5rem, 2vw, 1rem);
   width: 100%;
+  max-width: 500px;
 }
 
 .action-btn {
-  padding: 1.5rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
   border-radius: 1.5rem;
   border: none;
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 3vw, 1.5rem);
   font-weight: 600;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  height: 150px;
+  gap: clamp(0.5rem, 2vw, 1rem);
+  height: clamp(100px, 25vw, 150px);
   color: black;
+  transition: transform 0.2s ease;
+}
+
+.action-btn:hover {
+  transform: scale(1.05);
 }
 
 .icon {
-  width: 48px;
-  height: 48px;
+  width: clamp(32px, 8vw, 48px);
+  height: clamp(32px, 8vw, 48px);
   stroke-width: 1;
   flex-shrink: 0;
 }
@@ -307,11 +317,80 @@ async function signUp() {
 /* Fallback for auth section if needed */
 .auth-section {
   text-align: center;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
 }
 .auth-buttons {
   margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 .btn {
-  margin: 0 0.5rem;
+  margin: 0;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+.btn-primary {
+  background-color: #9c27b0;
+  color: white;
+}
+.btn-primary:hover {
+  background-color: #7b1fa2;
+}
+.btn-secondary {
+  background-color: #9e9e9e;
+  color: white;
+}
+.btn-secondary:hover {
+  background-color: #757575;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .home-page {
+    padding: 0.5rem;
+  }
+  
+  .app-content {
+    padding: 0 0.5rem;
+  }
+  
+  .baby-selectors {
+    gap: 0.5rem;
+  }
+  
+  .action-grid {
+    gap: 0.5rem;
+  }
+  
+  .action-btn {
+    padding: 1rem;
+    height: 100px;
+  }
+}
+
+@media (min-width: 768px) {
+  .home-page {
+    padding: 2rem;
+  }
+  
+  .app-content {
+    padding: 0 2rem;
+  }
+  
+  .baby-selectors {
+    gap: 1.5rem;
+  }
+  
+  .action-grid {
+    gap: 1.5rem;
+  }
 }
 </style> 
