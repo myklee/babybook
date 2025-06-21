@@ -4,7 +4,8 @@ import { useBabyStore } from '../stores/babyStore'
 import { format } from 'date-fns'
 import EditRecord from './EditRecord.vue'
 
-import flaskIcon from '../assets/icons/flask-conical.svg'
+import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
+import formulaIcon from '../assets/icons/flask-conical.svg'
 import poopIcon from '../assets/icons/hugeicons_poop.svg'
 import dropletsIcon from '../assets/icons/droplets.svg'
 
@@ -32,11 +33,13 @@ const sleepSessions = computed(() => {
 
 function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep') {
   if (category === 'feeding') {
-    return flaskIcon;
+    if (item.type === 'breast') return breastIcon;
+    if (item.type === 'formula') return formulaIcon;
+    return formulaIcon; // Default for 'solid' or others
   }
   if (category === 'diaper') {
-    if (item.type === 'wet') return dropletsIcon
-    return poopIcon // for 'dirty' and 'both'
+    if (item.type === 'pee') return dropletsIcon
+    return poopIcon // for 'poop' and 'both'
   }
   return null // No icon for sleep yet
 }

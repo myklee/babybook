@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
@@ -7,6 +8,7 @@ import EditBabyModal from '../components/EditBabyModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 
 const store = useBabyStore()
+const router = useRouter()
 
 // State
 const selectedBaby = ref<any>(null)
@@ -72,6 +74,12 @@ function openEditBabyModal(baby: any) {
 function onModalSaved() {
   // Refresh data after editing
   store.initializeStore()
+}
+
+function goToHistory() {
+  if (selectedBaby.value) {
+    router.push('/history')
+  }
 }
 
 // Sign in
@@ -144,13 +152,19 @@ async function signOut() {
         </div>
       </div>
 
+      <div v-if="selectedBaby" class="full-history-link-container">
+        <button @click="goToHistory" class="btn-link">
+          View full history for {{ selectedBaby.name }} &rarr;
+        </button>
+      </div>
+
       <div class="action-grid">
         <button class="action-btn breast" @click="openFeedingModal('breast')">
-          <img src="../assets/icons/flask-conical.svg" class="icon" alt="Breast" />
+          <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Breast" />
           <span>Breast</span>
         </button>
         <button class="action-btn formula" @click="openFeedingModal('formula')">
-          <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Formula" />
+          <img src="../assets/icons/flask-conical.svg" class="icon" alt="Formula" />
           <span>Formula</span>
         </button>
         <button class="action-btn poop" @click="openDiaperModal('poop')">
@@ -382,6 +396,30 @@ async function signOut() {
 
 .action-btn.pee {
   background-color: #ffd700; /* gold */
+}
+
+.full-history-link-container {
+  margin-bottom: 2rem;
+  width: 100%;
+  text-align: center;
+}
+
+.btn-link {
+  background: none;
+  border: 1px solid #4a4a7a;
+  color: #c0c0ff;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  transition: all 0.2s;
+}
+
+.btn-link:hover {
+  color: white;
+  background-color: #4a4a7a;
+  border-color: #6a6aff;
 }
 
 /* Fallback for auth section if needed */
