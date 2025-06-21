@@ -382,34 +382,6 @@ async function signOut() {
   background-color: #ffd700; /* gold */
 }
 
-:deep(.history-section h3) {
-  color: #a0a0e0;
-}
-
-:deep(.history-item) {
-  border-bottom-color: #3a3a5e;
-}
-
-:deep(.time),
-:deep(.amount),
-:deep(.notes),
-:deep(.empty-state) {
-  color: #c0c0ff;
-}
-
-:deep(.type) {
-  color: white;
-}
-
-:deep(.edit-btn) {
-  color: white;
-  opacity: 0.6;
-}
-:deep(.edit-btn:hover) {
-  background-color: #3a3a5e;
-  opacity: 1;
-}
-
 /* Fallback for auth section if needed */
 .auth-section {
   text-align: center;

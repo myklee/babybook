@@ -4,6 +4,10 @@ import { useBabyStore } from '../stores/babyStore'
 import { format } from 'date-fns'
 import EditRecord from './EditRecord.vue'
 
+import flaskIcon from '../assets/icons/flask-conical.svg'
+import poopIcon from '../assets/icons/hugeicons_poop.svg'
+import dropletsIcon from '../assets/icons/droplets.svg'
+
 const props = defineProps<{
   babyId: string
 }>()
@@ -21,6 +25,17 @@ const diaperChanges = computed(() => {
 const sleepSessions = computed(() => {
   return store.getBabySleepSessions(props.babyId)
 })
+
+function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep') {
+  if (category === 'feeding') {
+    return flaskIcon;
+  }
+  if (category === 'diaper') {
+    if (item.type === 'wet') return dropletsIcon
+    return poopIcon // for 'dirty' and 'both'
+  }
+  return null // No icon for sleep yet
+}
 
 // Edit modal state
 const showEditModal = ref(false)
@@ -55,22 +70,14 @@ function closeEditModal() {
         No feedings recorded yet
       </div>
       <ul v-else class="history-list">
-        <li v-for="feeding in feedings.slice(0, 5)" :key="feeding.id" class="history-item">
-          <div class="history-content">
-            <div class="time">{{ formatTime(feeding.timestamp) }}</div>
-            <div class="details">
-              <span class="type">{{ feeding.type }}</span>
-              <span v-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
-            </div>
-            <div v-if="feeding.notes" class="notes">{{ feeding.notes }}</div>
+        <li v-for="feeding in feedings.slice(0, 5)" :key="feeding.id" class="history-item" @click="openEditModal(feeding, 'feeding')">
+          <div class="time">{{ formatTime(feeding.timestamp) }}</div>
+          <div class="details">
+            <img :src="getIcon(feeding, 'feeding') || ''" class="item-icon" alt="Feeding" />
+            <span v-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
+            <span v-else class="type">{{ feeding.type }}</span>
           </div>
-          <button 
-            class="edit-btn" 
-            @click="openEditModal(feeding, 'feeding')"
-            title="Edit feeding"
-          >
-            ✏️
-          </button>
+          <div v-if="feeding.notes" class="notes">{{ feeding.notes }}</div>
         </li>
       </ul>
     </div>
@@ -81,21 +88,13 @@ function closeEditModal() {
         No diaper changes recorded yet
       </div>
       <ul v-else class="history-list">
-        <li v-for="change in diaperChanges.slice(0, 5)" :key="change.id" class="history-item">
-          <div class="history-content">
-            <div class="time">{{ formatTime(change.timestamp) }}</div>
-            <div class="details">
-              <span class="type">{{ change.type }}</span>
-            </div>
-            <div v-if="change.notes" class="notes">{{ change.notes }}</div>
+        <li v-for="change in diaperChanges.slice(0, 5)" :key="change.id" class="history-item" @click="openEditModal(change, 'diaper')">
+          <div class="time">{{ formatTime(change.timestamp) }}</div>
+           <div class="details">
+            <img :src="getIcon(change, 'diaper') || ''" class="item-icon" alt="Diaper" />
+            <span class="type">{{ change.type }}</span>
           </div>
-          <button 
-            class="edit-btn" 
-            @click="openEditModal(change, 'diaper')"
-            title="Edit diaper change"
-          >
-            ✏️
-          </button>
+          <div v-if="change.notes" class="notes">{{ change.notes }}</div>
         </li>
       </ul>
     </div>
@@ -106,22 +105,14 @@ function closeEditModal() {
         No sleep sessions recorded yet
       </div>
       <ul v-else class="history-list">
-        <li v-for="sleep in sleepSessions.slice(0, 5)" :key="sleep.id" class="history-item">
-          <div class="history-content">
-            <div class="time">{{ formatDate(sleep.start_time) }}<span v-if="sleep.end_time"> - {{ formatDate(sleep.end_time) }}</span></div>
+        <li v-for="sleep in sleepSessions.slice(0, 5)" :key="sleep.id" class="history-item" @click="openEditModal(sleep, 'sleep')">
+           <div class="time">{{ formatDate(sleep.start_time) }}<span v-if="sleep.end_time"> - {{ formatDate(sleep.end_time) }}</span></div>
             <div class="details">
+              <!-- No icon for sleep for now -->
               <span class="type">Sleep</span>
               <span v-if="sleep.end_time" class="amount">{{ ((new Date(sleep.end_time).getTime() - new Date(sleep.start_time).getTime()) / 60000).toFixed(0) }} min</span>
             </div>
             <div v-if="sleep.notes" class="notes">{{ sleep.notes }}</div>
-          </div>
-          <button 
-            class="edit-btn" 
-            @click="openEditModal(sleep, 'sleep')"
-            title="Edit sleep session"
-          >
-            ✏️
-          </button>
         </li>
       </ul>
     </div>
@@ -140,86 +131,88 @@ function closeEditModal() {
 <style scoped>
 .history {
   margin-top: 1rem;
+  width: 100%;
 }
 
 .history-section {
   margin-bottom: 1.5rem;
+  width: 100%;
 }
 
 .history-section h3 {
   margin: 0 0 0.5rem 0;
-  color: #666;
+  color: #a0a0e0;
   font-size: 0.9rem;
   text-transform: uppercase;
+  padding-left: 0.5rem;
 }
 
 .history-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  width: 100%;
+  padding: 0.5rem;
 }
 
 .history-item {
-  padding: 0.5rem;
-  border-bottom: 1px solid #eee;
+  background-color: #2c2c54;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 150px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-.history-item:last-child {
-  border-bottom: none;
-}
-
-.history-content {
-  flex: 1;
+.history-item:hover {
+  background-color: #40407a;
 }
 
 .time {
   font-size: 0.9rem;
-  color: #666;
+  color: #c0c0ff;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
 }
 
 .details {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
-  margin-top: 0.25rem;
 }
 
-.type {
+.item-icon {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1) opacity(0.8);
+}
+
+.amount, .type {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: white;
   text-transform: capitalize;
-  color: #333;
-}
-
-.amount {
-  color: #666;
 }
 
 .notes {
-  font-size: 0.9rem;
-  color: #666;
+  font-size: 0.8rem;
+  color: #c0c0ff;
   margin-top: 0.25rem;
-}
-
-.edit-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  opacity: 0.7;
-}
-
-.edit-btn:hover {
-  background-color: #f0f0f0;
-  opacity: 1;
+  word-break: break-word;
 }
 
 .empty-state {
-  color: #999;
+  color: #c0c0ff;
   font-style: italic;
   padding: 0.5rem;
+  text-align: center;
+  width: 100%;
 }
 </style> 

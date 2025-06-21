@@ -156,53 +156,6 @@ body {
   margin: 0;
 }
 
-.history-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background-color: white;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.history-content {
-  flex: 1;
-}
-
-.time {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 0.25rem;
-}
-
-.details {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.type {
-  background-color: #e3f2fd;
-  color: #1976d2;
-  padding: 0.25rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.amount {
-  color: #666;
-  font-size: 0.875rem;
-}
-
-.notes {
-  color: #666;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
 /* Modal styles */
 .record-modal-overlay,
 .edit-record-overlay {
