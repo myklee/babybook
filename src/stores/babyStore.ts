@@ -16,6 +16,7 @@ export const useBabyStore = defineStore('baby', () => {
   const isLoading = ref(false)
   const currentUser = ref<any>(null)
   const isDataLoading = ref(false) // Guard to prevent multiple simultaneous loads
+  const authListenerSet = ref(false)
 
   // Initialize store and load data
   async function initializeStore() {
@@ -34,6 +35,18 @@ export const useBabyStore = defineStore('baby', () => {
       }
     } catch (error) {
       console.error('Error initializing store:', error)
+      // If it's a session error, just clear the data and continue
+      if (error instanceof Error && error.message?.includes('Auth session missing')) {
+        console.log('No active session, clearing data and continuing...')
+        currentUser.value = null
+        babies.value = []
+        feedings.value = []
+        diaperChanges.value = []
+        sleepSessions.value = []
+        return
+      }
+      // For other errors, just log them but don't throw
+      console.error('Store initialization error:', error)
     }
   }
 
@@ -42,6 +55,12 @@ export const useBabyStore = defineStore('baby', () => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error) {
+        // Handle AuthSessionMissingError gracefully
+        if (error.message?.includes('Auth session missing') || error.message?.includes('AuthSessionMissingError')) {
+          console.log('No active session found, user needs to sign in')
+          currentUser.value = null
+          return
+        }
         console.error('Error getting user:', error)
         currentUser.value = null
         return
@@ -50,25 +69,34 @@ export const useBabyStore = defineStore('baby', () => {
       currentUser.value = user
       console.log('User loaded:', user?.email)
       
-      // Listen for auth changes
-      supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.email)
-        currentUser.value = session?.user || null
-        
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Only load data if not already loading
-          if (!isDataLoading.value) {
-            await loadData()
+      // Set up auth state change listener only once
+      if (!authListenerSet.value) {
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state change:', event, session?.user?.email)
+          currentUser.value = session?.user || null
+          
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            // Only load data if not already loading
+            if (!isDataLoading.value) {
+              await loadData()
+            }
+          } else if (event === 'SIGNED_OUT') {
+            babies.value = []
+            feedings.value = []
+            diaperChanges.value = []
+            sleepSessions.value = []
           }
-        } else if (event === 'SIGNED_OUT') {
-          babies.value = []
-          feedings.value = []
-          diaperChanges.value = []
-          sleepSessions.value = []
-        }
-      })
+        })
+        authListenerSet.value = true
+      }
     } catch (error) {
       console.error('Error in loadUser:', error)
+      // Handle AuthSessionMissingError gracefully
+      if (error instanceof Error && error.message?.includes('Auth session missing')) {
+        console.log('No active session found, user needs to sign in')
+        currentUser.value = null
+        return
+      }
       currentUser.value = null
     }
   }

@@ -104,12 +104,25 @@ async function signUp() {
     }
   }
 }
+
+// Sign out
+async function signOut() {
+  try {
+    await store.signOut()
+  } catch (error) {
+    console.error('Sign out error:', error)
+    alert('Failed to sign out. Please try again.')
+  }
+}
 </script>
 
 <template>
   <div class="home-page">
     <div v-if="isAuthenticated" class="app-content">
-      <h1 class="main-title">Baby Book</h1>
+      <div class="header">
+        <h1 class="main-title">Baby Book</h1>
+        <button @click="signOut" class="sign-out-btn">Sign Out</button>
+      </div>
 
       <div class="baby-selectors">
         <div
@@ -211,11 +224,38 @@ async function signUp() {
   padding: 0 1rem;
 }
 
+.header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
 .main-title {
   font-size: clamp(2rem, 5vw, 3rem);
   font-weight: bold;
-  margin-bottom: 2rem;
+  margin: 0;
   text-align: center;
+  flex: 1;
+}
+
+.sign-out-btn {
+  background: none;
+  border: 1px solid #666;
+  color: #ccc;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.sign-out-btn:hover {
+  background-color: #666;
+  color: white;
+  border-color: #888;
 }
 
 .baby-selectors {

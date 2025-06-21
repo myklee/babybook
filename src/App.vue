@@ -26,7 +26,10 @@ function handleFocus() {
   const now = Date.now()
   if (now - lastRefreshTime.value > REFRESH_COOLDOWN) {
     console.log('Window focused, refreshing data...')
-    store.initializeStore()
+    // Only refresh if user is authenticated
+    if (store.currentUser) {
+      store.initializeStore()
+    }
     lastRefreshTime.value = now
   } else {
     console.log('Skipping refresh due to cooldown')
@@ -38,7 +41,10 @@ function handleVisibilityChange() {
     const now = Date.now()
     if (now - lastRefreshTime.value > REFRESH_COOLDOWN) {
       console.log('Tab became visible, refreshing data...')
-      store.initializeStore()
+      // Only refresh if user is authenticated
+      if (store.currentUser) {
+        store.initializeStore()
+      }
       lastRefreshTime.value = now
     } else {
       console.log('Skipping refresh due to cooldown')
