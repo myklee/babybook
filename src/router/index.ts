@@ -15,7 +15,7 @@ const routes = [
     component: FeedingsPage
   },
   {
-    path: '/history',
+    path: '/history/:babyId',
     name: 'History',
     component: BabyHistoryPage
   }

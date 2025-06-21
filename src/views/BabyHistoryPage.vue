@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { format } from 'date-fns'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
@@ -28,21 +28,23 @@ type HistoryEvent = {
 
 const store = useBabyStore()
 const router = useRouter()
+const route = useRoute()
 
 const selectedBaby = ref<any>(null)
 
-// When the component mounts, if there's a selected baby in the store, use it.
+// When the component mounts, get the baby ID from the route.
 onMounted(() => {
+  const babyId = route.params.babyId as string;
   if (store.babies.length > 0) {
-    // A bit of a hack: assume the last selected baby on home is the one we want.
-    // A better approach would be to pass babyId in the route.
-    selectedBaby.value = store.babies.find(b => b.id === store.babies[store.babies.length - 1].id) || store.babies[0]
+    selectedBaby.value = store.babies.find(b => b.id === babyId)
   }
 })
 
+// Watch for changes in the store's babies array, in case it loads late.
 watch(() => store.babies, (newBabies) => {
   if (newBabies.length > 0 && !selectedBaby.value) {
-    selectedBaby.value = newBabies[0];
+    const babyId = route.params.babyId as string;
+    selectedBaby.value = newBabies.find(b => b.id === babyId)
   }
 });
 
@@ -63,7 +65,7 @@ const combinedHistory = computed((): HistoryEvent[] => {
     event_type: 'diaper',
     event_time: d.timestamp,
     notes: d.notes,
-    diaper_type: d.type
+    diaper_type: d.type as 'pee' | 'poop' | 'both'
   }))
 
   const sleeps: HistoryEvent[] = store.getBabySleepSessions(selectedBaby.value.id).map(s => ({

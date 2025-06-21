@@ -78,7 +78,7 @@ function onModalSaved() {
 
 function goToHistory() {
   if (selectedBaby.value) {
-    router.push('/history')
+    router.push(`/history/${selectedBaby.value.id}`)
   }
 }
 
