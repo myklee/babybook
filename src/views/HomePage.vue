@@ -15,7 +15,7 @@ const showDiaperModal = ref(false)
 const showEditBabyModal = ref(false)
 const editingBaby = ref<any>(null)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
-const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
+const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
 // Auth state
 const isAuthenticated = computed(() => !!store.currentUser)
@@ -59,7 +59,7 @@ function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
   showFeedingModal.value = true
 }
 
-function openDiaperModal(type: 'wet' | 'dirty' | 'both') {
+function openDiaperModal(type: 'pee' | 'poop' | 'both') {
   diaperType.value = type
   showDiaperModal.value = true
 }
@@ -153,11 +153,11 @@ async function signOut() {
           <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Formula" />
           <span>Formula</span>
         </button>
-        <button class="action-btn poop" @click="openDiaperModal('dirty')">
+        <button class="action-btn poop" @click="openDiaperModal('poop')">
           <img src="../assets/icons/hugeicons_poop.svg" class="icon" alt="Poop" />
           <span>Poop</span>
         </button>
-        <button class="action-btn pee" @click="openDiaperModal('wet')">
+        <button class="action-btn pee" @click="openDiaperModal('pee')">
           <img src="../assets/icons/droplets.svg" class="icon" alt="Pee" />
           <span>Pee</span>
         </button>

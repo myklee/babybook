@@ -3,9 +3,9 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 
 const props = defineProps<{
-  diaperType?: 'wet' | 'dirty' | 'both'
   babyId: string
   babyName: string
+  diaperType: 'pee' | 'poop' | 'both'
 }>()
 
 const emit = defineEmits<{
@@ -16,21 +16,22 @@ const emit = defineEmits<{
 const store = useBabyStore()
 
 // Form data
-const diaperTypeRef = ref<'wet' | 'dirty' | 'both'>('wet')
+const type = ref<'pee' | 'poop' | 'both'>(props.diaperType)
 const notes = ref('')
 const customDate = ref('')
 const customTime = ref('')
 const isSaving = ref(false)
 const timeInput = ref<HTMLInputElement | null>(null)
 
+const options = [
+  { value: 'pee', label: 'Pee' },
+  { value: 'poop', label: 'Poop' },
+  { value: 'both', label: 'Both' }
+]
+
 onMounted(async () => {
   console.log('DiaperModal mounted with babyName:', props.babyName)
   
-  // Pre-fill the type if provided
-  if (props.diaperType) {
-    diaperTypeRef.value = props.diaperType
-  }
-
   // Pre-fill current date and time
   const now = new Date()
   const year = now.getFullYear()
@@ -52,7 +53,7 @@ async function handleSubmit() {
     const timestamp = customDate.value && customTime.value ? new Date(`${customDate.value}T${customTime.value}`) : new Date()
     await store.addDiaperChange(
       props.babyId,
-      diaperTypeRef.value,
+      type.value,
       notes.value,
       timestamp
     )
@@ -93,10 +94,8 @@ async function handleSubmit() {
 
         <div class="form-group">
           <label>Type</label>
-          <select v-model="diaperTypeRef">
-            <option value="wet">Wet</option>
-            <option value="dirty">Dirty</option>
-            <option value="both">Both</option>
+          <select v-model="type">
+            <option v-for="option in options" :value="option.value">{{ option.label }}</option>
           </select>
         </div>
 

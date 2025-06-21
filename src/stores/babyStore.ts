@@ -353,7 +353,7 @@ export const useBabyStore = defineStore('baby', () => {
   }
 
   // Add a new diaper change
-  async function addDiaperChange(babyId: string, type: DiaperChange['type'], notes?: string, timestamp?: Date) {
+  async function addDiaperChange(babyId: string, type: 'pee' | 'poop' | 'both', notes?: string, timestamp?: Date) {
     if (!currentUser.value) throw new Error('User not authenticated')
 
     const newChange = {
