@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
+import { format } from 'date-fns'
 
 const props = defineProps<{
   record: any
@@ -19,60 +20,44 @@ const amount = ref(0)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 const notes = ref('')
-const customTimestamp = ref('')
-const customEndTimestamp = ref('')
+const customDate = ref('')
+const customTime = ref('')
+const customEndDate = ref('')
+const customEndTime = ref('')
 const isSaving = ref(false)
 
 onMounted(() => {
-  if (props.type === 'feeding') {
-    const feeding = props.record
-    amount.value = feeding.amount
-    feedingType.value = feeding.type
-    notes.value = feeding.notes || ''
-    
-    // Format stored ISO date string for datetime-local input
-    const date = new Date(feeding.timestamp)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
-  } else if (props.type === 'diaper') {
-    const diaperChange = props.record
-    diaperType.value = diaperChange.type
-    notes.value = diaperChange.notes || ''
-    
-    // Format stored ISO date string for datetime-local input
-    const date = new Date(diaperChange.timestamp)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
+  const setDateTime = (timestamp: string, isEnd = false) => {
+    const date = new Date(timestamp)
+    const dateString = format(date, 'yyyy-MM-dd')
+    const timeString = format(date, 'HH:mm')
+    if (isEnd) {
+      customEndDate.value = dateString
+      customEndTime.value = timeString
+    } else {
+      customDate.value = dateString
+      customTime.value = timeString
+    }
+  }
+
+  if (props.type === 'feeding' || props.type === 'diaper') {
+    if (props.type === 'feeding') {
+      const feeding = props.record
+      amount.value = feeding.amount
+      feedingType.value = feeding.type
+      notes.value = feeding.notes || ''
+    } else { // Diaper
+      const diaperChange = props.record
+      diaperType.value = diaperChange.type
+      notes.value = diaperChange.notes || ''
+    }
+    setDateTime(props.record.timestamp)
   } else if (props.type === 'sleep') {
     const sleep = props.record
     notes.value = sleep.notes || ''
-    
-    // Format start and end time for datetime-local input
-    const start = new Date(sleep.start_time)
-    const end = sleep.end_time ? new Date(sleep.end_time) : null
-    const year = start.getFullYear()
-    const month = String(start.getMonth() + 1).padStart(2, '0')
-    const day = String(start.getDate()).padStart(2, '0')
-    const hours = String(start.getHours()).padStart(2, '0')
-    const minutes = String(start.getMinutes()).padStart(2, '0')
-    customTimestamp.value = `${year}-${month}-${day}T${hours}:${minutes}`
-    if (end) {
-      const endYear = end.getFullYear()
-      const endMonth = String(end.getMonth() + 1).padStart(2, '0')
-      const endDay = String(end.getDate()).padStart(2, '0')
-      const endHours = String(end.getHours()).padStart(2, '0')
-      const endMinutes = String(end.getMinutes()).padStart(2, '0')
-      customEndTimestamp.value = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`
-    } else {
-      customEndTimestamp.value = ''
+    setDateTime(sleep.start_time)
+    if (sleep.end_time) {
+      setDateTime(sleep.end_time, true)
     }
   }
 })
@@ -80,26 +65,32 @@ onMounted(() => {
 async function handleSubmit() {
   isSaving.value = true
   try {
-    const timestamp = customTimestamp.value ? new Date(customTimestamp.value) : new Date()
-    
+    const getTimestamp = (dateStr: string, timeStr: string) => {
+      if (!dateStr || !timeStr) return null
+      return new Date(`${dateStr}T${timeStr}`)
+    }
+
+    const startTimestamp = getTimestamp(customDate.value, customTime.value)
+    if (!startTimestamp) throw new Error('Invalid start time')
+
     if (props.type === 'feeding') {
       await store.updateFeeding(props.record.id, {
         amount: amount.value,
         type: feedingType.value,
         notes: notes.value,
-        timestamp: timestamp.toISOString()
+        timestamp: startTimestamp.toISOString()
       })
     } else if (props.type === 'diaper') {
       await store.updateDiaperChange(props.record.id, {
         type: diaperType.value,
         notes: notes.value,
-        timestamp: timestamp.toISOString()
+        timestamp: startTimestamp.toISOString()
       })
     } else if (props.type === 'sleep') {
-      const endTime = customEndTimestamp.value ? new Date(customEndTimestamp.value) : null
+      const endTimestamp = getTimestamp(customEndDate.value, customEndTime.value)
       await store.updateSleepSession(props.record.id, {
-        start_time: timestamp.toISOString(),
-        end_time: endTime ? endTime.toISOString() : null,
+        start_time: startTimestamp.toISOString(),
+        end_time: endTimestamp ? endTimestamp.toISOString() : null,
         notes: notes.value
       })
     }
@@ -148,26 +139,24 @@ async function handleDelete() {
       <form @submit.prevent="handleSubmit">
         <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
           <label>Time</label>
-          <input 
-            type="datetime-local" 
-            v-model="customTimestamp" 
-            required
-          >
+          <div class="datetime-group">
+            <input type="date" v-model="customDate" required>
+            <input type="time" v-model="customTime" required>
+          </div>
         </div>
         <div v-if="type === 'sleep'" class="form-group">
           <label>Start Time</label>
-          <input 
-            type="datetime-local" 
-            v-model="customTimestamp" 
-            required
-          >
+          <div class="datetime-group">
+            <input type="date" v-model="customDate" required>
+            <input type="time" v-model="customTime" required>
+          </div>
         </div>
         <div v-if="type === 'sleep'" class="form-group">
           <label>End Time</label>
-          <input 
-            type="datetime-local" 
-            v-model="customEndTimestamp"
-          >
+          <div class="datetime-group">
+            <input type="date" v-model="customEndDate">
+            <input type="time" v-model="customEndTime">
+          </div>
         </div>
         <div v-if="type === 'feeding'" class="form-group">
           <label>Amount (ml)</label>
@@ -310,5 +299,14 @@ async function handleDelete() {
 
 .btn-cancel:hover {
   background-color: #757575;
+}
+
+.datetime-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.datetime-group input {
+  flex: 1;
 }
 </style> 
