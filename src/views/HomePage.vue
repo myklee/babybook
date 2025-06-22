@@ -78,8 +78,12 @@ function onModalSaved() {
 
 function goToHistory() {
   if (selectedBaby.value) {
-    router.push(`/history/${selectedBaby.value.id}`)
+    router.push(`/baby/${selectedBaby.value.id}`)
   }
+}
+
+function goToBabyHistory(baby: any) {
+  router.push(`/baby/${baby.id}`)
 }
 
 // Sign in
@@ -140,15 +144,20 @@ async function signOut() {
           :class="{ 'selected': selectedBaby?.id === baby.id }"
           @click="selectBaby(baby)"
         >
-          <button class="edit-baby-btn" @click.stop="openEditBabyModal(baby)">
-            <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
-          </button>
           <img 
             :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" 
             :alt="baby.name" 
             class="baby-photo" 
           />
-          <span class="baby-name">{{ baby.name }}</span>
+          <div class="baby-name-container">
+            <span class="baby-name">{{ baby.name }}</span>
+            <button class="history-icon-btn" @click.stop="goToBabyHistory(baby)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="9,6 15,12 9,18"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -307,37 +316,38 @@ async function signOut() {
   margin-bottom: 0.5rem;
 }
 
+.baby-name-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .baby-name {
   font-size: clamp(0.875rem, 2.5vw, 1.25rem);
   font-weight: 500;
 }
 
-.edit-baby-btn {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  background: rgba(0, 0, 0, 0.5);
+.history-icon-btn {
+  background: none;
   border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 0;
+  margin-left: 0.5rem;
   cursor: pointer;
   opacity: 0.7;
   transition: all 0.2s;
+  color: white;
+  display: flex;
+  align-items: center;
 }
 
-.edit-baby-btn img {
-  width: 16px;
-  height: 16px;
-  filter: brightness(0) invert(1);
-}
-
-.edit-baby-btn:hover {
+.history-icon-btn:hover {
   opacity: 1;
-  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.history-icon-btn svg {
+  width: clamp(0.875rem, 2.5vw, 1.25rem);
+  height: clamp(0.875rem, 2.5vw, 1.25rem);
+  filter: brightness(0) invert(1);
 }
 
 .action-grid {

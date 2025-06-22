@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import { useRouter, useRoute } from 'vue-router'
 import { format } from 'date-fns'
+import EditBabyModal from '../components/EditBabyModal.vue'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
@@ -31,6 +32,8 @@ const router = useRouter()
 const route = useRoute()
 
 const selectedBaby = ref<any>(null)
+const showEditBabyModal = ref(false)
+const editingBaby = ref<any>(null)
 
 // When the component mounts, get the baby ID from the route.
 onMounted(() => {
@@ -82,6 +85,91 @@ const combinedHistory = computed((): HistoryEvent[] => {
   return allEvents.sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime())
 })
 
+// Stats computed properties
+const stats = computed(() => {
+  if (!selectedBaby.value) return null
+
+  const feedings = store.getBabyFeedings(selectedBaby.value.id)
+  const diapers = store.getBabyDiaperChanges(selectedBaby.value.id)
+  const sleeps = store.getBabySleepSessions(selectedBaby.value.id)
+
+  // Total counts
+  const totalFeedings = feedings.length
+  const totalDiapers = diapers.length
+  const totalSleeps = sleeps.length
+
+  // Feeding stats
+  const totalMilk = feedings.reduce((sum, f) => sum + (f.amount || 0), 0)
+  const breastFeedings = feedings.filter(f => f.type === 'breast').length
+  const formulaFeedings = feedings.filter(f => f.type === 'formula').length
+
+  // Diaper stats
+  const peeDiapers = diapers.filter(d => d.type === 'wet').length
+  const poopDiapers = diapers.filter(d => d.type === 'dirty').length
+  const bothDiapers = diapers.filter(d => d.type === 'both').length
+
+  // Sleep stats
+  const totalSleepMinutes = sleeps.reduce((sum, s) => {
+    if (s.end_time && s.start_time) {
+      return sum + ((new Date(s.end_time).getTime() - new Date(s.start_time).getTime()) / 60000)
+    }
+    return sum
+  }, 0)
+
+  // Recent activity (last 24 hours)
+  const now = new Date()
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  
+  const recentFeedings = feedings.filter(f => new Date(f.timestamp) > yesterday).length
+  const recentDiapers = diapers.filter(d => new Date(d.timestamp) > yesterday).length
+  const recentSleeps = sleeps.filter(s => new Date(s.start_time) > yesterday).length
+
+  // Last 24 hours since 8am milk amount (same logic as homepage)
+  const last24HoursMilk = (() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    let eightAm
+
+    // If it's already past 8 AM today, the window started at 8 AM today.
+    if (now.getHours() >= 8) {
+        eightAm = new Date(today)
+        eightAm.setHours(8, 0, 0, 0)
+    } else {
+        // If it's before 8 AM today, the window started at 8 AM *yesterday*.
+        const yesterday = new Date(today)
+        yesterday.setDate(yesterday.getDate() - 1)
+        eightAm = new Date(yesterday)
+        eightAm.setHours(8, 0, 0, 0)
+    }
+
+    return feedings.filter(feeding => {
+        const feedingTimestamp = new Date(feeding.timestamp)
+        return (
+            (feeding.type === 'breast' || feeding.type === 'formula') &&
+            feeding.amount != null &&
+            feedingTimestamp >= eightAm
+        )
+    }).reduce((sum, feeding) => sum + (feeding.amount || 0), 0)
+  })()
+
+  return {
+    totalFeedings,
+    totalDiapers,
+    totalSleeps,
+    totalMilk,
+    breastFeedings,
+    formulaFeedings,
+    peeDiapers,
+    poopDiapers,
+    bothDiapers,
+    totalSleepMinutes,
+    recentFeedings,
+    recentDiapers,
+    recentSleeps,
+    last24HoursMilk
+  }
+})
+
 function getIcon(item: HistoryEvent) {
   switch (item.event_type) {
     case 'feeding':
@@ -102,6 +190,17 @@ function formatTimestamp(dateString: string) {
 function goHome() {
   router.push('/')
 }
+
+function openEditBabyModal() {
+  editingBaby.value = selectedBaby.value
+  showEditBabyModal.value = true
+}
+
+function onModalSaved() {
+  // Refresh data after editing
+  showEditBabyModal.value = false
+  editingBaby.value = null
+}
 </script>
 
 <template>
@@ -109,9 +208,64 @@ function goHome() {
     <div v-if="selectedBaby" class="container">
       <header class="page-header">
         <button @click="goHome" class="back-btn">&larr; Back</button>
-        <h2>{{ selectedBaby.name }}'s History</h2>
-        <div class="placeholder"></div>
+        <h2>{{ selectedBaby.name }}'s Home</h2>
+        <button @click="openEditBabyModal" class="edit-baby-btn">
+          <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
+        </button>
       </header>
+      
+      <!-- Stats Section -->
+      <div v-if="stats" class="stats-section">
+        <h3>Overview</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number">{{ stats.totalFeedings }}</div>
+            <div class="stat-label">Total Feedings</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">{{ stats.totalDiapers }}</div>
+            <div class="stat-label">Total Diapers</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">{{ stats.totalSleeps }}</div>
+            <div class="stat-label">Sleep Sessions</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">{{ Math.round(stats.totalMilk) }}ml</div>
+            <div class="stat-label">Total Milk</div>
+          </div>
+        </div>
+        
+        <div class="stats-details">
+          <div class="detail-section">
+            <h4>Feedings</h4>
+            <div class="detail-grid">
+              <span>Breast: {{ stats.breastFeedings }}</span>
+              <span>Formula: {{ stats.formulaFeedings }}</span>
+              <span>Last 24h: {{ stats.recentFeedings }}</span>
+              <span>Last 24h (since 8am): {{ Math.round(stats.last24HoursMilk) }}ml</span>
+            </div>
+          </div>
+          
+          <div class="detail-section">
+            <h4>Diapers</h4>
+            <div class="detail-grid">
+              <span>Wet: {{ stats.peeDiapers }}</span>
+              <span>Dirty: {{ stats.poopDiapers }}</span>
+              <span>Both: {{ stats.bothDiapers }}</span>
+              <span>Last 24h: {{ stats.recentDiapers }}</span>
+            </div>
+          </div>
+          
+          <div class="detail-section">
+            <h4>Sleep</h4>
+            <div class="detail-grid">
+              <span>Total: {{ Math.round(stats.totalSleepMinutes / 60) }}h {{ Math.round(stats.totalSleepMinutes % 60) }}m</span>
+              <span>Last 24h: {{ stats.recentSleeps }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <ul class="history-timeline">
         <li v-if="combinedHistory.length === 0" class="empty-state">
@@ -151,6 +305,13 @@ function goHome() {
       <p>Loading baby's history...</p>
       <button @click="goHome">Go Back Home</button>
     </div>
+
+    <EditBabyModal 
+      v-if="showEditBabyModal && editingBaby"
+      :baby="editingBaby"
+      @close="showEditBabyModal = false"
+      @saved="onModalSaved"
+    />
   </div>
 </template>
 
@@ -183,6 +344,27 @@ function goHome() {
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
+}
+.edit-baby-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #666;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.edit-baby-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #888;
+}
+.edit-baby-btn img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1);
 }
 .placeholder {
   width: 70px; /* To balance the back button */
@@ -250,5 +432,74 @@ function goHome() {
   padding: 2rem;
   font-size: 1.1rem;
   color: #a0a0e0;
+}
+
+/* Stats Section Styles */
+.stats-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stats-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: #e0e0ff;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-number {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #a0a0e0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stats-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.detail-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: #c0c0ff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 0.25rem;
+}
+
+.detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-grid span {
+  font-size: 0.9rem;
+  color: #d0d0ff;
 }
 </style> 
