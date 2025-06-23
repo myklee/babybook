@@ -7,6 +7,7 @@ import DiaperModal from '../components/DiaperModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
+import { format } from 'date-fns'
 
 const store = useBabyStore()
 const router = useRouter()
@@ -174,7 +175,11 @@ function getNextFeedingTime(babyId: string) {
     const now = new Date()
     
     if (nextFeedingTime <= now) {
-      return { status: 'overdue', time: 'Overdue' }
+      return { 
+        status: 'overdue', 
+        time: 'Overdue',
+        actualTime: format(nextFeedingTime, 'h:mm a')
+      }
     }
     
     const diffMs = nextFeedingTime.getTime() - now.getTime()
@@ -188,7 +193,11 @@ function getNextFeedingTime(babyId: string) {
       timeString = `in ${minutes}m`
     }
     
-    return { status: 'upcoming', time: timeString }
+    return { 
+      status: 'upcoming', 
+      time: timeString,
+      actualTime: format(nextFeedingTime, 'h:mm a')
+    }
   } catch (error) {
     console.error('Error getting next feeding time:', error)
     return null
@@ -234,6 +243,7 @@ function getNextFeedingTime(babyId: string) {
           </div>
           <div v-if="getNextFeedingTime(baby.id)" class="baby-next-feeding" :class="getNextFeedingTime(baby.id)?.status">
             <span class="next-feeding-time">{{ getNextFeedingTime(baby.id)?.time }}</span>
+            <span class="next-feeding-actual-time">at {{ getNextFeedingTime(baby.id)?.actualTime }}</span>
           </div>
         </div>
       </div>
@@ -650,5 +660,11 @@ function getNextFeedingTime(babyId: string) {
 
 .next-feeding-time {
   font-weight: 500;
+}
+
+.next-feeding-actual-time {
+  font-size: 0.75rem;
+  color: #a0a0e0;
+  margin-left: 0.5rem;
 }
 </style> 
