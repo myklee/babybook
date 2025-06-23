@@ -113,8 +113,8 @@ const stats = computed(() => {
   const formulaFeedings = feedings.filter(f => f.type === 'formula').length
 
   // Diaper stats
-  const peeDiapers = diapers.filter(d => d.type === 'wet').length
-  const poopDiapers = diapers.filter(d => d.type === 'dirty').length
+  const peeDiapers = diapers.filter(d => d.type === 'pee').length
+  const poopDiapers = diapers.filter(d => d.type === 'poop').length
   const bothDiapers = diapers.filter(d => d.type === 'both').length
 
   // Sleep stats
