@@ -392,17 +392,22 @@ export const useBabyStore = defineStore('baby', () => {
     const newChange = {
       baby_id: babyId,
       type,
-      notes,
+      notes: notes || null,
       user_id: currentUser.value.id,
       timestamp: timestamp ? timestamp.toISOString() : new Date().toISOString()
     }
+
+    console.log('Adding diaper change with data:', newChange)
 
     const { data, error } = await supabase
       .from('diaper_changes')
       .insert([newChange])
       .select()
 
-    if (error) throw error
+    if (error) {
+      console.error('Supabase error details:', error)
+      throw error
+    }
     
     if (data) {
       diaperChanges.value.push(data[0])
@@ -618,7 +623,7 @@ export const useBabyStore = defineStore('baby', () => {
 
     return relevantFeedings.reduce((sum, feeding) => {
         const baseAmount = feeding.amount || 0;
-        const topupAmount = feeding.topup_amount || 0;
+        const topupAmount = (feeding as any).topup_amount || 0;
         return sum + baseAmount + topupAmount;
     }, 0);
   }

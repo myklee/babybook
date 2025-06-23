@@ -83,8 +83,8 @@ async function signIn() {
   if (email && password) {
     try {
       await store.signIn(email, password)
-      // Redirect to homepage after successful login
-      router.push('/')
+      // Force a page refresh to ensure all data is loaded
+      window.location.reload()
     } catch (error) {
       console.error('Sign in error:', error)
       alert('Failed to sign in. Please check your credentials.')

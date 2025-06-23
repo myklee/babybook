@@ -70,7 +70,7 @@ export interface Database {
           id: string
           baby_id: string
           timestamp: string
-          type: 'wet' | 'dirty' | 'both'
+          type: 'pee' | 'poop' | 'both'
           notes: string | null
           created_at: string
           user_id: string
@@ -79,7 +79,7 @@ export interface Database {
           id?: string
           baby_id: string
           timestamp: string
-          type: 'wet' | 'dirty' | 'both'
+          type: 'pee' | 'poop' | 'both'
           notes?: string | null
           created_at?: string
           user_id: string
@@ -88,7 +88,7 @@ export interface Database {
           id?: string
           baby_id?: string
           timestamp?: string
-          type?: 'wet' | 'dirty' | 'both'
+          type?: 'pee' | 'poop' | 'both'
           notes?: string | null
           created_at?: string
           user_id?: string

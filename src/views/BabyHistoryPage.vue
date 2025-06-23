@@ -69,7 +69,7 @@ const combinedHistory = computed((): HistoryEvent[] => {
     notes: f.notes,
     feeding_type: f.type,
     amount: f.amount,
-    topup_amount: f.topup_amount,
+    topup_amount: (f as any).topup_amount,
   }))
   
   const diapers: HistoryEvent[] = store.getBabyDiaperChanges(selectedBaby.value.id).map(d => ({
@@ -108,7 +108,7 @@ const stats = computed(() => {
   const totalSleeps = sleeps.length
 
   // Feeding stats
-  const totalMilk = feedings.reduce((sum, f) => sum + (f.amount || 0) + (f.topup_amount || 0), 0)
+  const totalMilk = feedings.reduce((sum, f) => sum + (f.amount || 0) + ((f as any).topup_amount || 0), 0)
   const breastFeedings = feedings.filter(f => f.type === 'breast').length
   const formulaFeedings = feedings.filter(f => f.type === 'formula').length
 
@@ -174,7 +174,7 @@ const stats = computed(() => {
             feeding.amount != null &&
             feedingTimestamp >= windowStart
         )
-    }).reduce((sum, feeding) => sum + (feeding.amount || 0) + (feeding.topup_amount || 0), 0)
+    }).reduce((sum, feeding) => sum + (feeding.amount || 0) + ((feeding as any).topup_amount || 0), 0)
   })()
 
   return {
@@ -235,7 +235,7 @@ const dailyFeedings = computed(() => {
     }
     
     const dayData = dailyMap.get(dateKey)!
-    dayData.total += (feeding.amount || 0) + (feeding.topup_amount || 0)
+    dayData.total += (feeding.amount || 0) + ((feeding as any).topup_amount || 0)
     dayData.count += 1
     
     if (feeding.type === 'breast') {

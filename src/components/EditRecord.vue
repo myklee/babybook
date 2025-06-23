@@ -18,7 +18,7 @@ const store = useBabyStore()
 // Form data
 const amount = ref(0)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
-const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
+const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 const notes = ref('')
 const customDate = ref('')
 const customTime = ref('')
@@ -82,7 +82,7 @@ async function handleSubmit() {
         notes: notes.value,
         timestamp: startTimestamp.toISOString(),
         topup_amount: topupAmount.value
-      })
+      } as any)
     } else if (props.type === 'diaper') {
       await store.updateDiaperChange(props.record.id, {
         type: diaperType.value,
@@ -193,8 +193,8 @@ async function handleDelete() {
         <div v-if="type === 'diaper'" class="form-group">
           <label>Type</label>
           <select v-model="diaperType">
-            <option value="wet">Wet</option>
-            <option value="dirty">Dirty</option>
+            <option value="pee">Pee</option>
+            <option value="poop">Poop</option>
             <option value="both">Both</option>
           </select>
         </div>
