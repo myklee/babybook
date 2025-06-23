@@ -336,6 +336,72 @@ function closeEditModal() {
   // Refresh data after editing to ensure UI is up to date
   store.initializeStore()
 }
+
+function getTodaysFeedings() {
+  if (!selectedBaby.value) return []
+  return store.getBabyFeedings(selectedBaby.value.id).filter(f => new Date(f.timestamp).toDateString() === new Date().toDateString())
+}
+
+function getTimelineWindow() {
+  const now = new Date()
+  let start = new Date(now)
+  let end = new Date(now)
+  if (use8amWindow.value) {
+    // 8am today to 8am tomorrow
+    if (now.getHours() >= 8) {
+      start.setHours(8, 0, 0, 0)
+      end = new Date(start)
+      end.setDate(start.getDate() + 1)
+    } else {
+      // before 8am, window is 8am yesterday to 8am today
+      start.setDate(start.getDate() - 1)
+      start.setHours(8, 0, 0, 0)
+      end = new Date(start)
+      end.setDate(start.getDate() + 1)
+    }
+  } else {
+    // 12am today to 12am tomorrow
+    start.setHours(0, 0, 0, 0)
+    end = new Date(start)
+    end.setDate(start.getDate() + 1)
+  }
+  return { start, end }
+}
+
+function getTimelineHours() {
+  // Always 24 hours, but starting at 8 or 0
+  return Array.from({ length: 24 }, (_, i) => {
+    const { start } = getTimelineWindow()
+    const hour = (start.getHours() + i) % 24
+    return hour
+  })
+}
+
+function getFeedingsInWindow() {
+  if (!selectedBaby.value) return []
+  const { start, end } = getTimelineWindow()
+  return store.getBabyFeedings(selectedBaby.value.id).filter(f => {
+    const t = new Date(f.timestamp)
+    return t >= start && t < end
+  })
+}
+
+function getFeedingMarkerStyle(feeding: any) {
+  const { start, end } = getTimelineWindow()
+  const feedingTime = new Date(feeding.timestamp)
+  const totalMs = end.getTime() - start.getTime()
+  const elapsedMs = feedingTime.getTime() - start.getTime()
+  const positionPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100))
+  const now = new Date()
+  const isCurrent = Math.abs(feedingTime.getTime() - now.getTime()) < 60 * 1000
+  const isPast = feedingTime < now
+  return {
+    left: `${positionPercent}%`,
+    backgroundColor: isCurrent ? '#ffd700' : isPast ? '#a0a0e0' : '#3a3a5e',
+    transform: isCurrent ? 'scale(1.2)' : 'scale(1)',
+    opacity: isCurrent ? 1 : isPast ? 0.8 : 0.6
+  }
+}
 </script>
 
 <template>
@@ -381,11 +447,38 @@ function closeEditModal() {
         </div>
       </header>
       
-      <!-- Last 24 Hours Highlight -->
-      <div v-if="stats" class="last24-hours-highlight">
-        <div class="highlight-content">
-          <span class="highlight-label">Since {{ use8amWindow ? '8am' : '12am' }}</span>
-          <span class="highlight-amount">{{ Math.round(stats.last24HoursMilk || 0) }}ml</span>
+      <!-- Day View Timeline -->
+      <div v-if="stats" class="day-view-timeline">
+        <div class="timeline-header">
+          <span class="timeline-title">Today's Feedings</span>
+          <span class="timeline-total">{{ Math.round(stats.last24HoursMilk || 0) }}ml total</span>
+        </div>
+        <div class="timeline-container">
+          <div class="hour-marks">
+            <div v-for="(hour, i) in getTimelineHours()" :key="hour" class="hour-mark" :class="{ 'current-hour': hour === new Date().getHours() }">
+              <div class="hour-line"></div>
+              <span class="hour-label">
+                {{
+                  (i === 0 || hour === 0 || hour === 12)
+                    ? (hour === 0 ? '12AM' : hour === 12 ? '12PM' : (hour > 12 ? (hour - 12) : hour) + (hour >= 12 ? 'PM' : 'AM'))
+                    : (hour > 12 ? (hour - 12) : hour)
+                }}
+              </span>
+            </div>
+          </div>
+          <div class="timeline-track">
+            <div 
+              v-for="feeding in getFeedingsInWindow()" 
+              :key="feeding.id"
+              class="feeding-marker"
+              :style="getFeedingMarkerStyle(feeding)"
+              :title="`${feeding.type}: ${feeding.amount}ml at ${format(new Date(feeding.timestamp), 'h:mm a')}`"
+            >
+              <div class="feeding-tooltip">
+                {{ feeding.type === 'breast' ? 'B' : 'F' }} {{ feeding.amount }}ml
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -810,31 +903,135 @@ function closeEditModal() {
   transform: translateX(26px);
 }
 
-/* Last 24 Hours Highlight Styles */
-.last24-hours-highlight {
+/* Day View Timeline Styles */
+.day-view-timeline {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 1.5rem;
   margin-bottom: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.highlight-content {
+.timeline-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 1rem;
 }
 
-.highlight-label {
-  font-size: 1rem;
+.timeline-title {
+  font-size: 1.25rem;
   font-weight: bold;
   color: #e0e0ff;
 }
 
-.highlight-amount {
+.timeline-total {
   font-size: 1.5rem;
   font-weight: bold;
   color: #ffd700;
+}
+
+.timeline-container {
+  position: relative;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1rem 0;
+}
+
+.hour-marks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: stretch;
+}
+
+.hour-mark {
+  position: relative;
+  flex: 1 0 0%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.hour-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.current-hour .hour-line {
+  background-color: #ffd700;
+}
+
+.hour-label {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  font-size: 0.7rem;
+  color: #a0a0e0;
+  white-space: nowrap;
+  text-align: left;
+  transform: translateX(0);
+}
+
+.hour-mark:last-child .hour-label {
+  right: 0;
+  left: auto;
+  text-align: right;
+  transform: translateX(0);
+}
+
+.timeline-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 20px;
+  transform: translateY(-50%);
+}
+
+.feeding-marker {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.feeding-marker:hover {
+  transform: translate(-50%, -50%) scale(1.3);
+}
+
+.feeding-tooltip {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.feeding-marker:hover .feeding-tooltip {
+  opacity: 1;
 }
 
 .topup-display {
