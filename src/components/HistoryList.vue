@@ -88,7 +88,6 @@ function closeEditModal() {
             <img :src="getIcon(feeding, 'feeding') || ''" class="item-icon" alt="Feeding" />
             <span v-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
             <span v-if="feeding.topup_amount && feeding.topup_amount > 0" class="topup-amount">+{{ feeding.topup_amount }}</span>
-            <span v-else class="type">{{ feeding.type }}</span>
           </div>
           <div v-if="feeding.notes" class="notes">{{ feeding.notes }}</div>
         </li>
