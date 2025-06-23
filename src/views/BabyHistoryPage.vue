@@ -4,6 +4,7 @@ import { useBabyStore } from '../stores/babyStore'
 import { useRouter, useRoute } from 'vue-router'
 import { format } from 'date-fns'
 import EditBabyModal from '../components/EditBabyModal.vue'
+import EditRecord from '../components/EditRecord.vue'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
@@ -35,6 +36,11 @@ const selectedBaby = ref<any>(null)
 const showEditBabyModal = ref(false)
 const editingBaby = ref<any>(null)
 const use8amWindow = ref(true) // Toggle for 8am vs 12am window
+
+// Edit modal state
+const showEditModal = ref(false)
+const editingRecord = ref<any>(null)
+const editingType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 
 // When the component mounts, get the baby ID from the route.
 onMounted(() => {
@@ -267,6 +273,43 @@ function onModalSaved() {
   showEditBabyModal.value = false
   editingBaby.value = null
 }
+
+function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep') {
+  // Create a copy of the record to avoid modifying the original
+  const recordCopy = { ...record }
+  
+  // Map the record structure to match what EditRecord expects
+  if (type === 'feeding') {
+    // EditRecord expects: id, amount, type, notes, timestamp
+    recordCopy.timestamp = record.event_time
+    recordCopy.type = record.feeding_type
+  } else if (type === 'diaper') {
+    // EditRecord expects: id, type, notes, timestamp
+    recordCopy.timestamp = record.event_time
+    // Map diaper types from new terminology to old terminology
+    if (record.diaper_type === 'pee') {
+      recordCopy.type = 'wet'
+    } else if (record.diaper_type === 'poop') {
+      recordCopy.type = 'dirty'
+    } else {
+      recordCopy.type = record.diaper_type // 'both' stays the same
+    }
+  } else if (type === 'sleep') {
+    // EditRecord expects: id, start_time, end_time, notes
+    // These should already be correct from the mapping
+  }
+  
+  editingRecord.value = recordCopy
+  editingType.value = type
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editingRecord.value = null
+  // Refresh data after editing to ensure UI is up to date
+  store.initializeStore()
+}
 </script>
 
 <template>
@@ -368,7 +411,7 @@ function onModalSaved() {
         <li v-if="combinedHistory.length === 0" class="empty-state">
           No activities recorded yet for {{ selectedBaby.name }}.
         </li>
-        <li v-for="item in combinedHistory" :key="`${item.event_type}-${item.id}`" class="timeline-item">
+        <li v-for="item in combinedHistory" :key="`${item.event_type}-${item.id}`" class="timeline-item" @click="openEditModal(item, item.event_type)">
           <div class="item-icon-container">
             <img :src="getIcon(item)" class="item-icon" />
           </div>
@@ -408,6 +451,15 @@ function onModalSaved() {
       :baby="editingBaby"
       @close="showEditBabyModal = false"
       @saved="onModalSaved"
+    />
+
+    <!-- Edit Record Modal -->
+    <EditRecord
+      v-if="showEditModal && editingRecord"
+      :record="editingRecord"
+      :type="editingType"
+      @close="closeEditModal"
+      @saved="closeEditModal"
     />
   </div>
 </template>
@@ -475,6 +527,14 @@ function onModalSaved() {
   gap: 1rem;
   padding: 1rem 0;
   border-bottom: 1px solid #3a3a5e;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.timeline-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0 -1rem;
 }
 .item-icon-container {
   background-color: #2c2c54;
