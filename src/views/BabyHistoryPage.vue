@@ -372,32 +372,6 @@ function getTimelineHours() {
   })
 }
 
-function getFeedingsInWindow() {
-  if (!selectedBaby.value) return []
-  const { start, end } = getTimelineWindow()
-  return store.getBabyFeedings(selectedBaby.value.id).filter(f => {
-    const t = new Date(f.timestamp)
-    return t >= start && t < end
-  })
-}
-
-function getFeedingMarkerStyle(feeding: any) {
-  const { start, end } = getTimelineWindow()
-  const feedingTime = new Date(feeding.timestamp)
-  const totalMs = end.getTime() - start.getTime()
-  const elapsedMs = feedingTime.getTime() - start.getTime()
-  const positionPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100))
-  const now = new Date()
-  const isCurrent = Math.abs(feedingTime.getTime() - now.getTime()) < 60 * 1000
-  const isPast = feedingTime < now
-  return {
-    left: `${positionPercent}%`,
-    backgroundColor: isCurrent ? '#ffd700' : isPast ? '#a0a0e0' : '#3a3a5e',
-    transform: isCurrent ? 'scale(1.2)' : 'scale(1)',
-    opacity: isCurrent ? 1 : isPast ? 0.8 : 0.6
-  }
-}
-
 function getFeedingsForTimeline() {
   if (!selectedBaby.value) return []
   const { start, end } = getTimelineWindow()
