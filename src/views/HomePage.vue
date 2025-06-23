@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
-import EditBabyModal from '../components/EditBabyModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 
 const store = useBabyStore()
@@ -14,8 +13,6 @@ const router = useRouter()
 const selectedBaby = ref<any>(null)
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
-const showEditBabyModal = ref(false)
-const editingBaby = ref<any>(null)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
@@ -64,11 +61,6 @@ function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
 function openDiaperModal(type: 'pee' | 'poop' | 'both') {
   diaperType.value = type
   showDiaperModal.value = true
-}
-
-function openEditBabyModal(baby: any) {
-  editingBaby.value = baby
-  showEditBabyModal.value = true
 }
 
 function onModalSaved() {
@@ -213,13 +205,6 @@ async function signOut() {
       :babyName="selectedBaby.name"
       :diaperType="diaperType"
       @close="showDiaperModal = false"
-    />
-
-    <EditBabyModal 
-      v-if="showEditBabyModal && editingBaby"
-      :baby="editingBaby"
-      @close="showEditBabyModal = false"
-      @saved="onModalSaved"
     />
 
     <!-- Hidden original content for reference or later use -->
