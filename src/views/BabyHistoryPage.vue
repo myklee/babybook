@@ -34,6 +34,7 @@ const route = useRoute()
 const selectedBaby = ref<any>(null)
 const showEditBabyModal = ref(false)
 const editingBaby = ref<any>(null)
+const use8amWindow = ref(true) // Toggle for 8am vs 12am window
 
 // When the component mounts, get the baby ID from the route.
 onMounted(() => {
@@ -170,6 +171,62 @@ const stats = computed(() => {
   }
 })
 
+// Daily feeding summary
+const dailyFeedings = computed(() => {
+  if (!selectedBaby.value) return []
+
+  const feedings = store.getBabyFeedings(selectedBaby.value.id)
+  
+  // Group feedings by day using configurable window
+  const dailyMap = new Map<string, { date: string; total: number; count: number; breast: number; formula: number }>()
+  
+  feedings.forEach(feeding => {
+    const feedingTime = new Date(feeding.timestamp)
+    
+    // Calculate which day this feeding belongs to
+    let dayStart = new Date(feedingTime)
+    dayStart.setHours(0, 0, 0, 0)
+    
+    if (use8amWindow.value) {
+      // 8 AM to 8 AM window logic
+      if (feedingTime.getHours() < 8) {
+        dayStart.setDate(dayStart.getDate() - 1)
+      }
+      dayStart.setHours(8, 0, 0, 0)
+    } else {
+      // 12 AM to 12 AM window logic (standard calendar day)
+      // No adjustment needed, dayStart is already at midnight
+    }
+    
+    const dateKey = dayStart.toDateString()
+    
+    if (!dailyMap.has(dateKey)) {
+      dailyMap.set(dateKey, {
+        date: dateKey,
+        total: 0,
+        count: 0,
+        breast: 0,
+        formula: 0
+      })
+    }
+    
+    const dayData = dailyMap.get(dateKey)!
+    dayData.total += feeding.amount || 0
+    dayData.count += 1
+    
+    if (feeding.type === 'breast') {
+      dayData.breast += 1
+    } else if (feeding.type === 'formula') {
+      dayData.formula += 1
+    }
+  })
+  
+  // Convert to array and sort by date (newest first)
+  return Array.from(dailyMap.values())
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 7) // Show last 7 days
+})
+
 function getIcon(item: HistoryEvent) {
   switch (item.event_type) {
     case 'feeding':
@@ -185,6 +242,15 @@ function getIcon(item: HistoryEvent) {
 
 function formatTimestamp(dateString: string) {
   return format(new Date(dateString), 'MMM d, h:mm a')
+}
+
+function formatDate(dateString: string) {
+  const date = new Date(dateString)
+  if (use8amWindow.value) {
+    return format(date, 'MMM d') + ' (8am-8am)'
+  } else {
+    return format(date, 'MMM d') + ' (12am-12am)'
+  }
 }
 
 function goHome() {
@@ -207,8 +273,8 @@ function onModalSaved() {
   <div class="history-page">
     <div v-if="selectedBaby" class="container">
       <header class="page-header">
-        <button @click="goHome" class="back-btn">&larr; Back</button>
-        <h2>{{ selectedBaby.name }}'s Home</h2>
+        <button @click="goHome" class="back-btn">Home</button>
+        <h2>{{ selectedBaby.name }}</h2>
         <button @click="openEditBabyModal" class="edit-baby-btn">
           <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
         </button>
@@ -263,6 +329,37 @@ function onModalSaved() {
               <span>Total: {{ Math.round(stats.totalSleepMinutes / 60) }}h {{ Math.round(stats.totalSleepMinutes % 60) }}m</span>
               <span>Last 24h: {{ stats.recentSleeps }}</span>
             </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Daily Feeding Summary -->
+      <div v-if="dailyFeedings.length > 0" class="daily-feedings-section">
+        <div class="daily-feedings-header">
+          <h3>Daily Feeding Summary ({{ use8amWindow ? '8 AM to 8 AM' : '12 AM to 12 AM' }} Windows)</h3>
+          <div class="time-window-toggle">
+            <span class="toggle-text-left">12 AM</span>
+            <div class="toggle-container">
+              <input 
+                type="checkbox" 
+                v-model="use8amWindow" 
+                class="toggle-input"
+                id="time-window-toggle"
+              />
+              <label for="time-window-toggle" class="toggle-slider"></label>
+            </div>
+            <span class="toggle-text-right">8 AM</span>
+          </div>
+        </div>
+        <div class="daily-feedings-grid">
+          <div v-for="day in dailyFeedings" :key="day.date" class="daily-feeding-card">
+            <div class="daily-date">{{ formatDate(day.date) }}</div>
+            <div class="daily-total">{{ Math.round(day.total) }}ml</div>
+            <div class="daily-breakdown">
+              <span v-if="day.breast > 0" class="feeding-type breast">{{ day.breast }} breast</span>
+              <span v-if="day.formula > 0" class="feeding-type formula">{{ day.formula }} formula</span>
+            </div>
+            <div class="daily-count">{{ day.count }} feedings</div>
           </div>
         </div>
       </div>
@@ -501,5 +598,109 @@ function onModalSaved() {
 .detail-grid span {
   font-size: 0.9rem;
   color: #d0d0ff;
+}
+
+/* Daily Feeding Summary Styles */
+.daily-feedings-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.daily-feedings-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: #e0e0ff;
+}
+
+.daily-feedings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.daily-feeding-card {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.daily-date {
+  font-size: 0.9rem;
+  color: #a0a0e0;
+  margin-bottom: 0.25rem;
+}
+
+.daily-total {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 0.25rem;
+}
+
+.daily-breakdown {
+  font-size: 0.9rem;
+  color: #a0a0e0;
+  margin-bottom: 0.25rem;
+}
+
+.feeding-type {
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.daily-count {
+  font-size: 0.9rem;
+  color: #a0a0e0;
+}
+
+.daily-feedings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.time-window-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toggle-text-left, .toggle-text-right {
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #a0a0e0;
+}
+
+.toggle-container {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.toggle-input {
+  display: none;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.8);
+  transition: transform 0.2s;
+}
+
+.toggle-input:checked + .toggle-slider {
+  transform: translateX(26px);
 }
 </style> 
