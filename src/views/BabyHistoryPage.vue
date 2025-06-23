@@ -131,22 +131,38 @@ const stats = computed(() => {
   const recentDiapers = diapers.filter(d => new Date(d.timestamp) > yesterday).length
   const recentSleeps = sleeps.filter(s => new Date(s.start_time) > yesterday).length
 
-  // Last 24 hours since 8am milk amount (same logic as homepage)
+  // Last 24 hours milk amount (respects toggle setting)
   const last24HoursMilk = (() => {
+    const now = new Date()
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    let eightAm
+    let windowStart
 
-    // If it's already past 8 AM today, the window started at 8 AM today.
-    if (now.getHours() >= 8) {
-        eightAm = new Date(today)
-        eightAm.setHours(8, 0, 0, 0)
-    } else {
-        // If it's before 8 AM today, the window started at 8 AM *yesterday*.
+    if (use8amWindow.value) {
+      // Since the most recent 8 AM
+      if (now.getHours() >= 8) {
+        // It's past 8am today, so use 8am today
+        windowStart = new Date(today)
+        windowStart.setHours(8, 0, 0, 0)
+      } else {
+        // It's before 8am today, so use 8am yesterday
         const yesterday = new Date(today)
         yesterday.setDate(yesterday.getDate() - 1)
-        eightAm = new Date(yesterday)
-        eightAm.setHours(8, 0, 0, 0)
+        windowStart = new Date(yesterday)
+        windowStart.setHours(8, 0, 0, 0)
+      }
+    } else {
+      // Since the most recent 12 AM (midnight)
+      if (now.getHours() >= 0) {
+        // It's past midnight today, so use midnight today
+        windowStart = new Date(today)
+        windowStart.setHours(0, 0, 0, 0)
+      } else {
+        // This shouldn't happen since hours are 0-23, but just in case
+        const yesterday = new Date(today)
+        yesterday.setDate(yesterday.getDate() - 1)
+        windowStart = yesterday
+      }
     }
 
     return feedings.filter(feeding => {
@@ -154,7 +170,7 @@ const stats = computed(() => {
         return (
             (feeding.type === 'breast' || feeding.type === 'formula') &&
             feeding.amount != null &&
-            feedingTimestamp >= eightAm
+            feedingTimestamp >= windowStart
         )
     }).reduce((sum, feeding) => sum + (feeding.amount || 0), 0)
   })()
@@ -323,70 +339,14 @@ function closeEditModal() {
             :alt="selectedBaby.name" 
             class="baby-photo" 
           />
-          <h2>{{ selectedBaby.name }}</h2>
-        </div>
-        <button @click="openEditBabyModal" class="edit-baby-btn">
-          <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
-        </button>
-      </header>
-      
-      <!-- Stats Section -->
-      <div v-if="stats" class="stats-section">
-        <h3>Overview</h3>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-number">{{ stats.totalFeedings }}</div>
-            <div class="stat-label">Total Feedings</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-number">{{ stats.totalDiapers }}</div>
-            <div class="stat-label">Total Diapers</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-number">{{ stats.totalSleeps }}</div>
-            <div class="stat-label">Sleep Sessions</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-number">{{ Math.round(stats.totalMilk) }}ml</div>
-            <div class="stat-label">Total Milk</div>
+          <div class="baby-name-section">
+            <h2>{{ selectedBaby.name }}</h2>
+            <button @click="openEditBabyModal" class="edit-baby-btn">
+              <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
+            </button>
           </div>
         </div>
-        
-        <div class="stats-details">
-          <div class="detail-section">
-            <h4>Feedings</h4>
-            <div class="detail-grid">
-              <span>Breast: {{ stats.breastFeedings }}</span>
-              <span>Formula: {{ stats.formulaFeedings }}</span>
-              <span>Last 24h: {{ stats.recentFeedings }}</span>
-              <span>Last 24h (since 8am): {{ Math.round(stats.last24HoursMilk) }}ml</span>
-            </div>
-          </div>
-          
-          <div class="detail-section">
-            <h4>Diapers</h4>
-            <div class="detail-grid">
-              <span>Wet: {{ stats.peeDiapers }}</span>
-              <span>Dirty: {{ stats.poopDiapers }}</span>
-              <span>Both: {{ stats.bothDiapers }}</span>
-              <span>Last 24h: {{ stats.recentDiapers }}</span>
-            </div>
-          </div>
-          
-          <div class="detail-section">
-            <h4>Sleep</h4>
-            <div class="detail-grid">
-              <span>Total: {{ Math.round(stats.totalSleepMinutes / 60) }}h {{ Math.round(stats.totalSleepMinutes % 60) }}m</span>
-              <span>Last 24h: {{ stats.recentSleeps }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Daily Feeding Summary -->
-      <div v-if="dailyFeedings.length > 0" class="daily-feedings-section">
-        <div class="daily-feedings-header">
-          <h3>Daily Feeding Summary ({{ use8amWindow ? '8 AM to 8 AM' : '12 AM to 12 AM' }} Windows)</h3>
+        <div class="header-controls">
           <div class="time-window-toggle">
             <span class="toggle-text-left">12 AM</span>
             <div class="toggle-container">
@@ -400,6 +360,21 @@ function closeEditModal() {
             </div>
             <span class="toggle-text-right">8 AM</span>
           </div>
+        </div>
+      </header>
+      
+      <!-- Last 24 Hours Highlight -->
+      <div v-if="stats" class="last24-hours-highlight">
+        <div class="highlight-content">
+          <span class="highlight-label">Since {{ use8amWindow ? '8am' : '12am' }}</span>
+          <span class="highlight-amount">{{ Math.round(stats.last24HoursMilk || 0) }}ml</span>
+        </div>
+      </div>
+      
+      <!-- Time Window Toggle -->
+      <div v-if="dailyFeedings.length > 0" class="daily-feedings-section">
+        <div class="daily-feedings-header">
+          <h3>Daily Feeding Summary ({{ use8amWindow ? '8 AM to 8 AM' : '12 AM to 12 AM' }} Windows)</h3>
         </div>
         <div class="daily-feedings-grid">
           <div v-for="day in dailyFeedings" :key="day.date" class="daily-feeding-card">
@@ -494,6 +469,16 @@ function closeEditModal() {
   gap: 1rem;
   flex: 1;
   justify-content: center;
+}
+.baby-name-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 .baby-photo {
   width: 60px;
@@ -784,5 +769,32 @@ function closeEditModal() {
 
 .toggle-input:checked + .toggle-slider {
   transform: translateX(26px);
+}
+
+/* Last 24 Hours Highlight Styles */
+.last24-hours-highlight {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.highlight-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.highlight-label {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #e0e0ff;
+}
+
+.highlight-amount {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffd700;
 }
 </style> 
