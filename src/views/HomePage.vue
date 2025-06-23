@@ -5,6 +5,8 @@ import { useBabyStore } from '../stores/babyStore'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
 import HistoryList from '../components/HistoryList.vue'
+import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
+import formulaIcon from '../assets/icons/flask-conical.svg'
 
 const store = useBabyStore()
 const router = useRouter()
@@ -115,6 +117,47 @@ async function signOut() {
     alert('Failed to sign out. Please try again.')
   }
 }
+
+// Get last feeding time for a specific baby
+function getLastFeedingTime(babyId: string) {
+  try {
+    const feedings = store.getBabyFeedings(babyId)
+    if (feedings.length === 0) return null
+    
+    const lastFeeding = feedings[0]
+    const lastFeedingTime = new Date(lastFeeding.timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - lastFeedingTime.getTime()
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60))
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+    
+    let timeString
+    if (hours > 0) {
+      timeString = `${hours}h ${minutes}m ago`
+    } else {
+      timeString = `${minutes}m ago`
+    }
+    
+    return {
+      time: timeString,
+      type: lastFeeding.type
+    }
+  } catch (error) {
+    console.error('Error getting last feeding time:', error)
+    return null
+  }
+}
+
+// Get feeding icon based on type
+function getFeedingIcon(type: string | undefined) {
+  if (type === 'breast') {
+    return breastIcon
+  } else if (type === 'formula') {
+    return formulaIcon
+  }
+  return breastIcon // default
+}
 </script>
 
 <template>
@@ -146,6 +189,10 @@ async function signOut() {
                 <polyline points="9,6 15,12 9,18"/>
               </svg>
             </button>
+          </div>
+          <div v-if="store.babies.length > 0 && getLastFeedingTime(baby.id)" class="baby-last-feeding">
+            <img :src="getFeedingIcon(getLastFeedingTime(baby.id)?.type)" class="feeding-icon" alt="Feeding type" />
+            <span class="feeding-time">{{ getLastFeedingTime(baby.id)?.time }}</span>
           </div>
         </div>
       </div>
@@ -332,6 +379,27 @@ async function signOut() {
   filter: brightness(0) invert(1);
 }
 
+.baby-last-feeding {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #a0a0e0;
+}
+
+.feeding-icon {
+  width: 12px;
+  height: 12px;
+  filter: brightness(0) invert(1) opacity(0.8);
+}
+
+.feeding-time {
+  font-size: 0.75rem;
+  color: #a0a0e0;
+}
+
 .action-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -492,5 +560,26 @@ async function signOut() {
   .action-grid {
     gap: 1.5rem;
   }
+}
+
+.last-feeding-time {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.time-label {
+  font-size: 0.9rem;
+  color: #a0a0e0;
+  margin-right: 0.5rem;
+}
+
+.time-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffd700;
 }
 </style> 
