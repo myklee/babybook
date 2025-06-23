@@ -392,7 +392,7 @@ function closeEditModal() {
             <div class="daily-date">{{ formatDate(day.date) }}</div>
             <div class="daily-total">{{ Math.round(day.total) }}ml</div>
             <div class="daily-breakdown">
-              <span v-if="day.breast > 0" class="feeding-type breast">{{ day.breast }} breast</span>
+              <span v-if="day.breast > 0" class="feeding-type breast">{{ day.breast }} breast</span> &nbsp;
               <span v-if="day.formula > 0" class="feeding-type formula">{{ day.formula }} formula</span>
             </div>
             <div class="daily-count">{{ day.count }} feedings</div>
@@ -527,8 +527,8 @@ function closeEditModal() {
   font-size: 0.9rem;
 }
 .edit-baby-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid #666;
+  background: none;
+  border: none;
   border-radius: 8px;
   width: 40px;
   height: 40px;
@@ -539,8 +539,7 @@ function closeEditModal() {
   transition: all 0.2s;
 }
 .edit-baby-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: #888;
+  background: rgba(255, 255, 255, 0.1);
 }
 .edit-baby-btn img {
   width: 16px;
