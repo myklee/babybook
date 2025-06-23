@@ -5,6 +5,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { format } from 'date-fns'
 import EditBabyModal from '../components/EditBabyModal.vue'
 import EditRecord from '../components/EditRecord.vue'
+import BabySettingsModal from '../components/BabySettingsModal.vue'
+import settingsIcon from '../assets/icons/settings-2.svg'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
@@ -42,6 +44,8 @@ const use8amWindow = ref(true) // Toggle for 8am vs 12am window
 const showEditModal = ref(false)
 const editingRecord = ref<any>(null)
 const editingType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
+
+const showSettingsModal = ref(false)
 
 // When the component mounts, get the baby ID from the route.
 onMounted(() => {
@@ -351,6 +355,9 @@ function closeEditModal() {
               <button @click="openEditBabyModal" class="edit-baby-btn">
                 <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
               </button>
+              <button class="settings-icon-btn" @click="showSettingsModal = true">
+                <img :src="settingsIcon" alt="Settings" class="settings-svg" />
+              </button>
             </div>
             <div v-if="selectedBaby.birthdate" class="baby-birthdate">
               {{ formatBirthdate(selectedBaby.birthdate) }}
@@ -456,6 +463,14 @@ function closeEditModal() {
       :type="editingType"
       @close="closeEditModal"
       @saved="closeEditModal"
+    />
+
+    <BabySettingsModal
+      v-if="showSettingsModal && selectedBaby"
+      :babyId="selectedBaby.id"
+      :babyName="selectedBaby.name"
+      @close="showSettingsModal = false"
+      @saved="showSettingsModal = false"
     />
   </div>
 </template>
@@ -825,5 +840,31 @@ function closeEditModal() {
 .topup-display {
   font-size: 0.8rem;
   color: #a0a0e0;
+}
+
+.baby-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.settings-icon-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+  color: #333;
+  display: flex;
+  align-items: center;
+}
+.settings-icon-btn:hover {
+  opacity: 1;
+}
+.settings-svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: block;
+  filter: brightness(0) invert(1);
 }
 </style> 

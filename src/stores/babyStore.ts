@@ -8,12 +8,14 @@ type Baby = Database['public']['Tables']['babies']['Row'] & { image_url?: string
 type Feeding = Database['public']['Tables']['feedings']['Row']
 type DiaperChange = Database['public']['Tables']['diaper_changes']['Row']
 type SleepSession = Database['public']['Tables']['sleep_sessions']['Row']
+type BabySettings = Database['public']['Tables']['baby_settings']['Row']
 
 export const useBabyStore = defineStore('baby', () => {
   const babies = ref<Baby[]>([])
   const feedings = ref<Feeding[]>([])
   const diaperChanges = ref<DiaperChange[]>([])
   const sleepSessions = ref<SleepSession[]>([])
+  const babySettings = ref<BabySettings[]>([])
   const isLoading = ref(false)
   const currentUser = ref<any>(null)
   const isDataLoading = ref(false) // Guard to prevent multiple simultaneous loads
@@ -142,6 +144,32 @@ export const useBabyStore = defineStore('baby', () => {
       babies.value = babiesData || []
       console.log('Loaded babies:', babies.value.length)
 
+      // Load baby settings
+      console.log('Loading baby settings...')
+      try {
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('baby_settings')
+          .select('*')
+          .in('baby_id', babies.value.map(b => b.id))
+
+        if (settingsError) {
+          console.error('Error loading baby settings:', settingsError)
+          // If table doesn't exist, just skip it
+          if (settingsError.message.includes('relation "baby_settings" does not exist')) {
+            console.log('Baby settings table does not exist, skipping...')
+            babySettings.value = []
+          } else {
+            throw settingsError
+          }
+        } else {
+          babySettings.value = settingsData || []
+          console.log('Loaded baby settings:', babySettings.value.length)
+        }
+      } catch (settingsTableError) {
+        console.error('Baby settings table error:', settingsTableError)
+        babySettings.value = []
+      }
+
       // Load feedings
       console.log('Loading feedings...')
       const { data: feedingsData, error: feedingsError } = await supabase
@@ -257,6 +285,15 @@ export const useBabyStore = defineStore('baby', () => {
     }
     
     babies.value.push(data)
+    
+    // Create default baby settings
+    try {
+      await createBabySettings(data.id)
+    } catch (settingsError) {
+      console.error('Error creating baby settings:', settingsError)
+      // Don't throw here, as the baby was created successfully
+    }
+    
     return data
   }
 
@@ -628,12 +665,76 @@ export const useBabyStore = defineStore('baby', () => {
     }, 0);
   }
 
+  // Get baby settings
+  function getBabySettings(babyId: string) {
+    return babySettings.value.find(s => s.baby_id === babyId) || null
+  }
+
+  // Update baby settings
+  async function updateBabySettings(babyId: string, updates: {
+    feeding_interval_hours?: number
+    default_breast_amount?: number
+    default_formula_amount?: number
+  }) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase
+      .from('baby_settings')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('baby_id', babyId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Database update error:', error)
+      throw error
+    }
+
+    // Update local state
+    const index = babySettings.value.findIndex(s => s.baby_id === babyId)
+    if (index !== -1) {
+      babySettings.value[index] = data
+    } else {
+      babySettings.value.push(data)
+    }
+
+    return data
+  }
+
+  // Create baby settings (called when adding a new baby)
+  async function createBabySettings(babyId: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase
+      .from('baby_settings')
+      .insert({
+        baby_id: babyId,
+        feeding_interval_hours: 3,
+        default_breast_amount: 0,
+        default_formula_amount: 0
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Database insert error:', error)
+      throw error
+    }
+
+    babySettings.value.push(data)
+    return data
+  }
+
   return {
     // State
     babies,
     feedings,
     diaperChanges,
     sleepSessions,
+    babySettings,
     isLoading,
     currentUser,
     
@@ -659,6 +760,9 @@ export const useBabyStore = defineStore('baby', () => {
     signUp,
     signOut,
     getTodaysFeedingsTotal,
-    addTopUpToFeeding
+    addTopUpToFeeding,
+    getBabySettings,
+    updateBabySettings,
+    createBabySettings
   }
 }) 

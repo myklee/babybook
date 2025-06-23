@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 
 const props = defineProps<{
@@ -32,6 +32,16 @@ onMounted(async () => {
     feedingTypeRef.value = props.feedingType
   }
 
+  // Load default amounts from baby settings
+  const settings = store.getBabySettings(props.babyId)
+  if (settings) {
+    if (feedingTypeRef.value === 'breast' && settings.default_breast_amount > 0) {
+      amount.value = settings.default_breast_amount
+    } else if (feedingTypeRef.value === 'formula' && settings.default_formula_amount > 0) {
+      amount.value = settings.default_formula_amount
+    }
+  }
+
   // Pre-fill current date and time
   const now = new Date()
   const year = now.getFullYear()
@@ -45,6 +55,20 @@ onMounted(async () => {
 
   await nextTick()
   timeInput.value?.focus()
+})
+
+// Watch for feeding type changes to update default amount
+watch(feedingTypeRef, (newType) => {
+  const settings = store.getBabySettings(props.babyId)
+  if (settings) {
+    if (newType === 'breast' && settings.default_breast_amount > 0) {
+      amount.value = settings.default_breast_amount
+    } else if (newType === 'formula' && settings.default_formula_amount > 0) {
+      amount.value = settings.default_formula_amount
+    } else {
+      amount.value = 0
+    }
+  }
 })
 
 async function handleSubmit() {

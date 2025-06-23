@@ -158,6 +158,42 @@ function getFeedingIcon(type: string | undefined) {
   }
   return breastIcon // default
 }
+
+// Get next feeding time based on baby settings
+function getNextFeedingTime(babyId: string) {
+  try {
+    const settings = store.getBabySettings(babyId)
+    if (!settings || settings.feeding_interval_hours <= 0) return null
+    
+    const feedings = store.getBabyFeedings(babyId)
+    if (feedings.length === 0) return null
+    
+    const lastFeeding = feedings[0]
+    const lastFeedingTime = new Date(lastFeeding.timestamp)
+    const nextFeedingTime = new Date(lastFeedingTime.getTime() + (settings.feeding_interval_hours * 60 * 60 * 1000))
+    const now = new Date()
+    
+    if (nextFeedingTime <= now) {
+      return { status: 'overdue', time: 'Overdue' }
+    }
+    
+    const diffMs = nextFeedingTime.getTime() - now.getTime()
+    const hours = Math.floor(diffMs / (1000 * 60 * 60))
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+    
+    let timeString
+    if (hours > 0) {
+      timeString = `in ${hours}h ${minutes}m`
+    } else {
+      timeString = `in ${minutes}m`
+    }
+    
+    return { status: 'upcoming', time: timeString }
+  } catch (error) {
+    console.error('Error getting next feeding time:', error)
+    return null
+  }
+}
 </script>
 
 <template>
@@ -183,16 +219,21 @@ function getFeedingIcon(type: string | undefined) {
           />
           <div class="baby-name-container">
             <span class="baby-name">{{ baby.name }}</span>
-            <button class="history-icon-btn" @click.stop="goToBabyHistory(baby)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="9,6 15,12 9,18"/>
-              </svg>
-            </button>
+            <div class="baby-actions">
+              <button class="history-icon-btn" @click.stop="goToBabyHistory(baby)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="9,6 15,12 9,18"/>
+                </svg>
+              </button>
+            </div>
           </div>
           <div v-if="store.babies.length > 0 && getLastFeedingTime(baby.id)" class="baby-last-feeding">
             <img :src="getFeedingIcon(getLastFeedingTime(baby.id)?.type)" class="feeding-icon" alt="Feeding type" />
             <span class="feeding-time">{{ getLastFeedingTime(baby.id)?.time }}</span>
+          </div>
+          <div v-if="getNextFeedingTime(baby.id)" class="baby-next-feeding" :class="getNextFeedingTime(baby.id)?.status">
+            <span class="next-feeding-time">{{ getNextFeedingTime(baby.id)?.time }}</span>
           </div>
         </div>
       </div>
@@ -356,6 +397,13 @@ function getFeedingIcon(type: string | undefined) {
   font-weight: 500;
 }
 
+.baby-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
 .history-icon-btn {
   background: none;
   border: none;
@@ -382,11 +430,10 @@ function getFeedingIcon(type: string | undefined) {
 .baby-last-feeding {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
   margin-top: 0.5rem;
-  font-size: 0.75rem;
-  color: #a0a0e0;
+  font-size: 0.875rem;
+  opacity: 0.8;
 }
 
 .feeding-icon {
@@ -581,5 +628,27 @@ function getFeedingIcon(type: string | undefined) {
   font-size: 1.1rem;
   font-weight: 600;
   color: #ffd700;
+}
+
+.baby-next-feeding {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  text-align: center;
+}
+
+.baby-next-feeding.upcoming {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.baby-next-feeding.overdue {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.next-feeding-time {
+  font-weight: 500;
 }
 </style> 

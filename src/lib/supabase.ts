@@ -123,6 +123,35 @@ export interface Database {
           user_id?: string
         }
       }
+      baby_settings: {
+        Row: {
+          id: string
+          baby_id: string
+          feeding_interval_hours: number
+          default_breast_amount: number
+          default_formula_amount: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          baby_id: string
+          feeding_interval_hours?: number
+          default_breast_amount?: number
+          default_formula_amount?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          baby_id?: string
+          feeding_interval_hours?: number
+          default_breast_amount?: number
+          default_formula_amount?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 } 
