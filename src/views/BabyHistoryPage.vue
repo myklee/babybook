@@ -317,7 +317,14 @@ function closeEditModal() {
     <div v-if="selectedBaby" class="container">
       <header class="page-header">
         <button @click="goHome" class="back-btn">Home</button>
-        <h2>{{ selectedBaby.name }}</h2>
+        <div class="baby-info">
+          <img 
+            :src="selectedBaby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${selectedBaby.name}`" 
+            :alt="selectedBaby.name" 
+            class="baby-photo" 
+          />
+          <h2>{{ selectedBaby.name }}</h2>
+        </div>
         <button @click="openEditBabyModal" class="edit-baby-btn">
           <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
         </button>
@@ -481,9 +488,24 @@ function closeEditModal() {
   align-items: center;
   margin-bottom: 2rem;
 }
+.baby-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  justify-content: center;
+}
+.baby-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
 .page-header h2 {
   font-size: 1.75rem;
   font-weight: bold;
+  margin: 0;
 }
 .back-btn {
   background: none;
