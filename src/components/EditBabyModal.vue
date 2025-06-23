@@ -3,7 +3,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 
 const props = defineProps<{
-  baby: { id: string; name: string; image_url?: string | null }
+  baby: { id: string; name: string; image_url?: string | null; birthdate?: string | null }
 }>()
 
 const emit = defineEmits<{
@@ -13,6 +13,7 @@ const emit = defineEmits<{
 
 const store = useBabyStore()
 const name = ref('')
+const birthdate = ref('')
 const imageFile = ref<File | null>(null)
 const nameInput = ref<HTMLInputElement | null>(null)
 const isSaving = ref(false)
@@ -20,6 +21,7 @@ const previewUrl = ref<string | null>(null)
 
 onMounted(async () => {
   name.value = props.baby.name
+  birthdate.value = props.baby.birthdate || ''
   previewUrl.value = props.baby.image_url || null
   await nextTick()
   nameInput.value?.focus()
@@ -41,6 +43,7 @@ async function handleSubmit() {
   try {
     await store.updateBaby(props.baby.id, { 
       name: name.value.trim(),
+      birthdate: birthdate.value.trim(),
       imageFile: imageFile.value || undefined
     })
     emit('saved')
@@ -66,6 +69,15 @@ async function handleSubmit() {
             ref="nameInput"
             v-model="name"
             type="text"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="baby-birthdate">Birthdate</label>
+          <input
+            id="baby-birthdate"
+            v-model="birthdate"
+            type="date"
             required
           />
         </div>

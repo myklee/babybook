@@ -275,6 +275,10 @@ function formatDate(dateString: string) {
   }
 }
 
+function formatBirthdate(birthdate: string) {
+  return format(new Date(birthdate), 'MMM d, yyyy')
+}
+
 function goHome() {
   router.push('/')
 }
@@ -339,11 +343,16 @@ function closeEditModal() {
             :alt="selectedBaby.name" 
             class="baby-photo" 
           />
-          <div class="baby-name-section">
-            <h2>{{ selectedBaby.name }}</h2>
-            <button @click="openEditBabyModal" class="edit-baby-btn">
-              <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
-            </button>
+          <div class="baby-details">
+            <div class="baby-name-section">
+              <h2>{{ selectedBaby.name }}</h2>
+              <button @click="openEditBabyModal" class="edit-baby-btn">
+                <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
+              </button>
+            </div>
+            <div v-if="selectedBaby.birthdate" class="baby-birthdate">
+              {{ formatBirthdate(selectedBaby.birthdate) }}
+            </div>
           </div>
         </div>
         <div class="header-controls">
@@ -470,10 +479,21 @@ function closeEditModal() {
   flex: 1;
   justify-content: center;
 }
+.baby-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
 .baby-name-section {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+.baby-birthdate {
+  font-size: 0.9rem;
+  color: #a0a0e0;
+  margin-top: 0.25rem;
+  text-align: center;
 }
 .header-controls {
   display: flex;

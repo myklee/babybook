@@ -212,7 +212,7 @@ export const useBabyStore = defineStore('baby', () => {
   }
 
   // Add a new baby
-  async function addBaby(name: string, imageFile?: File) {
+  async function addBaby(name: string, birthdate?: string, imageFile?: File) {
     if (!currentUser.value) throw new Error('User not authenticated')
 
     let imageUrl: string | undefined = undefined
@@ -244,6 +244,7 @@ export const useBabyStore = defineStore('baby', () => {
       .from('babies')
       .insert({
         name,
+        birthdate: birthdate || null,
         user_id: currentUser.value.id,
         image_url: imageUrl
       })
@@ -260,7 +261,7 @@ export const useBabyStore = defineStore('baby', () => {
   }
 
   // Update a baby
-  async function updateBaby(id: string, updates: { name?: string; imageFile?: File }) {
+  async function updateBaby(id: string, updates: { name?: string; birthdate?: string; imageFile?: File }) {
     if (!currentUser.value) throw new Error('User not authenticated')
 
     let imageUrl: string | undefined
@@ -299,9 +300,12 @@ export const useBabyStore = defineStore('baby', () => {
       imageUrl = publicUrl
     }
 
-    const dbUpdates: { name?: string; image_url?: string } = {}
+    const dbUpdates: { name?: string; birthdate?: string; image_url?: string } = {}
     if (updates.name) {
       dbUpdates.name = updates.name
+    }
+    if (updates.birthdate) {
+      dbUpdates.birthdate = updates.birthdate
     }
     if (imageUrl) {
       dbUpdates.image_url = imageUrl
