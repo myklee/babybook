@@ -26,6 +26,7 @@ type HistoryEvent = {
   // Sleep specific
   start_time?: string;
   end_time?: string | null;
+  topup_amount?: number;
 }
 
 const store = useBabyStore()
@@ -68,6 +69,7 @@ const combinedHistory = computed((): HistoryEvent[] => {
     notes: f.notes,
     feeding_type: f.type,
     amount: f.amount,
+    topup_amount: f.topup_amount,
   }))
   
   const diapers: HistoryEvent[] = store.getBabyDiaperChanges(selectedBaby.value.id).map(d => ({
@@ -106,7 +108,7 @@ const stats = computed(() => {
   const totalSleeps = sleeps.length
 
   // Feeding stats
-  const totalMilk = feedings.reduce((sum, f) => sum + (f.amount || 0), 0)
+  const totalMilk = feedings.reduce((sum, f) => sum + (f.amount || 0) + (f.topup_amount || 0), 0)
   const breastFeedings = feedings.filter(f => f.type === 'breast').length
   const formulaFeedings = feedings.filter(f => f.type === 'formula').length
 
@@ -172,7 +174,7 @@ const stats = computed(() => {
             feeding.amount != null &&
             feedingTimestamp >= windowStart
         )
-    }).reduce((sum, feeding) => sum + (feeding.amount || 0), 0)
+    }).reduce((sum, feeding) => sum + (feeding.amount || 0) + (feeding.topup_amount || 0), 0)
   })()
 
   return {
@@ -233,7 +235,7 @@ const dailyFeedings = computed(() => {
     }
     
     const dayData = dailyMap.get(dateKey)!
-    dayData.total += feeding.amount || 0
+    dayData.total += (feeding.amount || 0) + (feeding.topup_amount || 0)
     dayData.count += 1
     
     if (feeding.type === 'breast') {
@@ -415,6 +417,9 @@ function closeEditModal() {
               <!-- Feeding Info -->
               <span v-if="item.event_type === 'feeding'">
                 {{ item.feeding_type === 'breast' ? 'Breast' : 'Formula' }}: <span class="font-bold">{{ item.amount }}ml</span>
+                <span v-if="item.topup_amount && item.topup_amount > 0" class="topup-display">
+                  + <span class="font-bold">{{ item.topup_amount }}ml formula</span>
+                </span>
               </span>
               <!-- Diaper Info -->
               <span v-if="item.event_type === 'diaper'">
@@ -816,5 +821,10 @@ function closeEditModal() {
   font-size: 1.5rem;
   font-weight: bold;
   color: #ffd700;
+}
+
+.topup-display {
+  font-size: 0.8rem;
+  color: #a0a0e0;
 }
 </style> 

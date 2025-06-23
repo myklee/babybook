@@ -44,13 +44,17 @@ const allFeedings = computed(() => {
 })
 
 const totalAmount = computed(() => {
-  return allFeedings.value.reduce((total, feeding) => total + feeding.amount, 0)
+  return allFeedings.value.reduce((total, feeding) => total + feeding.amount + (feeding.topup_amount || 0), 0)
 })
 
 const totalByType = computed(() => {
   const totals = { breast: 0, formula: 0, solid: 0 }
   allFeedings.value.forEach(feeding => {
-    totals[feeding.type] += feeding.amount
+    if (feeding.type === 'breast') {
+      totals.breast += feeding.amount + (feeding.topup_amount || 0)
+    } else {
+      totals[feeding.type] += feeding.amount
+    }
   })
   return totals
 })

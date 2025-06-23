@@ -87,6 +87,7 @@ function closeEditModal() {
           <div class="details">
             <img :src="getIcon(feeding, 'feeding') || ''" class="item-icon" alt="Feeding" />
             <span v-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
+            <span v-if="feeding.topup_amount && feeding.topup_amount > 0" class="topup-amount">+{{ feeding.topup_amount }}</span>
             <span v-else class="type">{{ feeding.type }}</span>
           </div>
           <div v-if="feeding.notes" class="notes">{{ feeding.notes }}</div>
@@ -239,5 +240,23 @@ function closeEditModal() {
   padding: 0.5rem;
   text-align: center;
   width: 100%;
+}
+
+.topup-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topup-icon {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1) opacity(0.8);
+}
+
+.topup-amount {
+  font-size: 0.8rem;
+  color: #c0c0ff;
+  font-weight: 400;
 }
 </style> 

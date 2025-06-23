@@ -24,6 +24,7 @@ const customDate = ref('')
 const customTime = ref('')
 const customEndDate = ref('')
 const customEndTime = ref('')
+const topupAmount = ref(0)
 const isSaving = ref(false)
 
 onMounted(() => {
@@ -46,6 +47,7 @@ onMounted(() => {
       amount.value = feeding.amount
       feedingType.value = feeding.type
       notes.value = feeding.notes || ''
+      topupAmount.value = feeding.topup_amount || 0
     } else { // Diaper
       const diaperChange = props.record
       diaperType.value = diaperChange.type
@@ -78,7 +80,8 @@ async function handleSubmit() {
         amount: amount.value,
         type: feedingType.value,
         notes: notes.value,
-        timestamp: startTimestamp.toISOString()
+        timestamp: startTimestamp.toISOString(),
+        topup_amount: topupAmount.value
       })
     } else if (props.type === 'diaper') {
       await store.updateDiaperChange(props.record.id, {
@@ -168,6 +171,17 @@ async function handleDelete() {
             step="1"
           >
         </div>
+        <div v-if="type === 'feeding' && feedingType === 'breast'" class="form-group">
+          <label>Formula Top-up (ml)</label>
+          <input 
+            type="number" 
+            v-model="topupAmount" 
+            min="0" 
+            step="1"
+            placeholder="0"
+          >
+          <small class="form-help">Add formula amount given after breastfeeding</small>
+        </div>
         <div v-if="type === 'feeding'" class="form-group">
           <label>Type</label>
           <select v-model="feedingType">
@@ -256,6 +270,13 @@ async function handleDelete() {
 
 .form-group textarea {
   resize: vertical;
+}
+
+.form-help {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #666;
 }
 
 .form-actions {

@@ -357,6 +357,34 @@ export const useBabyStore = defineStore('baby', () => {
     return data
   }
 
+  // Add top-up to an existing breast feeding
+  async function addTopUpToFeeding(feedingId: string, topupAmount: number) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    // First, get the current feeding to verify it's a breast feeding
+    const currentFeeding = feedings.value.find(f => f.id === feedingId)
+    if (!currentFeeding) throw new Error('Feeding not found')
+    if (currentFeeding.type !== 'breast') throw new Error('Can only add top-up to breast feedings')
+
+    const { data, error } = await supabase
+      .from('feedings')
+      .update({ topup_amount: topupAmount })
+      .eq('id', feedingId)
+      .eq('user_id', currentUser.value.id)
+      .select()
+      .single()
+
+    if (error) throw error
+    
+    // Update the local state
+    const index = feedings.value.findIndex(f => f.id === feedingId)
+    if (index !== -1) {
+      feedings.value[index] = data
+    }
+    
+    return data
+  }
+
   // Add a new diaper change
   async function addDiaperChange(babyId: string, type: 'pee' | 'poop' | 'both', notes?: string, timestamp?: Date) {
     if (!currentUser.value) throw new Error('User not authenticated')
@@ -588,7 +616,11 @@ export const useBabyStore = defineStore('baby', () => {
         );
     });
 
-    return relevantFeedings.reduce((sum, feeding) => sum + (feeding.amount || 0), 0);
+    return relevantFeedings.reduce((sum, feeding) => {
+        const baseAmount = feeding.amount || 0;
+        const topupAmount = feeding.topup_amount || 0;
+        return sum + baseAmount + topupAmount;
+    }, 0);
   }
 
   return {
@@ -621,6 +653,7 @@ export const useBabyStore = defineStore('baby', () => {
     signIn,
     signUp,
     signOut,
-    getTodaysFeedingsTotal
+    getTodaysFeedingsTotal,
+    addTopUpToFeeding
   }
 }) 
