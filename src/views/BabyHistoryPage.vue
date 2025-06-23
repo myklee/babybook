@@ -392,7 +392,7 @@ function closeEditModal() {
             <div class="daily-date">{{ formatDate(day.date) }}</div>
             <div class="daily-total">{{ Math.round(day.total) }}ml</div>
             <div class="daily-breakdown">
-              <span v-if="day.breast > 0" class="feeding-type breast">{{ day.breast }} breast</span> &nbsp;
+              <span v-if="day.breast > 0" class="feeding-type breast">{{ day.breast }} breast</span> &nbsp;,
               <span v-if="day.formula > 0" class="feeding-type formula">{{ day.formula }} formula</span>
             </div>
             <div class="daily-count">{{ day.count }} feedings</div>
