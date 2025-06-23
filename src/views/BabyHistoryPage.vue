@@ -397,6 +397,77 @@ function getFeedingMarkerStyle(feeding: any) {
     opacity: isCurrent ? 1 : isPast ? 0.8 : 0.6
   }
 }
+
+function getFeedingsForTimeline() {
+  if (!selectedBaby.value) return []
+  const { start, end } = getTimelineWindow()
+  return store.getBabyFeedings(selectedBaby.value.id).filter(f => {
+    const t = new Date(f.timestamp)
+    return t >= start && t < end
+  })
+}
+
+function getDiaperChangesForTimeline() {
+  if (!selectedBaby.value) return []
+  const { start, end } = getTimelineWindow()
+  return store.getBabyDiaperChanges(selectedBaby.value.id).filter(d => {
+    const t = new Date(d.timestamp)
+    return t >= start && t < end
+  })
+}
+
+function getFeedingPosition(feeding: any) {
+  const { start, end } = getTimelineWindow()
+  const feedingTime = new Date(feeding.timestamp)
+  const totalMs = end.getTime() - start.getTime()
+  const elapsedMs = feedingTime.getTime() - start.getTime()
+  const positionPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100))
+  return positionPercent
+}
+
+function getDiaperPosition(diaper: any) {
+  const { start, end } = getTimelineWindow()
+  const diaperTime = new Date(diaper.timestamp)
+  const totalMs = end.getTime() - start.getTime()
+  const elapsedMs = diaperTime.getTime() - start.getTime()
+  const positionPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100))
+  return positionPercent
+}
+
+function getFeedingMarkerClass(feeding: any) {
+  if (feeding.type === 'formula') {
+    return 'feeding-marker-formula'
+  } else if (feeding.type === 'breast') {
+    return 'feeding-marker-breast'
+  } else {
+    return ''
+  }
+}
+
+function getDiaperMarkerClass(diaper: any) {
+  if (diaper.type === 'pee') {
+    return 'diaper-marker-pee'
+  } else if (diaper.type === 'poop') {
+    return 'diaper-marker-poop'
+  } else if (diaper.type === 'both') {
+    return 'diaper-marker-both'
+  } else {
+    return ''
+  }
+}
+
+function formatTime(timestamp: string) {
+  return format(new Date(timestamp), 'h:mm a')
+}
+
+function getCurrentTimePosition() {
+  const now = new Date()
+  const { start, end } = getTimelineWindow()
+  const totalMs = end.getTime() - start.getTime()
+  const elapsedMs = now.getTime() - start.getTime()
+  const positionPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100))
+  return positionPercent
+}
 </script>
 
 <template>
@@ -451,8 +522,8 @@ function getFeedingMarkerStyle(feeding: any) {
         <div class="timeline-container">
           <div class="hour-marks">
             <div v-for="(hour, i) in getTimelineHours()" :key="hour" class="hour-mark" :class="{ 'current-hour': hour === new Date().getHours() }">
-              <div class="hour-line"></div>
-              <span class="hour-label">
+              <div class="hour-line" v-if="i !== 0"></div>
+              <span class="hour-label" v-if="hour % 2 === 0">
                 {{
                   (i === 0 || hour === 0 || hour === 12)
                     ? (hour === 0 ? '12AM' : hour === 12 ? '12PM' : (hour > 12 ? (hour - 12) : hour) + (hour >= 12 ? 'PM' : 'AM'))
@@ -463,17 +534,38 @@ function getFeedingMarkerStyle(feeding: any) {
           </div>
           <div class="timeline-track">
             <div 
-              v-for="feeding in getFeedingsInWindow()" 
+              v-for="feeding in getFeedingsForTimeline()" 
               :key="feeding.id"
               class="feeding-marker"
-              :style="getFeedingMarkerStyle(feeding)"
-              :title="`${feeding.type}: ${feeding.amount}ml at ${format(new Date(feeding.timestamp), 'h:mm a')}`"
+              :class="getFeedingMarkerClass(feeding)"
+              :style="{ left: `calc(${getFeedingPosition(feeding)}% - 11px)` }"
+              :title="`${feeding.type} feeding at ${formatTime(feeding.timestamp)}`"
             >
-              <div class="feeding-tooltip">
-                {{ feeding.type === 'breast' ? 'B' : 'F' }} {{ feeding.amount }}ml
-              </div>
+              <img 
+                :src="feeding.type === 'formula' ? '/src/assets/icons/flask-conical.svg' : '/src/assets/icons/lucide-lab_bottle-baby.svg'" 
+                alt="feeding"
+                class="feeding-icon"
+              />
+            </div>
+            <div 
+              v-for="diaper in getDiaperChangesForTimeline()" 
+              :key="diaper.id"
+              class="diaper-marker"
+              :class="getDiaperMarkerClass(diaper)"
+              :style="{ left: `calc(${getDiaperPosition(diaper)}% - 11px)` }"
+              :title="`${diaper.type} diaper at ${formatTime(diaper.timestamp)}`"
+            >
+              <img 
+                :src="diaper.type === 'pee' ? '/src/assets/icons/droplets.svg' : '/src/assets/icons/hugeicons_poop.svg'" 
+                alt="diaper"
+                class="diaper-icon"
+              />
             </div>
           </div>
+          <div 
+            class="current-time-indicator"
+            :style="{ left: `${getCurrentTimePosition()}%` }"
+          ></div>
         </div>
       </div>
       
@@ -681,9 +773,10 @@ function getFeedingMarkerStyle(feeding: any) {
   flex-shrink: 0;
 }
 .item-icon {
-  width: 24px;
-  height: 24px;
-  filter: brightness(0) invert(1) opacity(0.8);
+  width: 13px;
+  height: 13px;
+  opacity: 1;
+  filter: brightness(0) saturate(100%);
 }
 .item-details {
   flex-grow: 1;
@@ -928,7 +1021,7 @@ function getFeedingMarkerStyle(feeding: any) {
 
 .timeline-container {
   position: relative;
-  height: 80px;
+  height: 40px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 1rem 0;
@@ -963,7 +1056,7 @@ function getFeedingMarkerStyle(feeding: any) {
 }
 
 .current-hour .hour-line {
-  background-color: #ffd700;
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
 .hour-label {
@@ -977,56 +1070,44 @@ function getFeedingMarkerStyle(feeding: any) {
   transform: translateX(0);
 }
 
-.hour-mark:last-child .hour-label {
-  right: 0;
-  left: auto;
-  text-align: right;
-  transform: translateX(0);
-}
-
 .timeline-track {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
+  position: relative;
   height: 20px;
-  transform: translateY(-50%);
 }
 
 .feeding-marker {
   position: absolute;
-  top: 50%;
-  left: 0;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: all 0.2s ease;
+  top: 25%;
+  transform: translateY(-50%);
+  z-index: 10;
   cursor: pointer;
+  background: rgba(60, 60, 80, 0.85);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
-.feeding-marker:hover {
-  transform: translate(-50%, -50%) scale(1.3);
+.feeding-marker-breast {
+  background: rgba(245, 245, 220, 0.8);
 }
 
-.feeding-tooltip {
-  position: absolute;
-  top: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.9);
-  color: #fff;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+.feeding-marker-formula {
+  background: rgba(127, 255, 212, 0.8);
 }
 
-.feeding-marker:hover .feeding-tooltip {
+.feeding-icon {
+  width: 13px;
+  height: 13px;
   opacity: 1;
+  filter: brightness(0) saturate(100%);
+}
+
+.feeding-marker:hover .feeding-icon {
+  transform: scale(1.2);
 }
 
 .topup-display {
@@ -1058,5 +1139,58 @@ function getFeedingMarkerStyle(feeding: any) {
   height: 1.5rem;
   display: block;
   filter: brightness(0) invert(1);
+}
+
+.current-time-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background-color: #ffd700;
+  z-index: 15;
+}
+
+.feeding-marker:hover .feeding-icon {
+  transform: scale(1.2);
+}
+
+.diaper-marker {
+  position: absolute;
+  top: 25%;
+  transform: translateY(-50%);
+  z-index: 10;
+  cursor: pointer;
+  background: rgba(80, 60, 60, 0.85);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.diaper-marker-pee {
+  background: rgba(255, 215, 0, 0.8);
+}
+
+.diaper-marker-poop {
+  background: rgba(139, 69, 19, 0.8);
+}
+
+.diaper-marker-both {
+  background: rgba(139, 69, 19, 0.8);
+}
+
+.diaper-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 1;
+  filter: brightness(0) saturate(100%);
+}
+
+.diaper-marker:hover .diaper-icon {
+  transform: scale(1.2);
 }
 </style> 
