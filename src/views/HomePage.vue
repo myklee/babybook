@@ -63,11 +63,6 @@ function openDiaperModal(type: 'pee' | 'poop' | 'both') {
   showDiaperModal.value = true
 }
 
-function onModalSaved() {
-  // Refresh data after editing
-  store.initializeStore()
-}
-
 function goToHistory() {
   if (selectedBaby.value) {
     router.push(`/baby/${selectedBaby.value.id}`)
