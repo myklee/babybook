@@ -337,11 +337,6 @@ function closeEditModal() {
   store.initializeStore()
 }
 
-function getTodaysFeedings() {
-  if (!selectedBaby.value) return []
-  return store.getBabyFeedings(selectedBaby.value.id).filter(f => new Date(f.timestamp).toDateString() === new Date().toDateString())
-}
-
 function getTimelineWindow() {
   const now = new Date()
   let start = new Date(now)
