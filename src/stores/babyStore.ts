@@ -56,21 +56,36 @@ export const useBabyStore = defineStore('baby', () => {
   // Load current user
   async function loadUser() {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser()
-      if (error) {
-        // Handle AuthSessionMissingError gracefully
-        if (error.message?.includes('Auth session missing') || error.message?.includes('AuthSessionMissingError')) {
-          console.log('No active session found, user needs to sign in')
-          currentUser.value = null
-          return
-        }
-        console.error('Error getting user:', error)
+      // First, try to get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError) {
+        console.error('Error getting session:', sessionError)
         currentUser.value = null
         return
       }
       
-      currentUser.value = user
-      console.log('User loaded:', user?.email)
+      if (session?.user) {
+        currentUser.value = session.user
+        console.log('Session found, user loaded:', session.user.email)
+      } else {
+        // If no session, try to get user (this might trigger a refresh)
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) {
+          // Handle AuthSessionMissingError gracefully
+          if (error.message?.includes('Auth session missing') || error.message?.includes('AuthSessionMissingError')) {
+            console.log('No active session found, user needs to sign in')
+            currentUser.value = null
+            return
+          }
+          console.error('Error getting user:', error)
+          currentUser.value = null
+          return
+        }
+        
+        currentUser.value = user
+        console.log('User loaded:', user?.email)
+      }
       
       // Set up auth state change listener only once
       if (!authListenerSet.value) {
@@ -371,27 +386,58 @@ export const useBabyStore = defineStore('baby', () => {
     return data
   }
 
+  // Ensure session is valid before database operations
+  async function ensureValidSession() {
+    if (!currentUser.value) {
+      console.log('No current user, trying to load user...')
+      await loadUser()
+      if (!currentUser.value) {
+        throw new Error('No authenticated user found. Please sign in again.')
+      }
+    }
+    
+    // Check if session is still valid
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (error || !session) {
+      console.log('Session invalid, trying to refresh...')
+      await loadUser()
+      if (!currentUser.value) {
+        throw new Error('Session expired. Please sign in again.')
+      }
+    }
+  }
+
   // Add a new feeding
   async function addFeeding(babyId: string, amount: number, type: Feeding['type'], notes?: string, timestamp?: Date) {
-    if (!currentUser.value) throw new Error('User not authenticated')
-
-    const { data, error } = await supabase
-      .from('feedings')
-      .insert({
+    try {
+      await ensureValidSession()
+      
+      const feedingData = {
         baby_id: babyId,
+        timestamp: timestamp ? timestamp.toISOString() : new Date().toISOString(),
         amount,
         type,
         notes: notes || null,
-        timestamp: timestamp?.toISOString() || new Date().toISOString(),
-        user_id: currentUser.value.id
-      })
-      .select()
-      .single()
+        user_id: currentUser.value!.id
+      }
 
-    if (error) throw error
-    
-    feedings.value.unshift(data)
-    return data
+      const { data, error } = await supabase
+        .from('feedings')
+        .insert(feedingData)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error adding feeding:', error)
+        throw error
+      }
+
+      feedings.value.unshift(data)
+      return data
+    } catch (error) {
+      console.error('Error in addFeeding:', error)
+      throw error
+    }
   }
 
   // Add top-up to an existing breast feeding
@@ -424,30 +470,33 @@ export const useBabyStore = defineStore('baby', () => {
 
   // Add a new diaper change
   async function addDiaperChange(babyId: string, type: 'pee' | 'poop' | 'both', notes?: string, timestamp?: Date) {
-    if (!currentUser.value) throw new Error('User not authenticated')
+    try {
+      await ensureValidSession()
+      
+      const diaperData = {
+        baby_id: babyId,
+        timestamp: timestamp ? timestamp.toISOString() : new Date().toISOString(),
+        type,
+        notes: notes || null,
+        user_id: currentUser.value!.id
+      }
 
-    const newChange = {
-      baby_id: babyId,
-      type,
-      notes: notes || null,
-      user_id: currentUser.value.id,
-      timestamp: timestamp ? timestamp.toISOString() : new Date().toISOString()
-    }
+      const { data, error } = await supabase
+        .from('diaper_changes')
+        .insert(diaperData)
+        .select()
+        .single()
 
-    console.log('Adding diaper change with data:', newChange)
+      if (error) {
+        console.error('Error adding diaper change:', error)
+        throw error
+      }
 
-    const { data, error } = await supabase
-      .from('diaper_changes')
-      .insert([newChange])
-      .select()
-
-    if (error) {
-      console.error('Supabase error details:', error)
+      diaperChanges.value.unshift(data)
+      return data
+    } catch (error) {
+      console.error('Error in addDiaperChange:', error)
       throw error
-    }
-    
-    if (data) {
-      diaperChanges.value.push(data[0])
     }
   }
 
