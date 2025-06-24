@@ -82,7 +82,18 @@ function selectAmountText() {
 async function handleSubmit() {
   isSaving.value = true
   try {
-    const timestamp = customDate.value && customTime.value ? new Date(`${customDate.value}T${customTime.value}`) : new Date()
+    let timestamp
+    if (customDate.value && customTime.value) {
+      // Create timestamp in local timezone
+      const [year, month, day] = customDate.value.split('-').map(Number)
+      const [hours, minutes] = customTime.value.split(':').map(Number)
+      
+      // Create date in local timezone (month is 0-indexed in JavaScript)
+      timestamp = new Date(year, month - 1, day, hours, minutes, 0, 0)
+    } else {
+      timestamp = new Date()
+    }
+    
     await store.addFeeding(
       props.babyId,
       amount.value,
