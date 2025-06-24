@@ -54,10 +54,6 @@ const showEditModal = ref(false)
 const editingRecord = ref<any>(null)
 const editingType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 
-function formatTime(dateString: string) {
-  return format(new Date(dateString), 'h:mm a')
-}
-
 function formatDate(dateString: string) {
   return format(new Date(dateString), 'MMM d, h:mm a')
 }
