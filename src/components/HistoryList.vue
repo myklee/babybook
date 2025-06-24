@@ -62,6 +62,18 @@ function formatDate(dateString: string) {
   return format(new Date(dateString), 'MMM d, h:mm a')
 }
 
+function formatDateTime(dateString: string) {
+  const date = new Date(dateString)
+  const now = new Date()
+  const isToday = date.toDateString() === now.toDateString()
+  
+  if (isToday) {
+    return format(date, 'h:mm a')
+  } else {
+    return format(date, 'MMM d, h:mm a')
+  }
+}
+
 function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep') {
   editingRecord.value = record
   editingType.value = type
@@ -88,7 +100,7 @@ function closeEditModal() {
       </div>
       <ul v-else class="history-list">
         <li v-for="feeding in feedings.slice(0, 5)" :key="feeding.id" class="history-item" @click="openEditModal(feeding, 'feeding')">
-          <div class="time">{{ formatTime(feeding.timestamp) }}</div>
+          <div class="time">{{ formatDateTime(feeding.timestamp) }}</div>
           <div class="details">
             <img :src="getIcon(feeding, 'feeding') || ''" class="item-icon" alt="Feeding" />
             <span v-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
@@ -106,7 +118,7 @@ function closeEditModal() {
       </div>
       <ul v-else class="history-list">
         <li v-for="change in diaperChanges.slice(0, 5)" :key="change.id" class="history-item" @click="openEditModal(change, 'diaper')">
-          <div class="time">{{ formatTime(change.timestamp) }}</div>
+          <div class="time">{{ formatDateTime(change.timestamp) }}</div>
            <div class="details">
             <img :src="getIcon(change, 'diaper') || ''" class="item-icon" alt="Diaper" />
             <span class="type">{{ change.type }}</span>

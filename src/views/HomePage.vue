@@ -210,6 +210,7 @@ function getNextFeedingTime(babyId: string) {
   <div class="home-page">
     <div v-if="isAuthenticated" class="app-content">
       <div class="header">
+        <div class="header-spacer"></div>
         <IconButton
           :icon="logOutIcon"
           alt="Sign Out"
@@ -338,6 +339,10 @@ function getNextFeedingTime(babyId: string) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+}
+
+.header-spacer {
+  flex: 1;
 }
 
 .main-title {

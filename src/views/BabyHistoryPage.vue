@@ -466,12 +466,6 @@ function getCurrentTimePosition() {
                 title="Edit Baby"
                 @click="openEditBabyModal"
               />
-              <IconButton
-                :icon="settingsIcon"
-                alt="Settings"
-                title="Settings"
-                @click="showSettingsModal = true"
-              />
             </div>
             <div v-if="selectedBaby.birthdate" class="baby-birthdate">
               {{ formatBirthdate(selectedBaby.birthdate) }}
@@ -491,6 +485,14 @@ function getCurrentTimePosition() {
               <label for="time-window-toggle" class="toggle-slider"></label>
             </div>
             <span class="toggle-text-right">8 AM</span>
+          </div>
+          <div class="header-buttons">
+            <IconButton
+              :icon="settingsIcon"
+              alt="Settings"
+              title="Settings"
+              @click="showSettingsModal = true"
+            />
           </div>
         </div>
       </header>
@@ -1175,5 +1177,11 @@ function getCurrentTimePosition() {
 
 .diaper-marker:hover .diaper-icon {
   transform: scale(1.2);
+}
+
+.header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 </style> 
