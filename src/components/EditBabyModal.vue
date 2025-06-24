@@ -113,73 +113,178 @@ async function handleSubmit() {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1rem;
 }
 
 .edit-baby-modal {
-  background-color: var(--color-lavendar);
-  border-radius: 8px;
-  padding: 1.5rem;
-  max-width: 400px;
-  width: 90%;
-  color: var(--color-lavendar);
+  background-color: #1a1a2e;
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 450px;
+  width: 100%;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
 .edit-baby-modal h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 1.5rem 0;
+  color: #e0e0ff;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  color: #a0a0e0;
+  font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .form-group input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #9c27b0;
+  background-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .image-preview {
   margin-top: 1rem;
+  text-align: center;
 }
 
 .image-preview img {
-  max-width: 100px;
-  max-height: 100px;
+  max-width: 120px;
+  max-height: 120px;
   border-radius: 50%;
   object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .form-actions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
+  gap: 1rem;
+  margin-top: 2rem;
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
+  padding: 1rem 1.5rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 15px;
   color: white;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .btn-save {
-  background-color: #9c27b0;
+  background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+}
+
+.btn-save:hover {
+  background: linear-gradient(135deg, #8e24aa, #6a1b9a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(156, 39, 176, 0.4);
+}
+
+.btn-save:disabled {
+  background: #666;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-cancel {
-  background-color: #9e9e9e;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: #a0a0e0;
+}
+
+.btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+/* File input styling */
+.form-group input[type="file"] {
+  padding: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.form-group input[type="file"]:hover {
+  border-color: #9c27b0;
+  background-color: rgba(156, 39, 176, 0.1);
+}
+
+.form-group input[type="file"]::-webkit-file-upload-button {
+  background: #9c27b0;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-right: 1rem;
+  font-weight: 500;
+}
+
+.form-group input[type="file"]::-webkit-file-upload-button:hover {
+  background: #7b1fa2;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .edit-baby-modal {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  .form-group input {
+    padding: 1rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .btn {
+    padding: 1rem;
+    font-size: 1rem;
+  }
 }
 </style> 

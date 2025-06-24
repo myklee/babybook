@@ -6,9 +6,12 @@ import { format } from 'date-fns'
 import EditBabyModal from '../components/EditBabyModal.vue'
 import EditRecord from '../components/EditRecord.vue'
 import BabySettingsModal from '../components/BabySettingsModal.vue'
+import FeedingModal from '../components/FeedingModal.vue'
+import DiaperModal from '../components/DiaperModal.vue'
 import settingsIcon from '../assets/icons/settings-2.svg'
 import IconButton from '../components/IconButton.vue'
 import pencilIcon from '../assets/icons/lucide_pencil.svg'
+import arrowBigLeftIcon from '../assets/icons/arrow-big-left.svg'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
@@ -48,6 +51,12 @@ const editingRecord = ref<any>(null)
 const editingType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 
 const showSettingsModal = ref(false)
+
+// Modal state for feeding and diaper actions
+const showFeedingModal = ref(false)
+const showDiaperModal = ref(false)
+const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
+const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
 // When the component mounts, get the baby ID from the route.
 onMounted(() => {
@@ -291,6 +300,12 @@ function goHome() {
   router.push('/')
 }
 
+function switchBaby(baby: any) {
+  selectedBaby.value = baby
+  // Update the URL to reflect the new baby
+  router.push(`/baby/${baby.id}`)
+}
+
 function openEditBabyModal() {
   editingBaby.value = selectedBaby.value
   showEditBabyModal.value = true
@@ -444,13 +459,28 @@ function getCurrentTimePosition() {
   const positionPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100))
   return positionPercent
 }
+
+function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
+  feedingType.value = type
+  showFeedingModal.value = true
+}
+
+function openDiaperModal(type: 'pee' | 'poop' | 'both') {
+  diaperType.value = type
+  showDiaperModal.value = true
+}
 </script>
 
 <template>
   <div class="history-page">
     <div v-if="selectedBaby" class="container">
       <header class="page-header">
-        <button @click="goHome" class="back-btn">Home</button>
+        <IconButton
+          :icon="arrowBigLeftIcon"
+          alt="Go Home"
+          title="Go Home"
+          @click="goHome"
+        />
         <div class="baby-info">
           <img 
             :src="selectedBaby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${selectedBaby.name}`" 
@@ -472,7 +502,47 @@ function getCurrentTimePosition() {
             </div>
           </div>
         </div>
+        
+        <!-- Baby Selector -->
+        <div v-if="store.babies.length > 1 && selectedBaby" class="baby-selector">
+          <div class="baby-selector-buttons">
+            <button
+              v-for="baby in store.babies.filter(b => b.id !== selectedBaby.id)"
+              :key="baby.id"
+              class="baby-switch-btn"
+              @click="switchBaby(baby)"
+              :title="`Switch to ${baby.name}`"
+            >
+              <img 
+                :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" 
+                :alt="baby.name" 
+                class="baby-switch-photo" 
+              />
+            </button>
+          </div>
+        </div>
+        
         <div class="header-controls">
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <button class="action-btn breast" @click="openFeedingModal('breast')" title="Record Breast Feeding">
+              <img :src="breastIcon" alt="Breast" class="icon" />
+              <span>Breast</span>
+            </button>
+            <button class="action-btn formula" @click="openFeedingModal('formula')" title="Record Formula Feeding">
+              <img :src="formulaIcon" alt="Formula" class="icon" />
+              <span>Formula</span>
+            </button>
+            <button class="action-btn poop" @click="openDiaperModal('poop')" title="Record Poop Diaper">
+              <img :src="poopIcon" alt="Poop" class="icon" />
+              <span>Poop</span>
+            </button>
+            <button class="action-btn pee" @click="openDiaperModal('pee')" title="Record Pee Diaper">
+              <img :src="dropletsIcon" alt="Pee" class="icon" />
+              <span>Pee</span>
+            </button>
+          </div>
+          
           <div class="time-window-toggle">
             <span class="toggle-text-left">12 AM</span>
             <div class="toggle-container">
@@ -637,6 +707,24 @@ function getCurrentTimePosition() {
       @close="showSettingsModal = false"
       @saved="showSettingsModal = false"
     />
+
+    <FeedingModal
+      v-if="showFeedingModal && selectedBaby"
+      :babyId="selectedBaby.id"
+      :babyName="selectedBaby.name"
+      :feedingType="feedingType"
+      @close="showFeedingModal = false"
+      @saved="showFeedingModal = false"
+    />
+
+    <DiaperModal
+      v-if="showDiaperModal && selectedBaby"
+      :babyId="selectedBaby.id"
+      :babyName="selectedBaby.name"
+      :diaperType="diaperType"
+      @close="showDiaperModal = false"
+      @saved="showDiaperModal = false"
+    />
   </div>
 </template>
 
@@ -644,18 +732,25 @@ function getCurrentTimePosition() {
 .history-page {
   background-color: #1a1a2e;
   min-height: 100vh;
-  padding: 1rem;
   color: white;
 }
 .container {
   max-width: 800px;
   margin: 0 auto;
+  padding: 1rem;
 }
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  justify-content: center;
   margin-bottom: 2rem;
+  width: 100vw;
+  row-gap: 1rem;
+  margin-left: calc(-50vw + 50%);
+  padding: 1rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 .baby-info {
   display: flex;
@@ -673,6 +768,9 @@ function getCurrentTimePosition() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  h2 {
+    white-space: nowrap;
+  }
 }
 .baby-birthdate {
   font-size: 0.9rem;
@@ -947,6 +1045,7 @@ function getCurrentTimePosition() {
   font-size: 0.7rem;
   font-weight: bold;
   color: #a0a0e0;
+  white-space: nowrap;
 }
 
 .toggle-container {
@@ -1183,5 +1282,115 @@ function getCurrentTimePosition() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* Baby Selector Styles */
+.baby-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 1rem;
+}
+
+.baby-selector-label {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #a0a0e0;
+  white-space: nowrap;
+}
+
+.baby-selector-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1rem;
+}
+
+.baby-switch-btn {
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.baby-switch-btn:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.baby-switch-btn.active {
+  border-color: #ffd700;
+  opacity: 1;
+}
+
+.baby-switch-photo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Action Buttons Styles */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: black;
+  transition: transform 0.2s ease;
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 4px;
+}
+
+.action-btn:hover {
+  transform: scale(1.05);
+}
+
+.action-btn .icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1;
+  flex-shrink: 0;
+}
+
+.action-btn.breast {
+  background-color: #f5f5dc; /* beige */
+}
+
+.action-btn.formula {
+  background-color: #7fffd4; /* aquamarine */
+}
+
+.action-btn.poop {
+  background-color: saddlebrown;
+  color: white;
+}
+
+.action-btn.poop .icon {
+  stroke-width: 0;
+  fill: white;
+}
+
+.action-btn.pee {
+  background-color: #ffd700; /* gold */
 }
 </style> 

@@ -9,6 +9,7 @@ import IconButton from '../components/IconButton.vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import logOutIcon from '../assets/icons/log-out.svg'
+import bookUserIcon from '../assets/icons/book-user.svg'
 import { format } from 'date-fns'
 
 const store = useBabyStore()
@@ -236,10 +237,7 @@ function getNextFeedingTime(babyId: string) {
             <span class="baby-name">{{ baby.name }}</span>
             <div class="baby-actions">
               <button class="history-icon-btn" @click.stop="goToBabyHistory(baby)">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="9,6 15,12 9,18"/>
-                </svg>
+                <img :src="bookUserIcon" alt="View History" class="history-icon" />
               </button>
             </div>
           </div>
@@ -423,7 +421,7 @@ function getNextFeedingTime(babyId: string) {
   opacity: 1;
 }
 
-.history-icon-btn svg {
+.history-icon {
   width: clamp(0.875rem, 2.5vw, 1.25rem);
   height: clamp(0.875rem, 2.5vw, 1.25rem);
   filter: brightness(0) invert(1);
