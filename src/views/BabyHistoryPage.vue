@@ -7,6 +7,8 @@ import EditBabyModal from '../components/EditBabyModal.vue'
 import EditRecord from '../components/EditRecord.vue'
 import BabySettingsModal from '../components/BabySettingsModal.vue'
 import settingsIcon from '../assets/icons/settings-2.svg'
+import IconButton from '../components/IconButton.vue'
+import pencilIcon from '../assets/icons/lucide_pencil.svg'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
@@ -458,12 +460,18 @@ function getCurrentTimePosition() {
           <div class="baby-details">
             <div class="baby-name-section">
               <h2>{{ selectedBaby.name }}</h2>
-              <button @click="openEditBabyModal" class="edit-baby-btn">
-                <img src="../assets/icons/lucide_pencil.svg" alt="Edit" />
-              </button>
-              <button class="settings-icon-btn" @click="showSettingsModal = true">
-                <img :src="settingsIcon" alt="Settings" class="settings-svg" />
-              </button>
+              <IconButton
+                :icon="pencilIcon"
+                alt="Edit Baby"
+                title="Edit Baby"
+                @click="openEditBabyModal"
+              />
+              <IconButton
+                :icon="settingsIcon"
+                alt="Settings"
+                title="Settings"
+                @click="showSettingsModal = true"
+              />
             </div>
             <div v-if="selectedBaby.birthdate" class="baby-birthdate">
               {{ formatBirthdate(selectedBaby.birthdate) }}
@@ -516,7 +524,7 @@ function getCurrentTimePosition() {
               :title="`${feeding.type} feeding at ${formatTime(feeding.timestamp)}`"
             >
               <img 
-                :src="feeding.type === 'formula' ? '/src/assets/icons/flask-conical.svg' : '/src/assets/icons/lucide-lab_bottle-baby.svg'" 
+                :src="feeding.type === 'formula' ? formulaIcon : breastIcon" 
                 alt="feeding"
                 class="feeding-icon"
               />
@@ -530,7 +538,7 @@ function getCurrentTimePosition() {
               :title="`${diaper.type} diaper at ${formatTime(diaper.timestamp)}`"
             >
               <img 
-                :src="diaper.type === 'pee' ? '/src/assets/icons/droplets.svg' : '/src/assets/icons/hugeicons_poop.svg'" 
+                :src="diaper.type === 'pee' ? dropletsIcon : poopIcon" 
                 alt="diaper"
                 class="diaper-icon"
               />

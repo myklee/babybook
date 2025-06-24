@@ -23,6 +23,7 @@ const customDate = ref('')
 const customTime = ref('')
 const isSaving = ref(false)
 const timeInput = ref<HTMLInputElement | null>(null)
+const amountInput = ref<HTMLInputElement | null>(null)
 
 onMounted(async () => {
   console.log('FeedingModal mounted with babyName:', props.babyName)
@@ -70,6 +71,13 @@ watch(feedingTypeRef, (newType) => {
     }
   }
 })
+
+// Function to select all text when focusing amount field
+function selectAmountText() {
+  if (amountInput.value) {
+    amountInput.value.select()
+  }
+}
 
 async function handleSubmit() {
   isSaving.value = true
@@ -120,12 +128,71 @@ async function handleSubmit() {
         <div class="form-group">
           <label>Amount (ml)</label>
           <input 
+            ref="amountInput"
             type="number" 
             v-model="amount" 
             required 
             min="0" 
-            step="1"
+            step="5"
+            inputmode="decimal"
+            pattern="[0-9]*"
+            @focus="selectAmountText"
+            @click="selectAmountText"
+            placeholder="Enter amount"
+            autocomplete="off"
           >
+          <div v-if="feedingTypeRef === 'formula'" class="preset-buttons">
+            <button 
+              type="button" 
+              class="preset-btn" 
+              @click="amount = 100"
+              :class="{ active: amount === 100 }"
+            >
+              100ml
+            </button>
+            <button 
+              type="button" 
+              class="preset-btn" 
+              @click="amount = 130"
+              :class="{ active: amount === 130 }"
+            >
+              130ml
+            </button>
+            <button 
+              type="button" 
+              class="preset-btn" 
+              @click="amount = 160"
+              :class="{ active: amount === 160 }"
+            >
+              160ml
+            </button>
+          </div>
+          <div v-if="feedingTypeRef === 'breast'" class="preset-buttons">
+            <button 
+              type="button" 
+              class="preset-btn" 
+              @click="amount = 100"
+              :class="{ active: amount === 100 }"
+            >
+              100ml
+            </button>
+            <button 
+              type="button" 
+              class="preset-btn" 
+              @click="amount = 120"
+              :class="{ active: amount === 120 }"
+            >
+              120ml
+            </button>
+            <button 
+              type="button" 
+              class="preset-btn" 
+              @click="amount = 140"
+              :class="{ active: amount === 140 }"
+            >
+              140ml
+            </button>
+          </div>
         </div>
 
         <div class="form-group">
@@ -227,6 +294,71 @@ async function handleSubmit() {
   outline: none;
   border-color: #9c27b0;
   box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.2);
+}
+
+/* Mobile-specific improvements for numeric inputs */
+.form-group input[type="number"] {
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  font-size: 16px; /* Prevents zoom on iOS */
+}
+
+.form-group input[type="number"]::-webkit-outer-spin-button,
+.form-group input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Improve touch targets on mobile */
+@media (max-width: 768px) {
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 1rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+    min-height: 44px; /* Better touch target */
+  }
+  
+  .preset-btn {
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+    font-size: 1rem;
+  }
+  
+  .btn {
+    padding: 1rem 1.5rem;
+    min-height: 44px;
+    font-size: 1rem;
+  }
+}
+
+.preset-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.preset-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+  color: #333;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.preset-btn:hover {
+  background-color: #e9ecef;
+  border-color: #9c27b0;
+}
+
+.preset-btn.active {
+  background-color: #9c27b0;
+  color: white;
+  border-color: #9c27b0;
 }
 
 .form-actions {

@@ -20,6 +20,23 @@ const defaultBreastAmount = ref(0)
 const defaultFormulaAmount = ref(0)
 const isSaving = ref(false)
 
+// Refs for input fields
+const breastAmountInput = ref<HTMLInputElement | null>(null)
+const formulaAmountInput = ref<HTMLInputElement | null>(null)
+
+// Functions to select all text when focusing amount fields
+function selectBreastAmountText() {
+  if (breastAmountInput.value) {
+    breastAmountInput.value.select()
+  }
+}
+
+function selectFormulaAmountText() {
+  if (formulaAmountInput.value) {
+    formulaAmountInput.value.select()
+  }
+}
+
 onMounted(() => {
   // Load current settings
   const settings = store.getBabySettings(props.babyId)
@@ -75,6 +92,10 @@ async function handleSubmit() {
             v-model="defaultBreastAmount" 
             min="0" 
             step="5"
+            ref="breastAmountInput"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            @focus="selectBreastAmountText"
           >
           <small>Default amount for breast feedings (0 = no default)</small>
         </div>
@@ -86,6 +107,10 @@ async function handleSubmit() {
             v-model="defaultFormulaAmount" 
             min="0" 
             step="5"
+            ref="formulaAmountInput"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            @focus="selectFormulaAmountText"
           >
           <small>Default amount for formula feedings (0 = no default)</small>
         </div>

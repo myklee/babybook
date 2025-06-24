@@ -121,12 +121,12 @@ async function handleSubmit() {
 }
 
 .edit-baby-modal {
-  background-color: white;
+  background-color: var(--color-lavendar);
   border-radius: 8px;
   padding: 1.5rem;
   max-width: 400px;
   width: 90%;
-  color: #333;
+  color: var(--color-lavendar);
 }
 
 .edit-baby-modal h3 {

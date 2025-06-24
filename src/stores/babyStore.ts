@@ -141,43 +141,56 @@ export const useBabyStore = defineStore('baby', () => {
       console.warn('Data loading timeout, forcing loading state to false')
       isLoading.value = false
       isDataLoading.value = false
-    }, 10000) // 10 second timeout
+    }, 15000) // Increased to 15 seconds
     
     try {
-      // Load babies
+      // Load babies with individual timeout
       console.log('Loading babies...')
-      const { data: babiesData, error: babiesError } = await supabase
+      const babiesPromise = supabase
         .from('babies')
         .select('*')
         .eq('user_id', currentUser.value.id)
         .order('created_at', { ascending: true })
+      
+      const babiesResult = await Promise.race([
+        babiesPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Babies loading timeout')), 5000)
+        )
+      ]) as any
 
-      if (babiesError) {
-        console.error('Error loading babies:', babiesError)
-        throw babiesError
+      if (babiesResult.error) {
+        console.error('Error loading babies:', babiesResult.error)
+        throw babiesResult.error
       }
-      babies.value = babiesData || []
+      babies.value = babiesResult.data || []
       console.log('Loaded babies:', babies.value.length)
 
-      // Load baby settings
+      // Load baby settings (non-blocking)
       console.log('Loading baby settings...')
       try {
-        const { data: settingsData, error: settingsError } = await supabase
+        const settingsPromise = supabase
           .from('baby_settings')
           .select('*')
           .in('baby_id', babies.value.map(b => b.id))
+        
+        const settingsResult = await Promise.race([
+          settingsPromise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Settings loading timeout')), 5000)
+          )
+        ]) as any
 
-        if (settingsError) {
-          console.error('Error loading baby settings:', settingsError)
-          // If table doesn't exist, just skip it
-          if (settingsError.message.includes('relation "baby_settings" does not exist')) {
+        if (settingsResult.error) {
+          console.error('Error loading baby settings:', settingsResult.error)
+          if (settingsResult.error.message.includes('relation "baby_settings" does not exist')) {
             console.log('Baby settings table does not exist, skipping...')
             babySettings.value = []
           } else {
-            throw settingsError
+            throw settingsResult.error
           }
         } else {
-          babySettings.value = settingsData || []
+          babySettings.value = settingsResult.data || []
           console.log('Loaded baby settings:', babySettings.value.length)
         }
       } catch (settingsTableError) {
@@ -185,56 +198,76 @@ export const useBabyStore = defineStore('baby', () => {
         babySettings.value = []
       }
 
-      // Load feedings
+      // Load feedings with individual timeout
       console.log('Loading feedings...')
-      const { data: feedingsData, error: feedingsError } = await supabase
+      const feedingsPromise = supabase
         .from('feedings')
         .select('*')
         .eq('user_id', currentUser.value.id)
         .order('timestamp', { ascending: false })
+      
+      const feedingsResult = await Promise.race([
+        feedingsPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Feedings loading timeout')), 5000)
+        )
+      ]) as any
 
-      if (feedingsError) {
-        console.error('Error loading feedings:', feedingsError)
-        throw feedingsError
+      if (feedingsResult.error) {
+        console.error('Error loading feedings:', feedingsResult.error)
+        throw feedingsResult.error
       }
-      feedings.value = feedingsData || []
+      feedings.value = feedingsResult.data || []
       console.log('Loaded feedings:', feedings.value.length)
 
-      // Load diaper changes
+      // Load diaper changes with individual timeout
       console.log('Loading diaper changes...')
-      const { data: diaperChangesData, error: diaperChangesError } = await supabase
+      const diaperPromise = supabase
         .from('diaper_changes')
         .select('*')
         .eq('user_id', currentUser.value.id)
         .order('timestamp', { ascending: false })
+      
+      const diaperResult = await Promise.race([
+        diaperPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Diaper changes loading timeout')), 5000)
+        )
+      ]) as any
 
-      if (diaperChangesError) {
-        console.error('Error loading diaper changes:', diaperChangesError)
-        throw diaperChangesError
+      if (diaperResult.error) {
+        console.error('Error loading diaper changes:', diaperResult.error)
+        throw diaperResult.error
       }
-      diaperChanges.value = diaperChangesData || []
+      diaperChanges.value = diaperResult.data || []
       console.log('Loaded diaper changes:', diaperChanges.value.length)
 
-      // Load sleep sessions
+      // Load sleep sessions (non-blocking)
       console.log('Loading sleep sessions...')
       try {
-        const { data: sleepData, error: sleepError } = await supabase
+        const sleepPromise = supabase
           .from('sleep_sessions')
           .select('*')
           .eq('user_id', currentUser.value.id)
           .order('start_time', { ascending: false })
+        
+        const sleepResult = await Promise.race([
+          sleepPromise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Sleep sessions loading timeout')), 5000)
+          )
+        ]) as any
 
-        if (sleepError) {
-          console.error('Error loading sleep sessions:', sleepError)
-          // If table doesn't exist, just skip it
-          if (sleepError.message.includes('relation "sleep_sessions" does not exist')) {
+        if (sleepResult.error) {
+          console.error('Error loading sleep sessions:', sleepResult.error)
+          if (sleepResult.error.message.includes('relation "sleep_sessions" does not exist')) {
             console.log('Sleep sessions table does not exist, skipping...')
             sleepSessions.value = []
           } else {
-            throw sleepError
+            throw sleepResult.error
           }
         } else {
-          sleepSessions.value = sleepData || []
+          sleepSessions.value = sleepResult.data || []
           console.log('Loaded sleep sessions:', sleepSessions.value.length)
         }
       } catch (sleepTableError) {
@@ -396,13 +429,29 @@ export const useBabyStore = defineStore('baby', () => {
       }
     }
     
-    // Check if session is still valid
-    const { data: { session }, error } = await supabase.auth.getSession()
-    if (error || !session) {
-      console.log('Session invalid, trying to refresh...')
+    // Check if session is still valid with timeout
+    try {
+      const sessionPromise = supabase.auth.getSession()
+      const sessionResult = await Promise.race([
+        sessionPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 3000)
+        )
+      ]) as any
+      
+      if (sessionResult.error || !sessionResult.data.session) {
+        console.log('Session invalid, trying to refresh...')
+        await loadUser()
+        if (!currentUser.value) {
+          throw new Error('Session expired. Please sign in again.')
+        }
+      }
+    } catch (error) {
+      console.error('Session validation error:', error)
+      // If session check times out, try to load user anyway
       await loadUser()
       if (!currentUser.value) {
-        throw new Error('Session expired. Please sign in again.')
+        throw new Error('Session validation failed. Please sign in again.')
       }
     }
   }

@@ -5,8 +5,10 @@ import { useBabyStore } from '../stores/babyStore'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
 import HistoryList from '../components/HistoryList.vue'
+import IconButton from '../components/IconButton.vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
+import logOutIcon from '../assets/icons/log-out.svg'
 import { format } from 'date-fns'
 
 const store = useBabyStore()
@@ -84,8 +86,7 @@ async function signIn() {
   if (email && password) {
     try {
       await store.signIn(email, password)
-      // Force a page refresh to ensure all data is loaded
-      window.location.reload()
+      // The store will automatically handle loading data via the auth state change listener
     } catch (error) {
       console.error('Sign in error:', error)
       alert('Failed to sign in. Please check your credentials.')
@@ -209,8 +210,12 @@ function getNextFeedingTime(babyId: string) {
   <div class="home-page">
     <div v-if="isAuthenticated" class="app-content">
       <div class="header">
-        <h1 class="main-title">Baby Book</h1>
-        <button @click="signOut" class="sign-out-btn">Sign Out</button>
+        <IconButton
+          :icon="logOutIcon"
+          alt="Sign Out"
+          title="Sign Out"
+          @click="signOut"
+        />
       </div>
 
       <div class="baby-selectors">
@@ -336,29 +341,11 @@ function getNextFeedingTime(babyId: string) {
 }
 
 .main-title {
-  font-size: clamp(2rem, 5vw, 3rem);
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
   font-weight: bold;
   margin: 0;
-  text-align: center;
+  text-align: left;
   flex: 1;
-}
-
-.sign-out-btn {
-  background: none;
-  border: 1px solid #666;
-  color: #ccc;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.sign-out-btn:hover {
-  background-color: #666;
-  color: white;
-  border-color: #888;
 }
 
 .baby-selectors {
@@ -666,5 +653,12 @@ function getNextFeedingTime(babyId: string) {
   font-size: 0.75rem;
   color: #a0a0e0;
   margin-left: 0.5rem;
+}
+
+.settings-svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: block;
+  filter: brightness(0) invert(1);
 }
 </style> 

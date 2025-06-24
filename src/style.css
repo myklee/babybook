@@ -1,4 +1,13 @@
 :root {
+  --color-pee: #fffc3a;
+  --color-formula: #7fffea;
+  --color-poo: #8d4a24;
+  --color-milk: #fffde8;
+  --color-lavendar: #b39ddb;
+  --color-midnight: #0d1b1e;
+  --color-raven: #23243a;
+  --color-prince: #21022b;
+
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;

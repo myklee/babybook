@@ -26,6 +26,8 @@ const customEndDate = ref('')
 const customEndTime = ref('')
 const topupAmount = ref(0)
 const isSaving = ref(false)
+const amountInput = ref<HTMLInputElement | null>(null)
+const topupAmountInput = ref<HTMLInputElement | null>(null)
 
 onMounted(() => {
   const setDateTime = (timestamp: string, isEnd = false) => {
@@ -63,6 +65,19 @@ onMounted(() => {
     }
   }
 })
+
+// Function to select all text when focusing amount fields
+function selectAmountText() {
+  if (amountInput.value) {
+    amountInput.value.select()
+  }
+}
+
+function selectTopupAmountText() {
+  if (topupAmountInput.value) {
+    topupAmountInput.value.select()
+  }
+}
 
 async function handleSubmit() {
   isSaving.value = true
@@ -169,6 +184,13 @@ async function handleDelete() {
             required 
             min="0" 
             step="1"
+            ref="amountInput"
+            inputmode="decimal"
+            pattern="[0-9]*"
+            @focus="selectAmountText"
+            @click="selectAmountText"
+            placeholder="Enter amount"
+            autocomplete="off"
           >
         </div>
         <div v-if="type === 'feeding' && feedingType === 'breast'" class="form-group">
@@ -179,6 +201,12 @@ async function handleDelete() {
             min="0" 
             step="1"
             placeholder="0"
+            ref="topupAmountInput"
+            inputmode="decimal"
+            pattern="[0-9]*"
+            @focus="selectTopupAmountText"
+            @click="selectTopupAmountText"
+            autocomplete="off"
           >
           <small class="form-help">Add formula amount given after breastfeeding</small>
         </div>
@@ -276,7 +304,7 @@ async function handleDelete() {
   display: block;
   margin-top: 0.25rem;
   font-size: 0.8rem;
-  color: #666;
+  color: #333;
 }
 
 .form-actions {
@@ -329,5 +357,43 @@ async function handleDelete() {
 
 .datetime-group input {
   flex: 1;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #9c27b0;
+  box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.2);
+}
+
+/* Mobile-specific improvements for numeric inputs */
+.form-group input[type="number"] {
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  font-size: 16px; /* Prevents zoom on iOS */
+}
+
+.form-group input[type="number"]::-webkit-outer-spin-button,
+.form-group input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Improve touch targets on mobile */
+@media (max-width: 768px) {
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 1rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+    min-height: 44px; /* Better touch target */
+  }
+  
+  .btn {
+    padding: 1rem 1.5rem;
+    min-height: 44px;
+    font-size: 1rem;
+  }
 }
 </style> 
