@@ -623,6 +623,7 @@ function getCurrentTimePosition() {
       v-if="showEditModal && editingRecord"
       :record="editingRecord"
       :type="editingType"
+      :babyName="selectedBaby?.name"
       @close="closeEditModal"
       @saved="closeEditModal"
     />

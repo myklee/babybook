@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 const props = defineProps<{
   record: any
   type: 'feeding' | 'diaper' | 'sleep'
+  babyName?: string
 }>()
 
 const emit = defineEmits<{
@@ -152,6 +153,7 @@ async function handleDelete() {
         <span v-if="type === 'feeding'">Feeding</span>
         <span v-else-if="type === 'diaper'">Diaper Change</span>
         <span v-else-if="type === 'sleep'">Sleep Session</span>
+        <span v-if="babyName"> for {{ babyName }}</span>
       </h3>
       
       <form @submit.prevent="handleSubmit">
@@ -183,7 +185,7 @@ async function handleDelete() {
             v-model="amount" 
             required 
             min="0" 
-            step="1"
+            step="5"
             ref="amountInput"
             inputmode="decimal"
             pattern="[0-9]*"

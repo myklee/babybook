@@ -31,6 +31,11 @@ const sleepSessions = computed(() => {
   return store.getBabySleepSessions(props.babyId)
 })
 
+const babyName = computed(() => {
+  const baby = store.babies.find(b => b.id === props.babyId)
+  return baby?.name || ''
+})
+
 function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep') {
   if (category === 'feeding') {
     if (item.type === 'breast') return breastIcon;
@@ -134,6 +139,7 @@ function closeEditModal() {
       v-if="showEditModal && editingRecord"
       :record="editingRecord"
       :type="editingType"
+      :babyName="babyName"
       @close="closeEditModal"
       @saved="closeEditModal"
     />
