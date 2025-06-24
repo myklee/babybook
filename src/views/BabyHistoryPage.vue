@@ -469,6 +469,11 @@ function openDiaperModal(type: 'pee' | 'poop' | 'both') {
   diaperType.value = type
   showDiaperModal.value = true
 }
+
+function onBabyDeleted() {
+  // Handle the event when a baby is deleted
+  goHome()
+}
 </script>
 
 <template>
@@ -507,7 +512,7 @@ function openDiaperModal(type: 'pee' | 'poop' | 'both') {
         <div v-if="store.babies.length > 1 && selectedBaby" class="baby-selector">
           <div class="baby-selector-buttons">
             <button
-              v-for="baby in store.babies.filter(b => b.id !== selectedBaby.id)"
+              v-for="baby in store.babies.filter(b => selectedBaby && b.id !== selectedBaby.id)"
               :key="baby.id"
               class="baby-switch-btn"
               @click="switchBaby(baby)"
@@ -688,6 +693,7 @@ function openDiaperModal(type: 'pee' | 'poop' | 'both') {
       :baby="editingBaby"
       @close="showEditBabyModal = false"
       @saved="onModalSaved"
+      @deleted="onBabyDeleted"
     />
 
     <!-- Edit Record Modal -->

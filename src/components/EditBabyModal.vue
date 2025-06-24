@@ -9,6 +9,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   saved: []
+  deleted: []
 }>()
 
 const store = useBabyStore()
@@ -17,6 +18,8 @@ const birthdate = ref('')
 const imageFile = ref<File | null>(null)
 const nameInput = ref<HTMLInputElement | null>(null)
 const isSaving = ref(false)
+const isDeleting = ref(false)
+const showDeleteConfirm = ref(false)
 const previewUrl = ref<string | null>(null)
 
 onMounted(async () => {
@@ -53,6 +56,29 @@ async function handleSubmit() {
     alert('Failed to update baby.')
   } finally {
     isSaving.value = false
+  }
+}
+
+function showDeleteConfirmation() {
+  showDeleteConfirm.value = true
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+}
+
+async function confirmDelete() {
+  isDeleting.value = true
+  try {
+    await store.deleteBaby(props.baby.id)
+    emit('deleted')
+    emit('close')
+  } catch (error) {
+    console.error('Error deleting baby:', error)
+    alert('Failed to delete baby. Please try again.')
+  } finally {
+    isDeleting.value = false
+    showDeleteConfirm.value = false
   }
 }
 </script>
@@ -100,8 +126,28 @@ async function handleSubmit() {
           <button type="button" class="btn btn-cancel" @click="emit('close')">
             Cancel
           </button>
+          <button type="button" class="btn btn-delete" @click="showDeleteConfirmation" :disabled="isSaving">
+            Delete
+          </button>
         </div>
       </form>
+    </div>
+
+    <!-- Delete Confirmation Dialog -->
+    <div v-if="showDeleteConfirm" class="delete-confirm-overlay" @click="cancelDelete">
+      <div class="delete-confirm-modal" @click.stop>
+        <h4>Delete Baby</h4>
+        <p>Are you sure you want to delete <strong>{{ props.baby.name }}</strong>?</p>
+        <p class="warning-text">This action cannot be undone. All data for this baby will be permanently deleted.</p>
+        <div class="delete-confirm-actions">
+          <button class="btn btn-cancel" @click="cancelDelete" :disabled="isDeleting">
+            Cancel
+          </button>
+          <button class="btn btn-delete-confirm" @click="confirmDelete" :disabled="isDeleting">
+            {{ isDeleting ? 'Deleting...' : 'Delete Permanently' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -240,6 +286,18 @@ async function handleSubmit() {
   color: white;
 }
 
+.btn-delete {
+  background: rgba(239, 68, 68, 0.1);
+  border: 2px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
 /* File input styling */
 .form-group input[type="file"] {
   padding: 0.75rem;
@@ -286,5 +344,78 @@ async function handleSubmit() {
     padding: 1rem;
     font-size: 1rem;
   }
+}
+
+/* Delete Confirmation Dialog Styles */
+.delete-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.delete-confirm-modal {
+  background-color: #1a1a2e;
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  color: white;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.delete-confirm-modal h4 {
+  margin: 0 0 1rem 0;
+  color: #ef4444;
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.delete-confirm-modal p {
+  margin: 0 0 1rem 0;
+  color: #e0e0ff;
+  line-height: 1.5;
+}
+
+.warning-text {
+  color: #fca5a5 !important;
+  font-size: 0.9rem;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 1rem;
+  border-radius: 10px;
+  border-left: 3px solid #ef4444;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn-delete-confirm {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-delete-confirm:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.btn-delete-confirm:disabled {
+  background: #666;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 </style> 

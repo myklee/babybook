@@ -419,6 +419,69 @@ export const useBabyStore = defineStore('baby', () => {
     return data
   }
 
+  // Delete a baby and all associated data
+  async function deleteBaby(id: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+
+    try {
+      // Delete baby settings first
+      await supabase
+        .from('baby_settings')
+        .delete()
+        .eq('baby_id', id)
+
+      // Delete all feedings for this baby
+      await supabase
+        .from('feedings')
+        .delete()
+        .eq('baby_id', id)
+
+      // Delete all diaper changes for this baby
+      await supabase
+        .from('diaper_changes')
+        .delete()
+        .eq('baby_id', id)
+
+      // Delete all sleep sessions for this baby
+      await supabase
+        .from('sleep_sessions')
+        .delete()
+        .eq('baby_id', id)
+
+      // Delete the baby image if it exists
+      const baby = babies.value.find(b => b.id === id)
+      if (baby?.image_url) {
+        const imageKey = baby.image_url.split('/').pop()
+        if (imageKey) {
+          await supabase.storage.from('baby-images').remove([imageKey])
+        }
+      }
+
+      // Finally, delete the baby
+      const { error } = await supabase
+        .from('babies')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', currentUser.value.id)
+
+      if (error) {
+        console.error('Database delete error:', error)
+        throw error
+      }
+
+      // Remove from local state
+      const index = babies.value.findIndex(b => b.id === id)
+      if (index !== -1) {
+        babies.value.splice(index, 1)
+      }
+
+      return true
+    } catch (error) {
+      console.error('Error deleting baby:', error)
+      throw error
+    }
+  }
+
   // Ensure session is valid before database operations
   async function ensureValidSession() {
     if (!currentUser.value) {
@@ -861,6 +924,7 @@ export const useBabyStore = defineStore('baby', () => {
     addTopUpToFeeding,
     getBabySettings,
     updateBabySettings,
-    createBabySettings
+    createBabySettings,
+    deleteBaby
   }
 }) 

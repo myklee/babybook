@@ -10,6 +10,7 @@ import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import logOutIcon from '../assets/icons/log-out.svg'
 import bookUserIcon from '../assets/icons/book-user.svg'
+import addBabyIcon from '../assets/icons/add-baby.svg'
 import { format } from 'date-fns'
 
 const store = useBabyStore()
@@ -121,6 +122,19 @@ async function signOut() {
   }
 }
 
+// Add baby
+async function addBaby() {
+  const name = prompt('Enter baby name:')
+  if (name && name.trim()) {
+    try {
+      await store.addBaby(name.trim())
+    } catch (error) {
+      console.error('Error adding baby:', error)
+      alert('Failed to add baby. Please try again.')
+    }
+  }
+}
+
 // Get last feeding time for a specific baby
 function getLastFeedingTime(babyId: string) {
   try {
@@ -211,6 +225,12 @@ function getNextFeedingTime(babyId: string) {
   <div class="home-page">
     <div v-if="isAuthenticated" class="app-content">
       <div class="header">
+        <IconButton
+          :icon="addBabyIcon"
+          alt="Add Baby"
+          title="Add Baby"
+          @click="addBaby"
+        />
         <div class="header-spacer"></div>
         <IconButton
           :icon="logOutIcon"
