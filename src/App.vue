@@ -9,10 +9,10 @@ const REFRESH_COOLDOWN = 5000 // 5 seconds
 onMounted(async () => {
   console.log('App mounted, initializing...')
   await store.initializeStore()
-  
+
   // Add focus listener for auto-refresh
   window.addEventListener('focus', handleFocus)
-  
+
   // Add visibility change listener for when tab becomes visible
   document.addEventListener('visibilitychange', handleVisibilityChange)
 })
@@ -76,7 +76,7 @@ function handleVisibilityChange() {
 body {
   margin: 0;
   padding: 0;
-  background-color: #2a1f1a;
+  background-color: black;
 }
 
 .btn {

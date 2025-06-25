@@ -11,6 +11,7 @@ import formulaIcon from '../assets/icons/flask-conical.svg'
 import logOutIcon from '../assets/icons/log-out.svg'
 import bookUserIcon from '../assets/icons/book-user.svg'
 import addBabyIcon from '../assets/icons/add-baby.svg'
+import userRoundIcon from '../assets/icons/circle-user-round.svg'
 import { format } from 'date-fns'
 
 const store = useBabyStore()
@@ -78,6 +79,10 @@ function goToHistory() {
 
 function goToBabyHistory(baby: any) {
   router.push(`/baby/${baby.id}`)
+}
+
+function goToProfile() {
+  router.push('/profile')
 }
 
 // Sign in
@@ -226,6 +231,7 @@ function getNextFeedingTime(babyId: string) {
     <div v-if="isAuthenticated" class="app-content">
       <div class="header">
         <IconButton
+          v-if="store.babies.length === 0"
           :icon="addBabyIcon"
           alt="Add Baby"
           title="Add Baby"
@@ -233,10 +239,10 @@ function getNextFeedingTime(babyId: string) {
         />
         <div class="header-spacer"></div>
         <IconButton
-          :icon="logOutIcon"
-          alt="Sign Out"
-          title="Sign Out"
-          @click="signOut"
+          :icon="userRoundIcon"
+          alt="Profile"
+          title="Profile"
+          @click="goToProfile"
         />
       </div>
 
