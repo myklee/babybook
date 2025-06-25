@@ -116,16 +116,6 @@ async function signUp() {
   }
 }
 
-// Sign out
-async function signOut() {
-  try {
-    await store.signOut()
-  } catch (error) {
-    console.error('Sign out error:', error)
-    alert('Failed to sign out. Please try again.')
-  }
-}
-
 // Add baby
 async function addBaby() {
   const name = prompt('Enter baby name:')
