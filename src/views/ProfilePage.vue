@@ -227,9 +227,6 @@ async function signOut() {
                 />
                 <div class="baby-details">
                   <h3>{{ baby.name }}</h3>
-                  <p v-if="baby.birthdate" class="baby-birthdate">
-                    Born: {{ new Date(baby.birthdate).toLocaleDateString() }}
-                  </p>
                 </div>
               </div>
               <div class="baby-actions">
@@ -470,12 +467,6 @@ async function signOut() {
   margin: 0 0 0.25rem 0;
   color: #e0e0ff;
   font-size: 1.1rem;
-}
-
-.baby-birthdate {
-  margin: 0;
-  color: #a0a0e0;
-  font-size: 0.9rem;
 }
 
 .baby-actions {
