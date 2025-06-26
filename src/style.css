@@ -86,6 +86,6 @@ button:focus-visible {
   }
 }
 
-body.ios .home-page, body.ios .profile-page {
+body.ios .home-page, body.ios .profile-page, body.ios .history-page {
   padding-top: 44px;
 }
