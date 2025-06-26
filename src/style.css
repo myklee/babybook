@@ -85,3 +85,7 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+body.ios .home-page, body.ios .profile-page {
+  padding-top: 44px;
+}

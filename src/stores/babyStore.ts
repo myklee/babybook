@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/supabase'
 import { startOfToday, set } from 'date-fns'
@@ -20,6 +20,24 @@ export const useBabyStore = defineStore('baby', () => {
   const currentUser = ref<any>(null)
   const isDataLoading = ref(false) // Guard to prevent multiple simultaneous loads
   const authListenerSet = ref(false)
+
+  let pollingInterval: ReturnType<typeof setInterval> | null = null
+
+  function startPolling() {
+    if (pollingInterval) return // Already polling
+    pollingInterval = setInterval(() => {
+      if (currentUser.value) {
+        loadData()
+      }
+    }, 15000) // 15 seconds
+  }
+
+  function stopPolling() {
+    if (pollingInterval) {
+      clearInterval(pollingInterval)
+      pollingInterval = null
+    }
+  }
 
   // Initialize store and load data
   async function initializeStore() {
@@ -888,6 +906,25 @@ export const useBabyStore = defineStore('baby', () => {
     babySettings.value.push(data)
     return data
   }
+
+  // Start polling when the store is initialized and user is signed in
+  onMounted(() => {
+    if (currentUser.value) startPolling()
+  })
+
+  // Stop polling when the store is disposed
+  onUnmounted(() => {
+    stopPolling()
+  })
+
+  // Also start/stop polling on auth state changes
+  watch(currentUser, (user) => {
+    if (user) {
+      startPolling()
+    } else {
+      stopPolling()
+    }
+  })
 
   return {
     // State
