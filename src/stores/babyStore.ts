@@ -907,6 +907,48 @@ export const useBabyStore = defineStore('baby', () => {
     return data
   }
 
+  // Start a new sleep session (no end time)
+  async function startSleepSession(babyId: string, notes?: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+    const { data, error } = await supabase
+      .from('sleep_sessions')
+      .insert({
+        baby_id: babyId,
+        start_time: new Date().toISOString(),
+        end_time: null,
+        notes: notes || null,
+        user_id: currentUser.value.id
+      })
+      .select()
+      .single()
+    if (error) throw error
+    sleepSessions.value.unshift(data)
+    return data
+  }
+
+  // End the current sleep session (set end_time to now)
+  async function endSleepSession(babyId: string) {
+    if (!currentUser.value) throw new Error('User not authenticated')
+    const openSession = sleepSessions.value.find(s => s.baby_id === babyId && !s.end_time)
+    if (!openSession) throw new Error('No open sleep session found')
+    const { data, error } = await supabase
+      .from('sleep_sessions')
+      .update({ end_time: new Date().toISOString() })
+      .eq('id', openSession.id)
+      .eq('user_id', currentUser.value.id)
+      .select()
+      .single()
+    if (error) throw error
+    const index = sleepSessions.value.findIndex(s => s.id === openSession.id)
+    if (index !== -1) sleepSessions.value[index] = data
+    return data
+  }
+
+  // Check if a baby is currently sleeping (has an open session)
+  function isBabySleeping(babyId: string) {
+    return sleepSessions.value.some(s => s.baby_id === babyId && !s.end_time)
+  }
+
   // Start polling when the store is initialized and user is signed in
   onMounted(() => {
     if (currentUser.value) startPolling()
@@ -962,6 +1004,9 @@ export const useBabyStore = defineStore('baby', () => {
     getBabySettings,
     updateBabySettings,
     createBabySettings,
-    deleteBaby
+    deleteBaby,
+    startSleepSession,
+    endSleepSession,
+    isBabySleeping
   }
 }) 

@@ -12,6 +12,7 @@ import bookUserIcon from '../assets/icons/book-user.svg'
 import addBabyIcon from '../assets/icons/add-baby.svg'
 import userRoundIcon from '../assets/icons/circle-user-round.svg'
 import { format } from 'date-fns'
+import SleepModal from '../components/SleepModal.vue'
 
 const store = useBabyStore()
 const router = useRouter()
@@ -20,6 +21,7 @@ const router = useRouter()
 const selectedBaby = ref<any>(null)
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
+const showSleepModal = ref(false)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
@@ -68,6 +70,10 @@ function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
 function openDiaperModal(type: 'pee' | 'poop' | 'both') {
   diaperType.value = type
   showDiaperModal.value = true
+}
+
+function openSleepModal() {
+  showSleepModal.value = true
 }
 
 function goToHistory() {
@@ -214,6 +220,15 @@ function getNextFeedingTime(babyId: string) {
     return null
   }
 }
+
+function handleSleepClick() {
+  if (!selectedBaby.value) return
+  if (store.isBabySleeping(selectedBaby.value.id)) {
+    store.endSleepSession(selectedBaby.value.id)
+  } else {
+    store.startSleepSession(selectedBaby.value.id)
+  }
+}
 </script>
 
 <template>
@@ -255,6 +270,7 @@ function getNextFeedingTime(babyId: string) {
               <button class="history-icon-btn" @click.stop="goToBabyHistory(baby)">
                 <img :src="bookUserIcon" alt="View History" class="history-icon" />
               </button>
+              <span v-if="store.isBabySleeping(baby.id)" class="sleep-indicator" title="Sleeping">😴</span>
             </div>
           </div>
           <div v-if="store.babies.length > 0 && getLastFeedingTime(baby.id)" class="baby-last-feeding">
@@ -291,6 +307,10 @@ function getNextFeedingTime(babyId: string) {
           <img src="../assets/icons/droplets.svg" class="icon" alt="Pee" />
           <span>Pee</span>
         </button>
+        <button class="action-btn sleep" @click="handleSleepClick()">
+          <span v-if="store.isBabySleeping(selectedBaby?.id)">⏹️ Wake</span>
+          <span v-else>😴 Sleep</span>
+        </button>
       </div>
 
       <HistoryList v-if="selectedBaby" :baby-id="selectedBaby.id" class="mt-8 w-full" />
@@ -318,6 +338,13 @@ function getNextFeedingTime(babyId: string) {
       :babyName="selectedBaby.name"
       :diaperType="diaperType"
       @close="showDiaperModal = false"
+    />
+
+    <SleepModal
+      v-if="showSleepModal && selectedBaby"
+      :babyId="selectedBaby.id"
+      @close="showSleepModal = false"
+      @saved="async (session) => { await store.addSleepSession(selectedBaby.id, new Date(session.start_time), session.end_time ? new Date(session.end_time) : undefined, session.notes); showSleepModal = false; }"
     />
 
     <!-- Hidden original content for reference or later use -->
@@ -679,5 +706,11 @@ function getNextFeedingTime(babyId: string) {
   height: 1.5rem;
   display: block;
   filter: brightness(0) invert(1);
+}
+
+.sleep-indicator {
+  margin-left: 0.5rem;
+  font-size: 1.2rem;
+  vertical-align: middle;
 }
 </style> 

@@ -8,6 +8,7 @@ import EditRecord from '../components/EditRecord.vue'
 import BabySettingsModal from '../components/BabySettingsModal.vue'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
+import SleepModal from '../components/SleepModal.vue'
 import settingsIcon from '../assets/icons/settings-2.svg'
 import IconButton from '../components/IconButton.vue'
 import pencilIcon from '../assets/icons/lucide_pencil.svg'
@@ -57,6 +58,8 @@ const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
+
+const showSleepModal = ref(false)
 
 // When the component mounts, get the baby ID from the route.
 onMounted(() => {
@@ -470,9 +473,22 @@ function openDiaperModal(type: 'pee' | 'poop' | 'both') {
   showDiaperModal.value = true
 }
 
+function openSleepModal() {
+  showSleepModal.value = true
+}
+
 function onBabyDeleted() {
   // Handle the event when a baby is deleted
   goHome()
+}
+
+function handleSleepClick() {
+  if (!selectedBaby.value) return
+  if (store.isBabySleeping(selectedBaby.value.id)) {
+    store.endSleepSession(selectedBaby.value.id)
+  } else {
+    store.startSleepSession(selectedBaby.value.id)
+  }
 }
 </script>
 
@@ -546,6 +562,10 @@ function onBabyDeleted() {
               <img :src="dropletsIcon" alt="Pee" class="icon" />
               <span>Pee</span>
             </button>
+            <button class="action-btn sleep" @click="handleSleepClick()" title="Record Sleep Session">
+              <span v-if="store.isBabySleeping(selectedBaby?.id)">⏹️ Wake</span>
+              <span v-else>😴 Sleep</span>
+            </button>
           </div>
           
           <div class="time-window-toggle">
@@ -569,6 +589,9 @@ function onBabyDeleted() {
               @click="showSettingsModal = true"
             />
           </div>
+        </div>
+        <div v-if="store.isBabySleeping(selectedBaby?.id)" class="sleeping-banner">
+          <span>😴 {{ selectedBaby.name }} is currently sleeping</span>
         </div>
       </header>
       
@@ -730,6 +753,13 @@ function onBabyDeleted() {
       :diaperType="diaperType"
       @close="showDiaperModal = false"
       @saved="showDiaperModal = false"
+    />
+
+    <SleepModal
+      v-if="showSleepModal && selectedBaby"
+      :babyId="selectedBaby.id"
+      @close="showSleepModal = false"
+      @saved="async (session) => { await store.addSleepSession(selectedBaby.id, new Date(session.start_time), session.end_time ? new Date(session.end_time) : undefined, session.notes); showSleepModal = false; }"
     />
   </div>
 </template>
@@ -1398,5 +1428,20 @@ function onBabyDeleted() {
 
 .action-btn.pee {
   background-color: #ffd700; /* gold */
+}
+
+.sleeping-banner {
+  background: #23234a;
+  color: #ffd700;
+  font-weight: bold;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 </style> 
