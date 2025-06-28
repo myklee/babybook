@@ -72,10 +72,6 @@ function openDiaperModal(type: 'pee' | 'poop' | 'both') {
   showDiaperModal.value = true
 }
 
-function openSleepModal() {
-  showSleepModal.value = true
-}
-
 function goToHistory() {
   if (selectedBaby.value) {
     router.push(`/baby/${selectedBaby.value.id}`)

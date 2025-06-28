@@ -473,10 +473,6 @@ function openDiaperModal(type: 'pee' | 'poop' | 'both') {
   showDiaperModal.value = true
 }
 
-function openSleepModal() {
-  showSleepModal.value = true
-}
-
 function onBabyDeleted() {
   // Handle the event when a baby is deleted
   goHome()
