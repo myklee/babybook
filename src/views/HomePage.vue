@@ -12,7 +12,6 @@ import bookUserIcon from '../assets/icons/book-user.svg'
 import addBabyIcon from '../assets/icons/add-baby.svg'
 import userRoundIcon from '../assets/icons/circle-user-round.svg'
 import { format } from 'date-fns'
-import SleepModal from '../components/SleepModal.vue'
 
 const store = useBabyStore()
 const router = useRouter()
@@ -21,7 +20,6 @@ const router = useRouter()
 const selectedBaby = ref<any>(null)
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
-const showSleepModal = ref(false)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
@@ -90,7 +88,7 @@ function goToProfile() {
 async function signIn() {
   const email = prompt('Enter your email:')
   const password = prompt('Enter your password:')
-  
+
   if (email && password) {
     try {
       await store.signIn(email, password)
@@ -107,7 +105,7 @@ async function signIn() {
 async function signUp() {
   const email = prompt('Enter your email:')
   const password = prompt('Enter your password:')
-  
+
   if (email && password) {
     try {
       await store.signUp(email, password)
@@ -137,22 +135,22 @@ function getLastFeedingTime(babyId: string) {
   try {
     const feedings = store.getBabyFeedings(babyId)
     if (feedings.length === 0) return null
-    
+
     const lastFeeding = feedings[0]
     const lastFeedingTime = new Date(lastFeeding.timestamp)
     const now = new Date()
     const diffMs = now.getTime() - lastFeedingTime.getTime()
-    
+
     const hours = Math.floor(diffMs / (1000 * 60 * 60))
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-    
+
     let timeString
     if (hours > 0) {
       timeString = `${hours}h ${minutes}m ago`
     } else {
       timeString = `${minutes}m ago`
     }
-    
+
     return {
       time: timeString,
       type: lastFeeding.type
@@ -178,36 +176,36 @@ function getNextFeedingTime(babyId: string) {
   try {
     const settings = store.getBabySettings(babyId)
     if (!settings || settings.feeding_interval_hours <= 0) return null
-    
+
     const feedings = store.getBabyFeedings(babyId)
     if (feedings.length === 0) return null
-    
+
     const lastFeeding = feedings[0]
     const lastFeedingTime = new Date(lastFeeding.timestamp)
     const nextFeedingTime = new Date(lastFeedingTime.getTime() + (settings.feeding_interval_hours * 60 * 60 * 1000))
     const now = new Date()
-    
+
     if (nextFeedingTime <= now) {
-      return { 
-        status: 'overdue', 
+      return {
+        status: 'overdue',
         time: 'Overdue',
         actualTime: format(nextFeedingTime, 'h:mm a')
       }
     }
-    
+
     const diffMs = nextFeedingTime.getTime() - now.getTime()
     const hours = Math.floor(diffMs / (1000 * 60 * 60))
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-    
+
     let timeString
     if (hours > 0) {
       timeString = `in ${hours}h ${minutes}m`
     } else {
       timeString = `in ${minutes}m`
     }
-    
-    return { 
-      status: 'upcoming', 
+
+    return {
+      status: 'upcoming',
       time: timeString,
       actualTime: format(nextFeedingTime, 'h:mm a')
     }
@@ -231,35 +229,17 @@ function handleSleepClick() {
   <div class="home-page">
     <div v-if="isAuthenticated" class="app-content">
       <div class="header">
-        <IconButton
-          v-if="store.babies.length === 0"
-          :icon="addBabyIcon"
-          alt="Add Baby"
-          title="Add Baby"
-          @click="addBaby"
-        />
+        <IconButton v-if="store.babies.length === 0" :icon="addBabyIcon" alt="Add Baby" title="Add Baby"
+          @click="addBaby" />
         <div class="header-spacer"></div>
-        <IconButton
-          :icon="userRoundIcon"
-          alt="Profile"
-          title="Profile"
-          @click="goToProfile"
-        />
+        <IconButton :icon="userRoundIcon" alt="Profile" title="Profile" @click="goToProfile" />
       </div>
 
       <div class="baby-selectors">
-        <div
-          v-for="baby in store.babies"
-          :key="baby.id"
-          class="baby-selector"
-          :class="{ 'selected': selectedBaby?.id === baby.id }"
-          @click="selectBaby(baby)"
-        >
-          <img 
-            :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" 
-            :alt="baby.name" 
-            class="baby-photo" 
-          />
+        <div v-for="baby in store.babies" :key="baby.id" class="baby-selector"
+          :class="{ 'selected': selectedBaby?.id === baby.id }" @click="selectBaby(baby)">
+          <img :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" :alt="baby.name"
+            class="baby-photo" />
           <div class="baby-name-container">
             <span class="baby-name">{{ baby.name }}</span>
             <div class="baby-actions">
@@ -273,7 +253,8 @@ function handleSleepClick() {
             <img :src="getFeedingIcon(getLastFeedingTime(baby.id)?.type)" class="feeding-icon" alt="Feeding type" />
             <span class="feeding-time">{{ getLastFeedingTime(baby.id)?.time }}</span>
           </div>
-          <div v-if="getNextFeedingTime(baby.id)" class="baby-next-feeding" :class="getNextFeedingTime(baby.id)?.status">
+          <div v-if="getNextFeedingTime(baby.id)" class="baby-next-feeding"
+            :class="getNextFeedingTime(baby.id)?.status">
             <span class="next-feeding-time">{{ getNextFeedingTime(baby.id)?.time }}</span>
             <span class="next-feeding-actual-time">at {{ getNextFeedingTime(baby.id)?.actualTime }}</span>
           </div>
@@ -282,11 +263,17 @@ function handleSleepClick() {
 
       <div v-if="selectedBaby" class="full-history-link-container">
         <button @click="goToHistory" class="btn-link">
-          View full history for {{ selectedBaby.name }} &rarr;
+          View full history for {{ selectedBaby.name }}
         </button>
       </div>
 
       <div class="action-grid">
+        <button v-if="store.isBabySleeping(selectedBaby?.id)" class="action-btn wake" @click="handleSleepClick()">
+          <span>Wake</span>
+        </button>
+        <button v-else class="action-btn sleep" @click="handleSleepClick()">
+          <span>Sleep</span>
+        </button>
         <button class="action-btn breast" @click="openFeedingModal('breast')">
           <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Breast" />
           <span>Breast</span>
@@ -303,46 +290,24 @@ function handleSleepClick() {
           <img src="../assets/icons/droplets.svg" class="icon" alt="Pee" />
           <span>Pee</span>
         </button>
-        <button class="action-btn sleep" @click="handleSleepClick()">
-          <span v-if="store.isBabySleeping(selectedBaby?.id)">⏹️ Wake</span>
-          <span v-else>😴 Sleep</span>
-        </button>
       </div>
 
       <HistoryList v-if="selectedBaby" :baby-id="selectedBaby.id" class="mt-8 w-full" />
     </div>
     <div v-else class="auth-section">
-       <h2>Welcome to BabyBook</h2>
-       <p>Please sign in to start tracking your baby's activities.</p>
-       <div class="auth-buttons">
-         <button @click="signIn" class="btn btn-primary">Sign In</button>
-         <button @click="signUp" class="btn btn-secondary">Sign Up</button>
-       </div>
-     </div>
+      <h2>Welcome to BabyBook</h2>
+      <p>Please sign in to start tracking your baby's activities.</p>
+      <div class="auth-buttons">
+        <button @click="signIn" class="btn btn-primary">Sign In</button>
+        <button @click="signUp" class="btn btn-secondary">Sign Up</button>
+      </div>
+    </div>
 
-    <FeedingModal
-      v-if="showFeedingModal && selectedBaby"
-      :babyId="selectedBaby.id"
-      :babyName="selectedBaby.name"
-      :feedingType="feedingType"
-      @close="showFeedingModal = false"
-    />
+    <FeedingModal v-if="showFeedingModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
+      :feedingType="feedingType" @close="showFeedingModal = false" />
 
-    <DiaperModal
-      v-if="showDiaperModal && selectedBaby"
-      :babyId="selectedBaby.id"
-      :babyName="selectedBaby.name"
-      :diaperType="diaperType"
-      @close="showDiaperModal = false"
-    />
-
-    <SleepModal
-      v-if="showSleepModal && selectedBaby"
-      :babyId="selectedBaby.id"
-      @close="showSleepModal = false"
-      @saved="async (session) => { await store.addSleepSession(selectedBaby.id, new Date(session.start_time), session.end_time ? new Date(session.end_time) : undefined, session.notes); showSleepModal = false; }"
-    />
-
+    <DiaperModal v-if="showDiaperModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
+      :diaperType="diaperType" @close="showDiaperModal = false" />
     <!-- Hidden original content for reference or later use -->
     <div style="display: none;">
       <!-- ... (original content can be kept here if needed) ... -->
@@ -523,11 +488,13 @@ function handleSleepClick() {
 }
 
 .action-btn.breast {
-  background-color: #f5f5dc; /* beige */
+  background-color: #f5f5dc;
+  /* beige */
 }
 
 .action-btn.formula {
-  background-color: #7fffd4; /* aquamarine */
+  background-color: #7fffd4;
+  /* aquamarine */
 }
 
 .action-btn.poop {
@@ -541,7 +508,29 @@ function handleSleepClick() {
 }
 
 .action-btn.pee {
-  background-color: #ffd700; /* gold */
+  background-color: #ffd700;
+  /* gold */
+}
+
+.action-btn.wake,
+.action-btn.sleep {
+  grid-column: 1 / span 2;
+  height: calc(clamp(100px, 25vw, 150px) / 2);
+  color: white;
+  width: 100%;
+}
+
+.action-btn.wake {
+  background-color: #05409e;
+}
+
+.action-btn.sleep {
+  background-color: #090524;
+}
+
+.action-btn.sleep .icon {
+  filter: brightness(0) invert(1);
+  margin-right: 0.5rem;
 }
 
 .full-history-link-container {
@@ -575,6 +564,7 @@ function handleSleepClick() {
   margin: 0 auto;
   padding: 2rem 1rem;
 }
+
 .auth-buttons {
   margin-top: 1rem;
   display: flex;
@@ -582,6 +572,7 @@ function handleSleepClick() {
   justify-content: center;
   flex-wrap: wrap;
 }
+
 .btn {
   margin: 0;
   padding: 0.75rem 1.5rem;
@@ -591,17 +582,21 @@ function handleSleepClick() {
   font-weight: 500;
   transition: background-color 0.2s;
 }
+
 .btn-primary {
   background-color: #9c27b0;
   color: white;
 }
+
 .btn-primary:hover {
   background-color: #7b1fa2;
 }
+
 .btn-secondary {
   background-color: #9e9e9e;
   color: white;
 }
+
 .btn-secondary:hover {
   background-color: #757575;
 }
@@ -611,19 +606,19 @@ function handleSleepClick() {
   .home-page {
     padding: 0.5rem;
   }
-  
+
   .app-content {
     padding: 0 0.5rem;
   }
-  
+
   .baby-selectors {
     gap: 0.5rem;
   }
-  
+
   .action-grid {
     gap: 0.5rem;
   }
-  
+
   .action-btn {
     padding: 1rem;
     height: 100px;
@@ -634,15 +629,15 @@ function handleSleepClick() {
   .home-page {
     padding: 2rem;
   }
-  
+
   .app-content {
     padding: 0 2rem;
   }
-  
+
   .baby-selectors {
     gap: 1.5rem;
   }
-  
+
   .action-grid {
     gap: 1.5rem;
   }
@@ -709,4 +704,4 @@ function handleSleepClick() {
   font-size: 1.2rem;
   vertical-align: middle;
 }
-</style> 
+</style>
