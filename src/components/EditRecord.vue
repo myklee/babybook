@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import { format } from 'date-fns'
+import DatePicker from './DatePicker.vue'
+import TimePicker from './TimePicker.vue'
 
 const props = defineProps<{
   record: any
@@ -22,9 +24,9 @@ const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 const notes = ref('')
 const customDate = ref('')
-const customTime = ref('')
+const time = ref<{ hour: string; minute: string; ampm: 'AM' | 'PM' }>({ hour: '', minute: '', ampm: 'AM' })
 const customEndDate = ref('')
-const customEndTime = ref('')
+const endTime = ref<{ hour: string; minute: string; ampm: 'AM' | 'PM' }>({ hour: '', minute: '', ampm: 'AM' })
 const topupAmount = ref(0)
 const isSaving = ref(false)
 const amountInput = ref<HTMLInputElement | null>(null)
@@ -34,13 +36,23 @@ onMounted(() => {
   const setDateTime = (timestamp: string, isEnd = false) => {
     const date = new Date(timestamp)
     const dateString = format(date, 'yyyy-MM-dd')
-    const timeString = format(date, 'HH:mm')
+    const hour = date.getHours()
+    const minute = date.getMinutes()
+    
     if (isEnd) {
       customEndDate.value = dateString
-      customEndTime.value = timeString
+      endTime.value.ampm = hour >= 12 ? 'PM' : 'AM'
+      let hour12 = hour % 12
+      if (hour12 === 0) hour12 = 12
+      endTime.value.hour = String(hour12)
+      endTime.value.minute = String(minute).padStart(2, '0')
     } else {
       customDate.value = dateString
-      customTime.value = timeString
+      time.value.ampm = hour >= 12 ? 'PM' : 'AM'
+      let hour12 = hour % 12
+      if (hour12 === 0) hour12 = 12
+      time.value.hour = String(hour12)
+      time.value.minute = String(minute).padStart(2, '0')
     }
   }
 
@@ -80,15 +92,19 @@ function selectTopupAmountText() {
   }
 }
 
+function getSelectedDateTime(dateStr: string, timeObj: { hour: string; minute: string; ampm: 'AM' | 'PM' }) {
+  if (!dateStr) return null
+  const [year, month, day] = dateStr.split('-').map(Number)
+  let hour = Number(timeObj.hour)
+  if (timeObj.ampm === 'PM' && hour < 12) hour += 12
+  if (timeObj.ampm === 'AM' && hour === 12) hour = 0
+  return new Date(year, month - 1, day, hour, Number(timeObj.minute), 0, 0)
+}
+
 async function handleSubmit() {
   isSaving.value = true
   try {
-    const getTimestamp = (dateStr: string, timeStr: string) => {
-      if (!dateStr || !timeStr) return null
-      return new Date(`${dateStr}T${timeStr}`)
-    }
-
-    const startTimestamp = getTimestamp(customDate.value, customTime.value)
+    const startTimestamp = getSelectedDateTime(customDate.value, time.value)
     if (!startTimestamp) throw new Error('Invalid start time')
 
     if (props.type === 'feeding') {
@@ -106,7 +122,7 @@ async function handleSubmit() {
         timestamp: startTimestamp.toISOString()
       })
     } else if (props.type === 'sleep') {
-      const endTimestamp = getTimestamp(customEndDate.value, customEndTime.value)
+      const endTimestamp = getSelectedDateTime(customEndDate.value, endTime.value)
       await store.updateSleepSession(props.record.id, {
         start_time: startTimestamp.toISOString(),
         end_time: endTimestamp ? endTimestamp.toISOString() : null,
@@ -158,25 +174,28 @@ async function handleDelete() {
       
       <form @submit.prevent="handleSubmit">
         <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
-          <label>Date and Time</label>
-          <div class="datetime-group">
-            <input type="date" v-model="customDate" required>
-            <input type="time" v-model="customTime" required>
-          </div>
+          <label for="edit-date">Date</label>
+          <DatePicker v-model="customDate" id="edit-date" />
+        </div>
+        <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
+          <label for="edit-time">Time</label>
+          <TimePicker v-model="time" />
         </div>
         <div v-if="type === 'sleep'" class="form-group">
-          <label>Start Time</label>
-          <div class="datetime-group">
-            <input type="date" v-model="customDate" required>
-            <input type="time" v-model="customTime" required>
-          </div>
+          <label for="sleep-start-date">Start Date</label>
+          <DatePicker v-model="customDate" id="sleep-start-date" />
         </div>
         <div v-if="type === 'sleep'" class="form-group">
-          <label>End Time</label>
-          <div class="datetime-group">
-            <input type="date" v-model="customEndDate">
-            <input type="time" v-model="customEndTime">
-          </div>
+          <label for="sleep-start-time">Start Time</label>
+          <TimePicker v-model="time" />
+        </div>
+        <div v-if="type === 'sleep'" class="form-group">
+          <label for="sleep-end-date">End Date</label>
+          <DatePicker v-model="customEndDate" id="sleep-end-date" />
+        </div>
+        <div v-if="type === 'sleep'" class="form-group">
+          <label for="sleep-end-time">End Time</label>
+          <TimePicker v-model="endTime" />
         </div>
         <div v-if="type === 'feeding'" class="form-group">
           <label>Amount (ml)</label>

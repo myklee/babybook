@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
+import DatePicker from './DatePicker.vue'
+import TimePicker from './TimePicker.vue'
 
 const props = defineProps<{
   babyId: string
@@ -19,9 +21,8 @@ const store = useBabyStore()
 const type = ref<'pee' | 'poop' | 'both'>(props.diaperType)
 const notes = ref('')
 const customDate = ref('')
-const customTime = ref('')
+const time = ref<{ hour: string; minute: string; ampm: 'AM' | 'PM' }>({ hour: '', minute: '', ampm: 'AM' })
 const isSaving = ref(false)
-const timeInput = ref<HTMLInputElement | null>(null)
 
 const options = [
   { value: 'pee', label: 'Pee' },
@@ -29,7 +30,7 @@ const options = [
   { value: 'both', label: 'Both' }
 ]
 
-onMounted(async () => {
+onMounted(() => {
   console.log('DiaperModal mounted with babyName:', props.babyName)
   
   // Pre-fill current date and time
@@ -37,20 +38,31 @@ onMounted(async () => {
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-
+  
   customDate.value = `${year}-${month}-${day}`
-  customTime.value = `${hours}:${minutes}`
-
-  await nextTick()
-  timeInput.value?.focus()
+  
+  // Set default hour, minute, and ampm
+  let hour = now.getHours()
+  time.value.ampm = hour >= 12 ? 'PM' : 'AM'
+  let hour12 = hour % 12
+  if (hour12 === 0) hour12 = 12
+  time.value.hour = String(hour12)
+  time.value.minute = String(now.getMinutes()).padStart(2, '0')
 })
+
+function getSelectedDateTime() {
+  if (!customDate.value) return new Date()
+  const [year, month, day] = customDate.value.split('-').map(Number)
+  let hour = Number(time.value.hour)
+  if (time.value.ampm === 'PM' && hour < 12) hour += 12
+  if (time.value.ampm === 'AM' && hour === 12) hour = 0
+  return new Date(year, month - 1, day, hour, Number(time.value.minute), 0, 0)
+}
 
 async function handleSubmit() {
   isSaving.value = true
   try {
-    const timestamp = customDate.value && customTime.value ? new Date(`${customDate.value}T${customTime.value}`) : new Date()
+    const timestamp = getSelectedDateTime()
     await store.addDiaperChange(
       props.babyId,
       type.value,
@@ -76,20 +88,12 @@ async function handleSubmit() {
       
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
-          <label>Time</label>
-          <div class="datetime-group">
-            <input 
-              type="date" 
-              v-model="customDate" 
-              required
-            >
-            <input
-              ref="timeInput"
-              type="time" 
-              v-model="customTime" 
-              required
-            >
-          </div>
+          <label for="diaper-date">Date</label>
+          <DatePicker v-model="customDate" id="diaper-date" />
+        </div>
+        <div class="form-group">
+          <label for="diaper-time">Time</label>
+          <TimePicker v-model="time" />
         </div>
 
         <div class="form-group">

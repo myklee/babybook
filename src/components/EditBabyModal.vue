@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
+import DatePicker from './DatePicker.vue'
 
 const props = defineProps<{
   baby: { id: string; name: string; image_url?: string | null; birthdate?: string | null }
@@ -94,7 +95,7 @@ async function confirmDelete() {
         </div>
         <div class="form-group">
           <label for="baby-birthdate">Birthdate</label>
-          <input id="baby-birthdate" v-model="birthdate" type="date" required />
+          <DatePicker v-model="birthdate" id="baby-birthdate" />
         </div>
         <div class="form-group">
           <label for="baby-image">Image</label>
@@ -137,14 +138,9 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
-
 .form-group {
   margin-bottom: 1.5rem;
 }
-
-
-
-
 
 .image-preview {
   margin-top: 1rem;

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, watch } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
+import TimePicker from './TimePicker.vue'
+import DatePicker from './DatePicker.vue'
 
 const props = defineProps<{
   feedingType?: 'breast' | 'formula' | 'solid'
@@ -20,12 +22,26 @@ const amount = ref(0)
 const feedingTypeRef = ref<'breast' | 'formula' | 'solid'>('breast')
 const notes = ref('')
 const customDate = ref('')
-const customTime = ref('')
+const time = ref<{ hour: string; minute: string; ampm: 'AM' | 'PM' }>({ hour: '', minute: '', ampm: 'AM' })
 const isSaving = ref(false)
 const timeInput = ref<HTMLInputElement | null>(null)
 const amountInput = ref<HTMLInputElement | null>(null)
 
-onMounted(async () => {
+onMounted(() => {
+  const now = new Date()
+  // Set default date
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  customDate.value = `${year}-${month}-${day}`
+  // Set default hour, minute, and ampm
+  let hour = now.getHours()
+  time.value.ampm = hour >= 12 ? 'PM' : 'AM'
+  let hour12 = hour % 12
+  if (hour12 === 0) hour12 = 12
+  time.value.hour = String(hour12)
+  time.value.minute = String(now.getMinutes()).padStart(2, '0')
+
   console.log('FeedingModal mounted with babyName:', props.babyName)
   
   // Pre-fill the type if provided
@@ -43,18 +59,7 @@ onMounted(async () => {
     }
   }
 
-  // Pre-fill current date and time
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-
-  customDate.value = `${year}-${month}-${day}`
-  customTime.value = `${hours}:${minutes}`
-
-  await nextTick()
+  nextTick()
   timeInput.value?.focus()
 })
 
@@ -79,17 +84,22 @@ function selectAmountText() {
   }
 }
 
+function getSelectedDateTime() {
+  if (!customDate.value) return new Date()
+  const [year, month, day] = customDate.value.split('-').map(Number)
+  let hour = Number(time.value.hour)
+  if (time.value.ampm === 'PM' && hour < 12) hour += 12
+  if (time.value.ampm === 'AM' && hour === 12) hour = 0
+  return new Date(year, month - 1, day, hour, Number(time.value.minute), 0, 0)
+}
+
 async function handleSubmit() {
   isSaving.value = true
   try {
     let timestamp
-    if (customDate.value && customTime.value) {
+    if (customDate.value && getSelectedDateTime()) {
       // Create timestamp in local timezone
-      const [year, month, day] = customDate.value.split('-').map(Number)
-      const [hours, minutes] = customTime.value.split(':').map(Number)
-      
-      // Create date in local timezone (month is 0-indexed in JavaScript)
-      timestamp = new Date(year, month - 1, day, hours, minutes, 0, 0)
+      timestamp = getSelectedDateTime()
     } else {
       timestamp = new Date()
     }
@@ -120,20 +130,12 @@ async function handleSubmit() {
       
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
-          <label>Time</label>
-          <div class="datetime-group">
-            <input 
-              type="date" 
-              v-model="customDate" 
-              required
-            >
-            <input
-              ref="timeInput"
-              type="time" 
-              v-model="customTime" 
-              required
-            >
-          </div>
+          <label for="feeding-date">Date</label>
+          <DatePicker v-model="customDate" id="feeding-date" />
+        </div>
+        <div class="form-group">
+          <label for="feeding-time">Time</label>
+          <TimePicker v-model="time" />
         </div>
 
         <div class="form-group">
@@ -234,52 +236,5 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-
-.datetime-group {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.datetime-group input {
-  flex: 1;
-}
-
-
-
-/* Mobile-specific improvements for numeric inputs */
-.form-group input[type="number"] {
-  -webkit-appearance: none;
-  -moz-appearance: textfield;
-  font-size: 16px; /* Prevents zoom on iOS */
-}
-
-.form-group input[type="number"]::-webkit-outer-spin-button,
-.form-group input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* Improve touch targets on mobile */
-@media (max-width: 768px) {
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    padding: 1rem;
-    font-size: 16px; /* Prevents zoom on iOS */
-    min-height: 44px; /* Better touch target */
-  }
-  
-  .preset-btn {
-    padding: 0.75rem 1rem;
-    min-height: 44px;
-    font-size: 1rem;
-  }
-  
-  .btn {
-    padding: 1rem 1.5rem;
-    min-height: 44px;
-    font-size: 1rem;
-  }
-}
-
+/* Component-specific styles only - global styles are handled in style.css */
 </style> 

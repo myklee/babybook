@@ -68,9 +68,9 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="settings-modal-overlay" @click="emit('close')">
-    <div class="settings-modal" @click.stop>
-      <h3>Feeding Settings for {{ babyName }}</h3>
+  <div class="modal-overlay" @click="emit('close')">
+    <div class="modal" @click.stop>
+      <h3 class="modal-title">Feeding Settings for {{ babyName }}</h3>
       
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
@@ -129,104 +129,5 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.settings-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
 
-.settings-modal {
-  background-color: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  max-width: 400px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.settings-modal h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-  font-size: 1.2rem;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #333;
-  font-weight: 500;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  box-sizing: border-box;
-}
-
-.form-group small {
-  display: block;
-  margin-top: 0.25rem;
-  color: #666;
-  font-size: 0.875rem;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #9c27b0;
-  box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.2);
-}
-
-.form-actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.btn {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-save {
-  background-color: #9c27b0;
-  color: white;
-}
-
-.btn-save:hover:not(:disabled) {
-  background-color: #7b1fa2;
-}
-
-.btn-cancel {
-  background-color: #f5f5f5;
-  color: #333;
-}
-
-.btn-cancel:hover:not(:disabled) {
-  background-color: #e0e0e0;
-}
 </style> 
