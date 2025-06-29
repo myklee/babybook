@@ -70,9 +70,9 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="diaper-modal-overlay" @click="emit('close')">
-    <div class="diaper-modal" @click.stop>
-      <h3>Record Diaper Change for {{ babyName }}</h3>
+  <div class="modal-overlay" @click="emit('close')">
+    <div class="modal" @click.stop>
+      <h3 class="modal-title">Record Diaper Change for {{ babyName }}</h3>
       
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
@@ -118,110 +118,4 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.diaper-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.datetime-group {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.datetime-group input {
-  flex: 1;
-}
-
-.diaper-modal {
-  background-color: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  max-width: 400px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.diaper-modal h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-  font-size: 1.2rem;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #333;
-  font-weight: 500;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  box-sizing: border-box;
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #9c27b0;
-  box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.2);
-}
-
-.form-actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  flex: 1;
-  font-size: 1rem;
-}
-
-.btn-save {
-  background-color: #9c27b0;
-}
-
-.btn-save:hover {
-  background-color: #7b1fa2;
-}
-
-.btn-cancel {
-  background-color: #9e9e9e;
-}
-
-.btn-cancel:hover {
-  background-color: #757575;
-}
 </style> 

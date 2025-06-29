@@ -147,8 +147,8 @@ async function handleDelete() {
 </script>
 
 <template>
-  <div class="edit-record-overlay" @click="emit('close')">
-    <div class="edit-record-modal" @click.stop>
+  <div class="modal-overlay" @click="emit('close')">
+    <div class="modal" @click.stop>
       <h3>Edit
         <span v-if="type === 'feeding'">Feeding</span>
         <span v-else-if="type === 'diaper'">Diaper Change</span>
@@ -158,7 +158,7 @@ async function handleDelete() {
       
       <form @submit.prevent="handleSubmit">
         <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
-          <label>Time</label>
+          <label>Date and Time</label>
           <div class="datetime-group">
             <input type="date" v-model="customDate" required>
             <input type="time" v-model="customTime" required>
@@ -249,153 +249,6 @@ async function handleDelete() {
 </template>
 
 <style scoped>
-.edit-record-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
 
-.edit-record-modal {
-  background-color: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  max-width: 400px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
 
-.edit-record-modal h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #333;
-  font-weight: 500;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.form-group textarea {
-  resize: vertical;
-}
-
-.form-help {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.8rem;
-  color: #333;
-}
-
-.form-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.btn {
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  flex: 1;
-  min-width: 80px;
-}
-
-.btn-save {
-  background-color: #4caf50;
-}
-
-.btn-save:hover {
-  background-color: #388e3c;
-}
-
-.btn-delete {
-  background-color: #f44336;
-}
-
-.btn-delete:hover {
-  background-color: #d32f2f;
-}
-
-.btn-cancel {
-  background-color: #9e9e9e;
-}
-
-.btn-cancel:hover {
-  background-color: #757575;
-}
-
-.datetime-group {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.datetime-group input {
-  flex: 1;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #9c27b0;
-  box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.2);
-}
-
-/* Mobile-specific improvements for numeric inputs */
-.form-group input[type="number"] {
-  -webkit-appearance: none;
-  -moz-appearance: textfield;
-  font-size: 16px; /* Prevents zoom on iOS */
-}
-
-.form-group input[type="number"]::-webkit-outer-spin-button,
-.form-group input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* Improve touch targets on mobile */
-@media (max-width: 768px) {
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    padding: 1rem;
-    font-size: 16px; /* Prevents zoom on iOS */
-    min-height: 44px; /* Better touch target */
-  }
-  
-  .btn {
-    padding: 1rem 1.5rem;
-    min-height: 44px;
-    font-size: 1rem;
-  }
-}
-</style> 
+</style>  

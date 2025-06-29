@@ -79,25 +79,6 @@ body {
   background-color: black;
 }
 
-.btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  font-size: 1rem;
-}
-
-.btn:hover {
-  opacity: 0.9;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 
 .btn-feeding {
   background-color: #ff9800;
@@ -135,68 +116,6 @@ body {
   text-align: center;
   color: #666;
   padding: 2rem;
-}
-
-.history {
-  margin-top: 1rem;
-}
-
-.history-section {
-  margin-bottom: 1.5rem;
-}
-
-.history-section h3 {
-  margin: 0 0 0.5rem 0;
-  color: #333;
-}
-
-.history-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-/* Modal styles */
-.record-modal-overlay,
-.edit-record-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.record-modal,
-.edit-record-modal {
-  background-color: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  max-width: 400px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.record-modal h3,
-.edit-record-modal h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #333;
 }
 
 .form-group input,
