@@ -1,7 +1,7 @@
 <template>
     <div class="date-picker">
         <input :id="id" type="date" :value="modelValue"
-            @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)" required class="date-input"
+            @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)" :required="required" class="date-input"
             @focus="handleFocus" />
     </div>
 </template>
@@ -10,10 +10,12 @@
 interface Props {
     modelValue: string
     id?: string
+    required?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
-    id: 'date-picker'
+    id: 'date-picker',
+    required: true
 })
 
 defineEmits<{
@@ -34,7 +36,6 @@ const handleFocus = (event: FocusEvent) => {
 .date-input {
     width: 100%;
     padding: 1rem 1.25rem;
-    border: 2px solid rgba(255, 255, 255, 0.1);
     border-radius: 15px;
     background-color: rgba(255, 255, 255, 0.05);
     color: white;

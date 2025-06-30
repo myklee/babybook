@@ -58,11 +58,28 @@ function formatDate(dateString: string) {
   return format(new Date(dateString), 'MMM d, h:mm a')
 }
 
+function formatSleepDate(dateString: string) {
+  const date = new Date(dateString)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
+  if (dateOnly.getTime() === today.getTime()) {
+    return `Today, ${format(date, 'h:mm a')}`
+  } else if (dateOnly.getTime() === yesterday.getTime()) {
+    return `Yesterday, ${format(date, 'h:mm a')}`
+  } else {
+    return format(date, 'MMM d, h:mm a')
+  }
+}
+
 function formatDateTime(dateString: string) {
   const date = new Date(dateString)
   const now = new Date()
   const isToday = date.toDateString() === now.toDateString()
-  
+
   if (isToday) {
     return format(date, 'h:mm a')
   } else {
@@ -80,6 +97,29 @@ function closeEditModal() {
   showEditModal.value = false
   editingRecord.value = null
 }
+
+function isSameDay(date1: string, date2: string): boolean {
+  const d1 = new Date(date1)
+  const d2 = new Date(date2)
+  return d1.toDateString() === d2.toDateString()
+}
+
+function getRelativeDate(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
+  if (dateOnly.getTime() === today.getTime()) {
+    return 'Today'
+  } else if (dateOnly.getTime() === yesterday.getTime()) {
+    return 'Yesterday'
+  } else {
+    return format(date, 'MMM d')
+  }
+}
 </script>
 
 <template>
@@ -95,12 +135,14 @@ function closeEditModal() {
         No feedings recorded yet
       </div>
       <ul v-else class="history-list">
-        <li v-for="feeding in feedings.slice(0, 5)" :key="feeding.id" class="history-item" @click="openEditModal(feeding, 'feeding')">
+        <li v-for="feeding in feedings.slice(0, 8)" :key="feeding.id" class="history-item"
+          @click="openEditModal(feeding, 'feeding')">
           <div class="time">{{ formatDateTime(feeding.timestamp) }}</div>
           <div class="details">
             <img :src="getIcon(feeding, 'feeding') || ''" class="item-icon" alt="Feeding" />
             <span v-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
-            <span v-if="(feeding as any).topup_amount && (feeding as any).topup_amount > 0" class="topup-amount">+{{ (feeding as any).topup_amount }}</span>
+            <span v-if="(feeding as any).topup_amount && (feeding as any).topup_amount > 0" class="topup-amount">+{{
+              (feeding as any).topup_amount }}</span>
           </div>
           <div v-if="feeding.notes" class="notes">{{ feeding.notes }}</div>
         </li>
@@ -113,9 +155,10 @@ function closeEditModal() {
         No diaper changes recorded yet
       </div>
       <ul v-else class="history-list">
-        <li v-for="change in diaperChanges.slice(0, 5)" :key="change.id" class="history-item" @click="openEditModal(change, 'diaper')">
+        <li v-for="change in diaperChanges.slice(0, 8)" :key="change.id" class="history-item"
+          @click="openEditModal(change, 'diaper')">
           <div class="time">{{ formatDateTime(change.timestamp) }}</div>
-           <div class="details">
+          <div class="details">
             <img :src="getIcon(change, 'diaper') || ''" class="item-icon" alt="Diaper" />
             <span class="type">{{ change.type }}</span>
           </div>
@@ -130,27 +173,35 @@ function closeEditModal() {
         No sleep sessions recorded yet
       </div>
       <ul v-else class="history-list">
-        <li v-for="sleep in sleepSessions.slice(0, 5)" :key="sleep.id" class="history-item" @click="openEditModal(sleep, 'sleep')">
-           <div class="time">{{ formatDate(sleep.start_time) }}<span v-if="sleep.end_time"> - {{ formatDate(sleep.end_time) }}</span></div>
-            <div class="details">
-              <!-- No icon for sleep for now -->
-              <span class="type">Sleep</span>
-              <span v-if="sleep.end_time" class="amount">{{ ((new Date(sleep.end_time).getTime() - new Date(sleep.start_time).getTime()) / 60000).toFixed(0) }} min</span>
-            </div>
-            <div v-if="sleep.notes" class="notes">{{ sleep.notes }}</div>
+        <li v-for="sleep in sleepSessions.slice(0, 8)" :key="sleep.id" class="history-item"
+          @click="openEditModal(sleep, 'sleep')">
+          <div class="time">
+            <span v-if="sleep.end_time && isSameDay(sleep.start_time, sleep.end_time)">
+              {{ getRelativeDate(sleep.start_time) }}, {{ format(new Date(sleep.start_time), 'h:mm a') }} - {{ format(new Date(sleep.end_time), 'h:mm a') }}
+            </span>
+            <span v-else>
+              {{ formatSleepDate(sleep.start_time) }}
+              <span v-if="sleep.end_time"> - {{ formatSleepDate(sleep.end_time) }}</span>
+              <span v-else class="sleeping-indicator"> - Sleeping</span>
+            </span>
+          </div>
+          <div class="details">
+            <!-- No icon for sleep for now -->
+            <span class="type">{{ sleep.end_time ? 'Slept' : 'Sleeping' }}</span>
+            <span v-if="sleep.end_time" class="amount">{{ ((new Date(sleep.end_time).getTime() - new
+              Date(sleep.start_time).getTime()) / 60000).toFixed(0) }} min</span>
+            <span v-if="sleep.end_time" class="amount hours">{{ (((new Date(sleep.end_time).getTime() - new
+              Date(sleep.start_time).getTime()) / 60000) / 60).toFixed(2) }} hrs</span>
+            <span v-else class="sleeping-duration">Ongoing</span>
+          </div>
+          <div v-if="sleep.notes" class="notes">{{ sleep.notes }}</div>
         </li>
       </ul>
     </div>
 
     <!-- Edit Modal -->
-    <EditRecord
-      v-if="showEditModal && editingRecord"
-      :record="editingRecord"
-      :type="editingType"
-      :babyName="babyName"
-      @close="closeEditModal"
-      @saved="closeEditModal"
-    />
+    <EditRecord v-if="showEditModal && editingRecord" :record="editingRecord" :type="editingType" :babyName="babyName"
+      @close="closeEditModal" @saved="closeEditModal" />
   </div>
 </template>
 
@@ -223,7 +274,7 @@ function closeEditModal() {
 
 .details {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.5rem;
 }
 
@@ -233,11 +284,16 @@ function closeEditModal() {
   filter: brightness(0) invert(1) opacity(0.8);
 }
 
-.amount, .type {
+.amount,
+.type {
   font-size: 1.25rem;
   font-weight: bold;
   color: white;
-  text-transform: capitalize;
+  &.hours {
+    font-size: 0.8rem;
+    color: var(--color-lavendar);
+
+  }
 }
 
 .notes {
@@ -272,4 +328,14 @@ function closeEditModal() {
   color: #c0c0ff;
   font-weight: 400;
 }
-</style> 
+
+.sleeping-indicator {
+  font-style: italic;
+  color: var(--color-lavendar);
+}
+
+.sleeping-duration {
+  font-style: italic;
+  color: var(--color-lavendar);
+}
+</style>

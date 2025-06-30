@@ -122,6 +122,7 @@ body.ios .history-page {
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  max-height: 100vh;
 }
 
 .modal-title {
@@ -196,6 +197,24 @@ body.ios .history-page {
 }
 
 /* File input styling */
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  border-radius: .75rem;
+  font-family: inherit;
+}
+
+
 .form-group {
   margin-bottom: 1rem;
 }
@@ -208,26 +227,16 @@ label {
   font-size: 0.95rem;
 }
 
-.form-group input {
-  width: 100%;
-  padding: 1rem 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: white;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
 
-.form-group input:focus {
+
+input:focus {
   outline: none;
   border-color: #9c27b0;
   background-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
 }
 
-.form-group input::placeholder {
+input::placeholder {
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -237,7 +246,7 @@ label {
   margin-top: 2rem;
 }
 
-.form-group input[type="file"] {
+input[type="file"] {
   padding: 0.75rem;
   background-color: rgba(255, 255, 255, 0.05);
   border: 2px dashed rgba(255, 255, 255, 0.2);
@@ -246,12 +255,12 @@ label {
   text-align: center;
 }
 
-.form-group input[type="file"]:hover {
+input[type="file"]:hover {
   border-color: #9c27b0;
   background-color: rgba(156, 39, 176, 0.1);
 }
 
-.form-group input[type="file"]::-webkit-file-upload-button {
+input[type="file"]::-webkit-file-upload-button {
   background: #9c27b0;
   color: white;
   border: none;
@@ -262,7 +271,7 @@ label {
   font-weight: 500;
 }
 
-.form-group input[type="file"]::-webkit-file-upload-button:hover {
+input[type="file"]::-webkit-file-upload-button:hover {
   background: #7b1fa2;
 }
 
@@ -273,7 +282,7 @@ label {
     margin: 1rem;
   }
 
-  .form-group input {
+  input {
     padding: 1rem;
     font-size: 16px;
     /* Prevents zoom on iOS */
@@ -367,7 +376,6 @@ label {
 
 .preset-btn {
   padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
   border-radius: 4px;
   background-color: #f8f9fa;
   color: #333;
@@ -390,15 +398,15 @@ label {
 
 
 /* Mobile-specific improvements for numeric inputs */
-.form-group input[type="number"] {
+input[type="number"] {
   -webkit-appearance: none;
   -moz-appearance: textfield;
   font-size: 16px;
   /* Prevents zoom on iOS */
 }
 
-.form-group input[type="number"]::-webkit-outer-spin-button,
-.form-group input[type="number"]::-webkit-inner-spin-button {
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
@@ -406,9 +414,9 @@ label {
 /* Improve touch targets on mobile */
 @media (max-width: 768px) {
 
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
+  input,
+  select,
+  textarea {
     padding: 1rem;
     font-size: 16px;
     /* Prevents zoom on iOS */

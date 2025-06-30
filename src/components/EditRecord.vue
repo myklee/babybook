@@ -191,10 +191,11 @@ async function handleDelete() {
         </div>
         <div v-if="type === 'sleep'" class="form-group">
           <label for="sleep-end-date">End Date</label>
-          <DatePicker v-model="customEndDate" id="sleep-end-date" />
+          <DatePicker v-model="customEndDate" id="sleep-end-date" :required="false" />
+          <small class="form-help">Leave empty if sleep session is ongoing</small>
         </div>
         <div v-if="type === 'sleep'" class="form-group">
-          <label for="sleep-end-time">End Time</label>
+          <label for="sleep-end-time">End Time (Optional)</label>
           <TimePicker v-model="endTime" />
         </div>
         <div v-if="type === 'feeding'" class="form-group">

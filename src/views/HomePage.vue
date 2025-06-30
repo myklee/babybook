@@ -328,7 +328,6 @@ function handleSleepClick() {
 
 .app-content {
   width: 100%;
-  max-width: 600px;
   display: flex;
   flex-direction: column;
   align-items: center;

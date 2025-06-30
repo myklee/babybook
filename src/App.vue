@@ -118,16 +118,7 @@ body {
   padding: 2rem;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-family: inherit;
-}
+
 
 .form-group textarea {
   resize: vertical;

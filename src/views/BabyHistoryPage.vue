@@ -8,7 +8,6 @@ import EditRecord from '../components/EditRecord.vue'
 import BabySettingsModal from '../components/BabySettingsModal.vue'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
-import SleepModal from '../components/SleepModal.vue'
 import settingsIcon from '../assets/icons/settings-2.svg'
 import IconButton from '../components/IconButton.vue'
 import pencilIcon from '../assets/icons/lucide_pencil.svg'
@@ -58,8 +57,6 @@ const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
 const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
-
-const showSleepModal = ref(false)
 
 // When the component mounts, get the baby ID from the route.
 onMounted(() => {
@@ -749,13 +746,6 @@ function handleSleepClick() {
       :diaperType="diaperType"
       @close="showDiaperModal = false"
       @saved="showDiaperModal = false"
-    />
-
-    <SleepModal
-      v-if="showSleepModal && selectedBaby"
-      :babyId="selectedBaby.id"
-      @close="showSleepModal = false"
-      @saved="async (session) => { await store.addSleepSession(selectedBaby.id, new Date(session.start_time), session.end_time ? new Date(session.end_time) : undefined, session.notes); showSleepModal = false; }"
     />
   </div>
 </template>
