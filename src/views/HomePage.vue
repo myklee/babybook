@@ -2,7 +2,6 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
-import { supabase } from '../lib/supabase'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
 import HistoryList from '../components/HistoryList.vue'
