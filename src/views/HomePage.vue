@@ -2,10 +2,12 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
+import { supabase } from '../lib/supabase'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 import IconButton from '../components/IconButton.vue'
+import SleepingAnimation from '../components/SleepingAnimation.vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import bookUserIcon from '../assets/icons/book-user.svg'
@@ -238,15 +240,16 @@ function handleSleepClick() {
       <div class="baby-selectors">
         <div v-for="baby in store.babies" :key="baby.id" class="baby-selector"
           :class="{ 'selected': selectedBaby?.id === baby.id }" @click="selectBaby(baby)">
-          <img :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" :alt="baby.name"
-            class="baby-photo" />
+          <SleepingAnimation :is-sleeping="store.isBabySleeping(baby.id)" :size="100">
+            <img :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" :alt="baby.name"
+              class="baby-photo" />
+          </SleepingAnimation>
           <div class="baby-name-container">
             <span class="baby-name">{{ baby.name }}</span>
             <div class="baby-actions">
               <button class="history-icon-btn" @click.stop="goToBabyHistory(baby)">
                 <img :src="bookUserIcon" alt="View History" class="history-icon" />
               </button>
-              <span v-if="store.isBabySleeping(baby.id)" class="sleep-indicator" title="Sleeping">😴</span>
             </div>
           </div>
           <div v-if="store.babies.length > 0 && getLastFeedingTime(baby.id)" class="baby-last-feeding">
