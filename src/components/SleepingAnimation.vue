@@ -69,8 +69,8 @@ function createZStream(): Z[] {
   const endDistance = 80 + Math.random() * 20 // End 80-100% from center
   
   // Calculate start and end positions
-  const startX = 50 + Math.cos(angle) * startDistance // Always 50% (center)
-  const startY = 50 + Math.sin(angle) * startDistance // Always 50% (center)
+  // const startX = 50 + Math.cos(angle) * startDistance // Always 50% (center)
+  // const startY = 50 + Math.sin(angle) * startDistance // Always 50% (center)
   const endX = 50 + Math.cos(angle) * endDistance
   const endY = 50 + Math.sin(angle) * endDistance
   
