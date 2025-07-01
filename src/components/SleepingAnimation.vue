@@ -65,7 +65,6 @@ function createZStream(): Z[] {
   
   // Always move to the top right (angle = -45 degrees)
   const angle = -Math.PI / 4
-  const startDistance = 0 // Start from center (0% from center)
   const endDistance = 80 + Math.random() * 20 // End 80-100% from center
   
   // Calculate start and end positions
