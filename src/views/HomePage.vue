@@ -240,7 +240,7 @@ function handleSleepClick() {
         <div v-for="baby in store.babies" :key="baby.id" class="baby-selector"
           :class="{ 'selected': selectedBaby?.id === baby.id }" @click="selectBaby(baby)">
           <SleepingAnimation :is-sleeping="store.isBabySleeping(baby.id)" :size="100">
-            <img :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" :alt="baby.name"
+            <img :src="baby.image_url || `https://api.dicebear.com/8.x/thumbs/svg?seed=${baby.name}&backgroundColor=1a1a2e&shapeColor=2c2c54`" :alt="baby.name"
               class="baby-photo" />
           </SleepingAnimation>
           <div class="baby-name-container">

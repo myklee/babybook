@@ -221,7 +221,7 @@ async function signOut() {
             >
               <div class="baby-info">
                 <img 
-                  :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" 
+                  :src="baby.image_url || `https://api.dicebear.com/8.x/thumbs/svg?seed=${baby.name}&backgroundColor=1a1a2e&shapeColor=2c2c54`" 
                   :alt="baby.name" 
                   class="baby-photo" 
                 />

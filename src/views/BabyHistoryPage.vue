@@ -497,7 +497,7 @@ function handleSleepClick() {
         />
         <div class="baby-info">
           <img 
-            :src="selectedBaby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${selectedBaby.name}`" 
+            :src="selectedBaby.image_url || `https://api.dicebear.com/8.x/thumbs/svg?seed=${selectedBaby.name}&backgroundColor=1a1a2e&shapeColor=2c2c54`" 
             :alt="selectedBaby.name" 
             class="baby-photo" 
           />
@@ -528,7 +528,7 @@ function handleSleepClick() {
               :title="`Switch to ${baby.name}`"
             >
               <img 
-                :src="baby.image_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${baby.name}`" 
+                :src="baby.image_url || `https://api.dicebear.com/8.x/thumbs/svg?seed=${baby.name}&backgroundColor=1a1a2e&shapeColor=2c2c54`" 
                 :alt="baby.name" 
                 class="baby-switch-photo" 
               />
