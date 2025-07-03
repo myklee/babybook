@@ -26,6 +26,7 @@
           :class="`feeding-marker-${event.type}`"
           :style="{ left: `calc(${getEventPosition(event)}% - 11px)` }"
           :title="formatEventTooltip(event)"
+          @click="showFeedingDetails(event)"
         ></div>
         <div
           v-for="diaper in diaperEvents"
@@ -34,13 +35,32 @@
           :class="`diaper-marker-${diaper.type}`"
           :style="{ left: `calc(${getEventPosition(diaper)}% - 11px)` }"
           :title="`${diaper.type.charAt(0).toUpperCase() + diaper.type.slice(1)} diaper at ${formatEventTooltip(diaper)}`"
+          @click="showDiaperDetails(diaper)"
         ></div>
+      </div>
+    </div>
+    
+    <!-- Snackbar Overlay -->
+    <div v-if="snackbar.show" class="snackbar-overlay" @click="hideSnackbar"></div>
+    <!-- Snackbar -->
+    <div v-if="snackbar.show" class="snackbar" :class="snackbar.type">
+      <div class="snackbar-content" @click.stop>
+        <div class="snackbar-icon">
+          <img v-if="snackbar.icon" :src="snackbar.icon" :alt="snackbar.type" />
+        </div>
+        <div class="snackbar-details">
+          <div class="snackbar-title">{{ snackbar.title }}</div>
+          <div class="snackbar-time">{{ snackbar.time }}</div>
+          <div v-if="snackbar.details" class="snackbar-extra">{{ snackbar.details }}</div>
+        </div>
+        <button class="snackbar-close" @click="hideSnackbar">×</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, reactive } from 'vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import poopIcon from '../assets/icons/hugeicons_poop.svg'
@@ -50,6 +70,8 @@ interface Event {
   id: string | number
   timestamp: string // ISO string in UTC
   type?: 'breast' | 'formula' | 'solid'
+  amount?: number
+  topup_amount?: number
 }
 
 interface DiaperEvent {
@@ -166,6 +188,69 @@ function getDiaperMarkerStyle(event: DiaperEvent) {
   if (event.type === 'poop') return { background: 'var(--poop-color)' }
   if (event.type === 'both') return { background: 'linear-gradient(90deg, var(--pee-color) 50%, var(--poop-color) 50%)' }
   return {}
+}
+
+// Snackbar state
+const snackbar = reactive({
+  show: false,
+  type: '',
+  title: '',
+  time: '',
+  details: '',
+  icon: ''
+})
+
+function showFeedingDetails(event: Event) {
+  const eventTime = new Date(event.timestamp)
+  const timeString = eventTime.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  
+  // Build amount details
+  let amountDetails = ''
+  if (event.amount && event.amount > 0) {
+    amountDetails = `${event.amount}ml`
+    if (event.topup_amount && event.topup_amount > 0) {
+      amountDetails += ` + ${event.topup_amount}ml formula top-up`
+    }
+  } else if (event.topup_amount && event.topup_amount > 0) {
+    amountDetails = `${event.topup_amount}ml formula top-up`
+  } else {
+    amountDetails = 'No amount recorded'
+  }
+  
+  snackbar.show = true
+  snackbar.type = 'feeding'
+  snackbar.title = `${(event.type || 'Unknown').charAt(0).toUpperCase() + (event.type || 'Unknown').slice(1)} Feeding`
+  snackbar.time = timeString
+  snackbar.details = amountDetails
+  snackbar.icon = getFeedingIcon(event)
+}
+
+function showDiaperDetails(diaper: DiaperEvent) {
+  const eventTime = new Date(diaper.timestamp)
+  const timeString = eventTime.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  
+  snackbar.show = true
+  snackbar.type = 'diaper'
+  snackbar.title = `${diaper.type.charAt(0).toUpperCase() + diaper.type.slice(1)} Diaper`
+  snackbar.time = timeString
+  snackbar.details = diaper.type === 'both' ? 'Pee and poop' : diaper.type === 'pee' ? 'Wet diaper' : 'Dirty diaper'
+  snackbar.icon = getDiaperIcon(diaper)
+}
+
+function hideSnackbar() {
+  snackbar.show = false
 }
 </script>
 
@@ -284,5 +369,114 @@ function getDiaperMarkerStyle(event: DiaperEvent) {
   height: 100%;
   background-color: #ffd700;
   z-index: 15;
+}
+
+/* Snackbar Styles */
+.snackbar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.01);
+  z-index: 999;
+}
+
+.snackbar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  z-index: 1000;
+  min-width: 300px;
+  max-width: 400px;
+  backdrop-filter: blur(10px);
+  animation: slideUp 0.3s ease-out;
+}
+
+.snackbar-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.snackbar-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.snackbar-icon img {
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(1);
+}
+
+.snackbar-details {
+  flex: 1;
+}
+
+.snackbar-title {
+  font-weight: bold;
+  color: #ffffff;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.snackbar-time {
+  color: #a0a0e0;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.snackbar-extra {
+  color: #c0c0c0;
+  font-size: 0.8rem;
+}
+
+.snackbar-close {
+  background: none;
+  border: none;
+  color: #a0a0e0;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.snackbar-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.snackbar.feeding {
+  border-left: 4px solid var(--formula-color);
+}
+
+.snackbar.diaper {
+  border-left: 4px solid var(--pee-color);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
 }
 </style> 

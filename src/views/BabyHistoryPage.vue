@@ -291,7 +291,13 @@ const todaysFeedings = computed(() => {
   return feedings.filter(f => {
     const t = new Date(f.timestamp);
     return t >= start && t < end;
-  }).map(f => ({ id: f.id, timestamp: f.timestamp, type: f.type }));
+  }).map(f => ({ 
+    id: f.id, 
+    timestamp: f.timestamp, 
+    type: f.type,
+    amount: f.amount,
+    topup_amount: (f as any).topup_amount
+  }));
 });
 
 const todaysDiapers = computed(() => {
