@@ -12,6 +12,7 @@ import settingsIcon from '../assets/icons/settings-2.svg'
 import IconButton from '../components/IconButton.vue'
 import pencilIcon from '../assets/icons/lucide_pencil.svg'
 import arrowBigLeftIcon from '../assets/icons/arrow-big-left.svg'
+import Timeline from '../components/Timeline.vue'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
@@ -86,7 +87,7 @@ const combinedHistory = computed((): HistoryEvent[] => {
     amount: f.amount,
     topup_amount: (f as any).topup_amount,
   }))
-  
+
   const diapers: HistoryEvent[] = store.getBabyDiaperChanges(selectedBaby.value.id).map(d => ({
     id: d.id,
     event_type: 'diaper',
@@ -143,7 +144,7 @@ const stats = computed(() => {
   // Recent activity (last 24 hours)
   const now = new Date()
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  
+
   const recentFeedings = feedings.filter(f => new Date(f.timestamp) > yesterday).length
   const recentDiapers = diapers.filter(d => new Date(d.timestamp) > yesterday).length
   const recentSleeps = sleeps.filter(s => new Date(s.start_time) > yesterday).length
@@ -183,12 +184,12 @@ const stats = computed(() => {
     }
 
     return feedings.filter(feeding => {
-        const feedingTimestamp = new Date(feeding.timestamp)
-        return (
-            (feeding.type === 'breast' || feeding.type === 'formula') &&
-            feeding.amount != null &&
-            feedingTimestamp >= windowStart
-        )
+      const feedingTimestamp = new Date(feeding.timestamp)
+      return (
+        (feeding.type === 'breast' || feeding.type === 'formula') &&
+        feeding.amount != null &&
+        feedingTimestamp >= windowStart
+      )
     }).reduce((sum, feeding) => sum + (feeding.amount || 0) + ((feeding as any).topup_amount || 0), 0)
   })()
 
@@ -215,17 +216,17 @@ const dailyFeedings = computed(() => {
   if (!selectedBaby.value) return []
 
   const feedings = store.getBabyFeedings(selectedBaby.value.id)
-  
+
   // Group feedings by day using configurable window
   const dailyMap = new Map<string, { date: string; total: number; count: number; breast: number; formula: number }>()
-  
+
   feedings.forEach(feeding => {
     const feedingTime = new Date(feeding.timestamp)
-    
+
     // Calculate which day this feeding belongs to
     let dayStart = new Date(feedingTime)
     dayStart.setHours(0, 0, 0, 0)
-    
+
     if (use8amWindow.value) {
       // 8 AM to 8 AM window logic
       if (feedingTime.getHours() < 8) {
@@ -236,9 +237,9 @@ const dailyFeedings = computed(() => {
       // 12 AM to 12 AM window logic (standard calendar day)
       // No adjustment needed, dayStart is already at midnight
     }
-    
+
     const dateKey = dayStart.toDateString()
-    
+
     if (!dailyMap.has(dateKey)) {
       dailyMap.set(dateKey, {
         date: dateKey,
@@ -248,23 +249,76 @@ const dailyFeedings = computed(() => {
         formula: 0
       })
     }
-    
+
     const dayData = dailyMap.get(dateKey)!
     dayData.total += (feeding.amount || 0) + ((feeding as any).topup_amount || 0)
     dayData.count += 1
-    
+
     if (feeding.type === 'breast') {
       dayData.breast += 1
     } else if (feeding.type === 'formula') {
       dayData.formula += 1
     }
   })
-  
+
   // Convert to array and sort by date (newest first)
   return Array.from(dailyMap.values())
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 7) // Show last 7 days
 })
+
+// Add a computed for today's feedings in local time
+const todaysFeedings = computed(() => {
+  if (!selectedBaby.value) return [];
+  const feedings = store.getBabyFeedings(selectedBaby.value.id);
+  const now = new Date();
+  let start = new Date(now);
+  let end;
+  if (use8amWindow.value) {
+    if (now.getHours() >= 8) {
+      start.setHours(8, 0, 0, 0);
+    } else {
+      start.setDate(start.getDate() - 1);
+      start.setHours(8, 0, 0, 0);
+    }
+    end = new Date(start);
+    end.setDate(start.getDate() + 1);
+  } else {
+    start.setHours(0, 0, 0, 0);
+    end = new Date(start);
+    end.setDate(start.getDate() + 1);
+  }
+  return feedings.filter(f => {
+    const t = new Date(f.timestamp);
+    return t >= start && t < end;
+  }).map(f => ({ id: f.id, timestamp: f.timestamp, type: f.type }));
+});
+
+const todaysDiapers = computed(() => {
+  if (!selectedBaby.value) return [];
+  const diapers = store.getBabyDiaperChanges(selectedBaby.value.id);
+  const now = new Date();
+  let start = new Date(now);
+  let end;
+  if (use8amWindow.value) {
+    if (now.getHours() >= 8) {
+      start.setHours(8, 0, 0, 0);
+    } else {
+      start.setDate(start.getDate() - 1);
+      start.setHours(8, 0, 0, 0);
+    }
+    end = new Date(start);
+    end.setDate(start.getDate() + 1);
+  } else {
+    start.setHours(0, 0, 0, 0);
+    end = new Date(start);
+    end.setDate(start.getDate() + 1);
+  }
+  return diapers.filter(d => {
+    const t = new Date(d.timestamp);
+    return t >= start && t < end;
+  }).map(d => ({ id: d.id, timestamp: d.timestamp, type: d.type }));
+});
 
 function getIcon(item: HistoryEvent) {
   switch (item.event_type) {
@@ -320,7 +374,7 @@ function onModalSaved() {
 function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep') {
   // Create a copy of the record to avoid modifying the original
   const recordCopy = { ...record }
-  
+
   // Map the record structure to match what EditRecord expects
   if (type === 'feeding') {
     // EditRecord expects: id, amount, type, notes, timestamp
@@ -341,7 +395,7 @@ function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep') {
     // EditRecord expects: id, start_time, end_time, notes
     // These should already be correct from the mapping
   }
-  
+
   editingRecord.value = recordCopy
   editingType.value = type
   showEditModal.value = true
@@ -483,59 +537,65 @@ function handleSleepClick() {
     store.startSleepSession(selectedBaby.value.id)
   }
 }
+
+function getFeedingsForTimelineDate(date: Date) {
+  if (!selectedBaby.value) return [];
+  const feedings = store.getBabyFeedings(selectedBaby.value.id);
+  let start = new Date(date);
+  let end;
+  if (use8amWindow.value) {
+    // 8am to 8am window
+    start.setHours(8, 0, 0, 0);
+    end = new Date(start);
+    end.setDate(start.getDate() + 1);
+  } else {
+    // 12am to 12am window
+    start.setHours(0, 0, 0, 0);
+    end = new Date(start);
+    end.setDate(start.getDate() + 1);
+  }
+  return feedings.filter(f => {
+    const t = new Date(f.timestamp);
+    return t >= start && t < end;
+  }).map(f => ({ id: f.id, timestamp: f.timestamp, type: f.type }));
+}
 </script>
 
 <template>
+  <div>
+    <p>DEBUG: selectedBaby = {{ JSON.stringify(selectedBaby) }}</p>
+  </div>
   <div class="history-page">
     <div v-if="selectedBaby" class="container">
       <header class="page-header">
-        <IconButton
-          :icon="arrowBigLeftIcon"
-          alt="Go Home"
-          title="Go Home"
-          @click="goHome"
-        />
+        <IconButton :icon="arrowBigLeftIcon" alt="Go Home" title="Go Home" @click="goHome" />
         <div class="baby-info">
-          <img 
-            :src="selectedBaby.image_url || `https://api.dicebear.com/8.x/thumbs/svg?seed=${selectedBaby.name}&backgroundColor=1a1a2e&shapeColor=2c2c54`" 
-            :alt="selectedBaby.name" 
-            class="baby-photo" 
-          />
+          <img
+            :src="selectedBaby.image_url || `https://api.dicebear.com/8.x/thumbs/svg?seed=${selectedBaby.name}&backgroundColor=1a1a2e&shapeColor=2c2c54`"
+            :alt="selectedBaby.name" class="baby-photo" />
           <div class="baby-details">
             <div class="baby-name-section">
               <h2>{{ selectedBaby.name }}</h2>
-              <IconButton
-                :icon="pencilIcon"
-                alt="Edit Baby"
-                title="Edit Baby"
-                @click="openEditBabyModal"
-              />
+              <IconButton :icon="pencilIcon" alt="Edit Baby" title="Edit Baby" @click="openEditBabyModal" />
             </div>
             <div v-if="selectedBaby.birthdate" class="baby-birthdate">
               {{ formatBirthdate(selectedBaby.birthdate) }}
             </div>
           </div>
         </div>
-        
+
         <!-- Baby Selector -->
         <div v-if="store.babies.length > 1 && selectedBaby" class="baby-selector">
           <div class="baby-selector-buttons">
-            <button
-              v-for="baby in store.babies.filter(b => selectedBaby && b.id !== selectedBaby.id)"
-              :key="baby.id"
-              class="baby-switch-btn"
-              @click="switchBaby(baby)"
-              :title="`Switch to ${baby.name}`"
-            >
-              <img 
-                :src="baby.image_url || `https://api.dicebear.com/8.x/thumbs/svg?seed=${baby.name}&backgroundColor=1a1a2e&shapeColor=2c2c54`" 
-                :alt="baby.name" 
-                class="baby-switch-photo" 
-              />
+            <button v-for="baby in store.babies.filter(b => selectedBaby && b.id !== selectedBaby.id)" :key="baby.id"
+              class="baby-switch-btn" @click="switchBaby(baby)" :title="`Switch to ${baby.name}`">
+              <img
+                :src="baby.image_url || `https://api.dicebear.com/8.x/thumbs/svg?seed=${baby.name}&backgroundColor=1a1a2e&shapeColor=2c2c54`"
+                :alt="baby.name" class="baby-switch-photo" />
             </button>
           </div>
         </div>
-        
+
         <div class="header-controls">
           <!-- Action Buttons -->
           <div class="action-buttons">
@@ -560,90 +620,36 @@ function handleSleepClick() {
               <span v-else>😴 Sleep</span>
             </button>
           </div>
-          
+
           <div class="time-window-toggle">
             <span class="toggle-text-left">12 AM</span>
             <div class="toggle-container">
-              <input 
-                type="checkbox" 
-                v-model="use8amWindow" 
-                class="toggle-input"
-                id="time-window-toggle"
-              />
+              <input type="checkbox" v-model="use8amWindow" class="toggle-input" id="time-window-toggle" />
               <label for="time-window-toggle" class="toggle-slider"></label>
             </div>
             <span class="toggle-text-right">8 AM</span>
           </div>
           <div class="header-buttons">
-            <IconButton
-              :icon="settingsIcon"
-              alt="Settings"
-              title="Settings"
-              @click="showSettingsModal = true"
-            />
+            <IconButton :icon="settingsIcon" alt="Settings" title="Settings" @click="showSettingsModal = true" />
           </div>
         </div>
         <div v-if="store.isBabySleeping(selectedBaby?.id)" class="sleeping-banner">
           <span>😴 {{ selectedBaby.name }} is currently sleeping</span>
         </div>
       </header>
-      
+
       <!-- Day View Timeline -->
-      <div v-if="stats" class="day-view-timeline">
-        <div class="timeline-header">
-          <span class="timeline-title">Today's Feedings</span>
-          <span class="timeline-total">{{ Math.round(stats.last24HoursMilk || 0) }}ml total</span>
-        </div>
-        <div class="timeline-container">
-          <div class="hour-marks">
-            <div v-for="(hour, i) in getTimelineHours()" :key="hour" class="hour-mark" :class="{ 'current-hour': hour === new Date().getHours() }">
-              <div class="hour-line" v-if="i !== 0"></div>
-              <span class="hour-label" v-if="hour % 2 === 0">
-                {{
-                  (i === 0 || hour === 0 || hour === 12)
-                    ? (hour === 0 ? '12AM' : hour === 12 ? '12PM' : (hour > 12 ? (hour - 12) : hour) + (hour >= 12 ? 'PM' : 'AM'))
-                    : (hour > 12 ? (hour - 12) : hour)
-                }}
-              </span>
-            </div>
-          </div>
-          <div class="timeline-track">
-            <div 
-              v-for="feeding in getFeedingsForTimeline()" 
-              :key="feeding.id"
-              class="feeding-marker"
-              :class="getFeedingMarkerClass(feeding)"
-              :style="{ left: `calc(${getFeedingPosition(feeding)}% - 11px)` }"
-              :title="`${feeding.type} feeding at ${formatTime(feeding.timestamp)}`"
-            >
-              <img 
-                :src="feeding.type === 'formula' ? formulaIcon : breastIcon" 
-                alt="feeding"
-                class="feeding-icon"
-              />
-            </div>
-            <div 
-              v-for="diaper in getDiaperChangesForTimeline()" 
-              :key="diaper.id"
-              class="diaper-marker"
-              :class="getDiaperMarkerClass(diaper)"
-              :style="{ left: `calc(${getDiaperPosition(diaper)}% - 11px)` }"
-              :title="`${diaper.type} diaper at ${formatTime(diaper.timestamp)}`"
-            >
-              <img 
-                :src="diaper.type === 'pee' ? dropletsIcon : poopIcon" 
-                alt="diaper"
-                class="diaper-icon"
-              />
-            </div>
-          </div>
-          <div 
-            class="current-time-indicator"
-            :style="{ left: `${getCurrentTimePosition()}%` }"
-          ></div>
-        </div>
-      </div>
-      
+      <Timeline
+        v-if="selectedBaby"
+        title="Today's Feedings"
+        :events="todaysFeedings"
+        :diaperEvents="todaysDiapers"
+        :hourLabelInterval="2"
+        :use8amWindow="use8amWindow"
+        :showCurrentTimeIndicator="true"
+        :totalLabel="`${Math.round(stats?.last24HoursMilk || 0)}ml total`"
+      />
+
       <!-- Time Window Toggle -->
       <div v-if="dailyFeedings.length > 0" class="daily-feedings-section">
         <div class="daily-feedings-header">
@@ -661,12 +667,13 @@ function handleSleepClick() {
           </div>
         </div>
       </div>
-      
+
       <ul class="history-timeline">
         <li v-if="combinedHistory.length === 0" class="empty-state">
           No activities recorded yet for {{ selectedBaby.name }}.
         </li>
-        <li v-for="item in combinedHistory" :key="`${item.event_type}-${item.id}`" class="timeline-item" @click="openEditModal(item, item.event_type)">
+        <li v-for="item in combinedHistory" :key="`${item.event_type}-${item.id}`" class="timeline-item"
+          @click="openEditModal(item, item.event_type)">
           <div class="item-icon-container">
             <img :src="getIcon(item)" class="item-icon" />
           </div>
@@ -678,7 +685,8 @@ function handleSleepClick() {
             <div class="item-info">
               <!-- Feeding Info -->
               <span v-if="item.event_type === 'feeding'">
-                {{ item.feeding_type === 'breast' ? 'Breast' : 'Formula' }}: <span class="font-bold">{{ item.amount }}ml</span>
+                {{ item.feeding_type === 'breast' ? 'Breast' : 'Formula' }}: <span class="font-bold">{{ item.amount
+                  }}ml</span>
                 <span v-if="item.topup_amount && item.topup_amount > 0" class="topup-display">
                   + <span class="font-bold">{{ item.topup_amount }}ml formula</span>
                 </span>
@@ -689,7 +697,8 @@ function handleSleepClick() {
               </span>
               <!-- Sleep Info -->
               <span v-if="item.event_type === 'sleep' && item.end_time">
-                Slept for <span class="font-bold">{{ ((new Date(item.end_time).getTime() - new Date(item.start_time!).getTime()) / 60000).toFixed(0) }} minutes</span>
+                Slept for <span class="font-bold">{{ ((new Date(item.end_time).getTime() - new
+                  Date(item.start_time!).getTime()) / 60000).toFixed(0) }} minutes</span>
               </span>
             </div>
             <div v-if="item.notes" class="item-notes">
@@ -704,49 +713,21 @@ function handleSleepClick() {
       <button @click="goHome">Go Back Home</button>
     </div>
 
-    <EditBabyModal 
-      v-if="showEditBabyModal && editingBaby"
-      :baby="editingBaby"
-      @close="showEditBabyModal = false"
-      @saved="onModalSaved"
-      @deleted="onBabyDeleted"
-    />
+    <EditBabyModal v-if="showEditBabyModal && editingBaby" :baby="editingBaby" @close="showEditBabyModal = false"
+      @saved="onModalSaved" @deleted="onBabyDeleted" />
 
     <!-- Edit Record Modal -->
-    <EditRecord
-      v-if="showEditModal && editingRecord"
-      :record="editingRecord"
-      :type="editingType"
-      :babyName="selectedBaby?.name"
-      @close="closeEditModal"
-      @saved="closeEditModal"
-    />
+    <EditRecord v-if="showEditModal && editingRecord" :record="editingRecord" :type="editingType"
+      :babyName="selectedBaby?.name" @close="closeEditModal" @saved="closeEditModal" />
 
-    <BabySettingsModal
-      v-if="showSettingsModal && selectedBaby"
-      :babyId="selectedBaby.id"
-      :babyName="selectedBaby.name"
-      @close="showSettingsModal = false"
-      @saved="showSettingsModal = false"
-    />
+    <BabySettingsModal v-if="showSettingsModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
+      @close="showSettingsModal = false" @saved="showSettingsModal = false" />
 
-    <FeedingModal
-      v-if="showFeedingModal && selectedBaby"
-      :babyId="selectedBaby.id"
-      :babyName="selectedBaby.name"
-      :feedingType="feedingType"
-      @close="showFeedingModal = false"
-      @saved="showFeedingModal = false"
-    />
+    <FeedingModal v-if="showFeedingModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
+      :feedingType="feedingType" @close="showFeedingModal = false" @saved="showFeedingModal = false" />
 
-    <DiaperModal
-      v-if="showDiaperModal && selectedBaby"
-      :babyId="selectedBaby.id"
-      :babyName="selectedBaby.name"
-      :diaperType="diaperType"
-      @close="showDiaperModal = false"
-      @saved="showDiaperModal = false"
-    />
+    <DiaperModal v-if="showDiaperModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
+      :diaperType="diaperType" @close="showDiaperModal = false" @saved="showDiaperModal = false" />
   </div>
 </template>
 
@@ -756,11 +737,13 @@ function handleSleepClick() {
   min-height: 100vh;
   color: white;
 }
+
 .container {
   max-width: 800px;
   margin: 0 auto;
   padding: 1rem;
 }
+
 .page-header {
   display: flex;
   flex-wrap: wrap;
@@ -774,6 +757,7 @@ function handleSleepClick() {
   padding: 1rem 2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
+
 .baby-info {
   display: flex;
   align-items: center;
@@ -781,30 +765,36 @@ function handleSleepClick() {
   flex: 1;
   justify-content: center;
 }
+
 .baby-details {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
+
 .baby-name-section {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+
   h2 {
     white-space: nowrap;
   }
 }
+
 .baby-birthdate {
   font-size: 0.9rem;
   color: #a0a0e0;
   margin-top: 0.25rem;
   text-align: center;
 }
+
 .header-controls {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
+
 .baby-photo {
   width: 60px;
   height: 60px;
@@ -812,11 +802,13 @@ function handleSleepClick() {
   object-fit: cover;
   border: 2px solid rgba(255, 255, 255, 0.2);
 }
+
 .page-header h2 {
   font-size: 1.75rem;
   font-weight: bold;
   margin: 0;
 }
+
 .back-btn {
   background: none;
   border: 1px solid #666;
@@ -826,6 +818,7 @@ function handleSleepClick() {
   cursor: pointer;
   font-size: 0.9rem;
 }
+
 .edit-baby-btn {
   background: none;
   border: none;
@@ -838,21 +831,27 @@ function handleSleepClick() {
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .edit-baby-btn:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
 .edit-baby-btn img {
   width: 16px;
   height: 16px;
   filter: brightness(0) invert(1);
 }
+
 .placeholder {
-  width: 70px; /* To balance the back button */
+  width: 70px;
+  /* To balance the back button */
 }
+
 .history-timeline {
   list-style: none;
   padding: 0;
 }
+
 .timeline-item {
   display: flex;
   gap: 1rem;
@@ -861,12 +860,14 @@ function handleSleepClick() {
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
+
 .timeline-item:hover {
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 1rem;
   margin: 0 -1rem;
 }
+
 .item-icon-container {
   background-color: #2c2c54;
   border-radius: 50%;
@@ -877,46 +878,56 @@ function handleSleepClick() {
   justify-content: center;
   flex-shrink: 0;
 }
+
 .item-icon {
   width: 13px;
   height: 13px;
   opacity: 1;
   filter: brightness(0) saturate(100%);
 }
+
 .item-details {
   flex-grow: 1;
 }
+
 .item-header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   margin-bottom: 0.25rem;
 }
+
 .item-type {
   font-weight: bold;
   text-transform: capitalize;
   font-size: 1.1rem;
 }
+
 .item-time {
   font-size: 0.8rem;
   color: #a0a0e0;
 }
+
 .item-info {
   font-size: 1rem;
   color: #c0c0ff;
 }
+
 .font-bold {
   font-weight: bold;
 }
+
 .item-notes {
   font-size: 0.9rem;
   color: #a0a0e0;
   margin-top: 0.5rem;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   padding: 0.5rem;
   border-radius: 8px;
 }
-.loading-state, .empty-state {
+
+.loading-state,
+.empty-state {
   text-align: center;
   padding: 2rem;
   font-size: 1.1rem;
@@ -1063,7 +1074,8 @@ function handleSleepClick() {
   gap: 0.5rem;
 }
 
-.toggle-text-left, .toggle-text-right {
+.toggle-text-left,
+.toggle-text-right {
   font-size: 0.7rem;
   font-weight: bold;
   color: #a0a0e0;
@@ -1093,7 +1105,7 @@ function handleSleepClick() {
   transition: transform 0.2s;
 }
 
-.toggle-input:checked + .toggle-slider {
+.toggle-input:checked+.toggle-slider {
   transform: translateX(26px);
 }
 
@@ -1194,7 +1206,7 @@ function handleSleepClick() {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .feeding-marker-breast {
@@ -1226,6 +1238,7 @@ function handleSleepClick() {
   align-items: center;
   gap: 0.5rem;
 }
+
 .settings-icon-btn {
   background: none;
   border: none;
@@ -1237,9 +1250,11 @@ function handleSleepClick() {
   display: flex;
   align-items: center;
 }
+
 .settings-icon-btn:hover {
   opacity: 1;
 }
+
 .settings-svg {
   width: 1.5rem;
   height: 1.5rem;
@@ -1274,7 +1289,7 @@ function handleSleepClick() {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .diaper-marker-pee {
@@ -1395,11 +1410,13 @@ function handleSleepClick() {
 }
 
 .action-btn.breast {
-  background-color: #f5f5dc; /* beige */
+  background-color: #f5f5dc;
+  /* beige */
 }
 
 .action-btn.formula {
-  background-color: #7fffd4; /* aquamarine */
+  background-color: #7fffd4;
+  /* aquamarine */
 }
 
 .action-btn.poop {
@@ -1413,7 +1430,8 @@ function handleSleepClick() {
 }
 
 .action-btn.pee {
-  background-color: #ffd700; /* gold */
+  background-color: #ffd700;
+  /* gold */
 }
 
 .sleeping-banner {
@@ -1430,4 +1448,4 @@ function handleSleepClick() {
   justify-content: center;
   gap: 0.5rem;
 }
-</style> 
+</style>
