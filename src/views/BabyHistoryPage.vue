@@ -410,33 +410,6 @@ function closeEditModal() {
   store.initializeStore()
 }
 
-function getTimelineWindow() {
-  const now = new Date()
-  let start = new Date(now)
-  let end = new Date(now)
-  if (use8amWindow.value) {
-    // 8am today to 8am tomorrow
-    if (now.getHours() >= 8) {
-      start.setHours(8, 0, 0, 0)
-      end = new Date(start)
-      end.setDate(start.getDate() + 1)
-    } else {
-      // before 8am, window is 8am yesterday to 8am today
-      start.setDate(start.getDate() - 1)
-      start.setHours(8, 0, 0, 0)
-      end = new Date(start)
-      end.setDate(start.getDate() + 1)
-    }
-  } else {
-    // 12am today to 12am tomorrow
-    start.setHours(0, 0, 0, 0)
-    end = new Date(start)
-    end.setDate(start.getDate() + 1)
-  }
-  return { start, end }
-}
-
-
 function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
   feedingType.value = type
   showFeedingModal.value = true

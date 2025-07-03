@@ -60,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { reactive } from 'vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import poopIcon from '../assets/icons/hugeicons_poop.svg'
@@ -164,12 +164,6 @@ function getCurrentTimePosition() {
   return positionPercent;
 }
 
-function getFeedingMarkerClass(event: Event) {
-  if (event.type === 'formula') return 'feeding-marker-formula'
-  if (event.type === 'breast') return 'feeding-marker-breast'
-  return ''
-}
-
 function getFeedingIcon(event: Event) {
   if (event.type === 'formula') return formulaIcon
   if (event.type === 'breast') return breastIcon
@@ -179,20 +173,6 @@ function getFeedingIcon(event: Event) {
 function getDiaperIcon(event: DiaperEvent) {
   if (event.type === 'pee') return dropletsIcon
   return poopIcon
-}
-
-function getDiaperMarkerClass(event: DiaperEvent) {
-  if (event.type === 'pee') return 'diaper-marker-pee'
-  if (event.type === 'poop') return 'diaper-marker-poop'
-  if (event.type === 'both') return 'diaper-marker-both'
-  return ''
-}
-
-function getDiaperMarkerStyle(event: DiaperEvent) {
-  if (event.type === 'pee') return { background: 'var(--pee-color)' }
-  if (event.type === 'poop') return { background: 'var(--poop-color)' }
-  if (event.type === 'both') return { background: 'linear-gradient(90deg, var(--pee-color) 50%, var(--poop-color) 50%)' }
-  return {}
 }
 
 // Snackbar state
