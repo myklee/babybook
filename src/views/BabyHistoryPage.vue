@@ -218,7 +218,7 @@ const dailyFeedings = computed(() => {
   const feedings = store.getBabyFeedings(selectedBaby.value.id)
 
   // Group feedings by day using configurable window
-  const dailyMap = new Map<string, { date: string; total: number; count: number; breast: number; formula: number }>()
+  const dailyMap = new Map<string, { date: string; windowStart: string; windowEnd: string; total: number; count: number; breast: number; formula: number }>()
 
   feedings.forEach(feeding => {
     const feedingTime = new Date(feeding.timestamp)
@@ -226,34 +226,30 @@ const dailyFeedings = computed(() => {
     // Calculate which day this feeding belongs to
     let dayStart = new Date(feedingTime)
     dayStart.setHours(0, 0, 0, 0)
-
     if (use8amWindow.value) {
-      // 8 AM to 8 AM window logic
       if (feedingTime.getHours() < 8) {
         dayStart.setDate(dayStart.getDate() - 1)
       }
       dayStart.setHours(8, 0, 0, 0)
-    } else {
-      // 12 AM to 12 AM window logic (standard calendar day)
-      // No adjustment needed, dayStart is already at midnight
     }
-
-    const dateKey = dayStart.toDateString()
-
+    const windowStart = new Date(dayStart)
+    const windowEnd = new Date(dayStart)
+    windowEnd.setDate(windowEnd.getDate() + 1)
+    const dateKey = windowStart.toISOString()
     if (!dailyMap.has(dateKey)) {
       dailyMap.set(dateKey, {
-        date: dateKey,
+        date: windowStart.toDateString(),
+        windowStart: windowStart.toISOString(),
+        windowEnd: windowEnd.toISOString(),
         total: 0,
         count: 0,
         breast: 0,
         formula: 0
       })
     }
-
     const dayData = dailyMap.get(dateKey)!
     dayData.total += (feeding.amount || 0) + ((feeding as any).topup_amount || 0)
     dayData.count += 1
-
     if (feeding.type === 'breast') {
       dayData.breast += 1
     } else if (feeding.type === 'formula') {
@@ -263,7 +259,7 @@ const dailyFeedings = computed(() => {
 
   // Convert to array and sort by date (newest first)
   return Array.from(dailyMap.values())
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => new Date(b.windowStart).getTime() - new Date(a.windowStart).getTime())
     .slice(0, 7) // Show last 7 days
 })
 
@@ -291,9 +287,9 @@ const todaysFeedings = computed(() => {
   return feedings.filter(f => {
     const t = new Date(f.timestamp);
     return t >= start && t < end;
-  }).map(f => ({ 
-    id: f.id, 
-    timestamp: f.timestamp, 
+  }).map(f => ({
+    id: f.id,
+    timestamp: f.timestamp,
     type: f.type,
     amount: f.amount,
     topup_amount: (f as any).topup_amount
@@ -440,85 +436,6 @@ function getTimelineWindow() {
   return { start, end }
 }
 
-function getTimelineHours() {
-  // Always 24 hours, but starting at 8 or 0
-  return Array.from({ length: 24 }, (_, i) => {
-    const { start } = getTimelineWindow()
-    const hour = (start.getHours() + i) % 24
-    return hour
-  })
-}
-
-function getFeedingsForTimeline() {
-  if (!selectedBaby.value) return []
-  const { start, end } = getTimelineWindow()
-  return store.getBabyFeedings(selectedBaby.value.id).filter(f => {
-    const t = new Date(f.timestamp)
-    return t >= start && t < end
-  })
-}
-
-function getDiaperChangesForTimeline() {
-  if (!selectedBaby.value) return []
-  const { start, end } = getTimelineWindow()
-  return store.getBabyDiaperChanges(selectedBaby.value.id).filter(d => {
-    const t = new Date(d.timestamp)
-    return t >= start && t < end
-  })
-}
-
-function getFeedingPosition(feeding: any) {
-  const { start, end } = getTimelineWindow()
-  const feedingTime = new Date(feeding.timestamp)
-  const totalMs = end.getTime() - start.getTime()
-  const elapsedMs = feedingTime.getTime() - start.getTime()
-  const positionPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100))
-  return positionPercent
-}
-
-function getDiaperPosition(diaper: any) {
-  const { start, end } = getTimelineWindow()
-  const diaperTime = new Date(diaper.timestamp)
-  const totalMs = end.getTime() - start.getTime()
-  const elapsedMs = diaperTime.getTime() - start.getTime()
-  const positionPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100))
-  return positionPercent
-}
-
-function getFeedingMarkerClass(feeding: any) {
-  if (feeding.type === 'formula') {
-    return 'feeding-marker-formula'
-  } else if (feeding.type === 'breast') {
-    return 'feeding-marker-breast'
-  } else {
-    return ''
-  }
-}
-
-function getDiaperMarkerClass(diaper: any) {
-  if (diaper.type === 'pee') {
-    return 'diaper-marker-pee'
-  } else if (diaper.type === 'poop') {
-    return 'diaper-marker-poop'
-  } else if (diaper.type === 'both') {
-    return 'diaper-marker-both'
-  } else {
-    return ''
-  }
-}
-
-function formatTime(timestamp: string) {
-  return format(new Date(timestamp), 'h:mm a')
-}
-
-function getCurrentTimePosition() {
-  const now = new Date()
-  const { start, end } = getTimelineWindow()
-  const totalMs = end.getTime() - start.getTime()
-  const elapsedMs = now.getTime() - start.getTime()
-  const positionPercent = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100))
-  return positionPercent
-}
 
 function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
   feedingType.value = type
@@ -547,30 +464,79 @@ function handleSleepClick() {
 function getFeedingsForTimelineDate(date: Date) {
   if (!selectedBaby.value) return [];
   const feedings = store.getBabyFeedings(selectedBaby.value.id);
-  let start = new Date(date);
-  let end;
+
+  // Use the same logic as dailyFeedings to calculate the window
+  let dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+
   if (use8amWindow.value) {
-    // 8am to 8am window
-    start.setHours(8, 0, 0, 0);
-    end = new Date(start);
-    end.setDate(start.getDate() + 1);
+    // 8 AM to 8 AM window logic - same as dailyFeedings
+    dayStart.setHours(8, 0, 0, 0);
   } else {
-    // 12am to 12am window
-    start.setHours(0, 0, 0, 0);
-    end = new Date(start);
-    end.setDate(start.getDate() + 1);
+    // 12 AM to 12 AM window logic - same as dailyFeedings
+    // No adjustment needed, dayStart is already at midnight
   }
+
+  const end = new Date(dayStart);
+  end.setDate(dayStart.getDate() + 1);
+
   return feedings.filter(f => {
     const t = new Date(f.timestamp);
-    return t >= start && t < end;
-  }).map(f => ({ id: f.id, timestamp: f.timestamp, type: f.type }));
+    return t >= dayStart && t < end;
+  }).map(f => ({ id: f.id, timestamp: f.timestamp, type: f.type, amount: f.amount, topup_amount: (f as any).topup_amount }));
+}
+
+function getDiapersForTimelineDate(date: Date) {
+  if (!selectedBaby.value) return [];
+  const diapers = store.getBabyDiaperChanges(selectedBaby.value.id);
+
+  // Use the same logic as dailyFeedings to calculate the window
+  let dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+
+  if (use8amWindow.value) {
+    // 8 AM to 8 AM window logic - same as dailyFeedings
+    dayStart.setHours(8, 0, 0, 0);
+  } else {
+    // 12 AM to 12 AM window logic - same as dailyFeedings
+    // No adjustment needed, dayStart is already at midnight
+  }
+
+  const end = new Date(dayStart);
+  end.setDate(dayStart.getDate() + 1);
+
+  return diapers.filter(d => {
+    const t = new Date(d.timestamp);
+    return t >= dayStart && t < end;
+  }).map(d => ({ id: d.id, timestamp: d.timestamp, type: d.type }));
+}
+
+// Helper functions to get windowStart and windowEnd for a given day string
+function getTimelineWindowStart(windowStart: string) {
+  return windowStart
+}
+
+function getTimelineWindowEnd(windowEnd: string) {
+  return windowEnd
+}
+
+// Helper to get the current windowStart for today
+function getCurrentWindowStart() {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  if (use8amWindow.value) {
+    if (now.getHours() < 8) {
+      now.setDate(now.getDate() - 1);
+    }
+    now.setHours(8, 0, 0, 0);
+  } else {
+    now.setHours(0, 0, 0, 0);
+  }
+  return now.toISOString();
 }
 </script>
 
 <template>
-  <div>
-    <p>DEBUG: selectedBaby = {{ JSON.stringify(selectedBaby) }}</p>
-  </div>
   <div class="history-page">
     <div v-if="selectedBaby" class="container">
       <header class="page-header">
@@ -645,33 +611,33 @@ function getFeedingsForTimelineDate(date: Date) {
       </header>
 
       <!-- Day View Timeline -->
-      <Timeline
-        v-if="selectedBaby"
-        title="Today's Feedings"
-        :events="todaysFeedings"
-        :diaperEvents="todaysDiapers"
-        :hourLabelInterval="2"
-        :use8amWindow="use8amWindow"
-        :showCurrentTimeIndicator="true"
-        :totalLabel="`${Math.round(stats?.last24HoursMilk || 0)}ml total`"
-      />
+      <Timeline v-if="selectedBaby" title="Today's Feedings" :events="todaysFeedings" :diaperEvents="todaysDiapers"
+        :hourLabelInterval="2" :use8amWindow="use8amWindow" :showCurrentTimeIndicator="true"
+        :totalLabel="`${Math.round(stats?.last24HoursMilk || 0)}ml total`" />
 
       <!-- Time Window Toggle -->
       <div v-if="dailyFeedings.length > 0" class="daily-feedings-section">
-        <div class="daily-feedings-header">
-          <h3>Daily Feeding Summary ({{ use8amWindow ? '8 AM to 8 AM' : '12 AM to 12 AM' }} Windows)</h3>
-        </div>
-        <div class="daily-feedings-grid">
-          <div v-for="day in dailyFeedings" :key="day.date" class="daily-feeding-card">
-            <div class="daily-date">{{ formatDate(day.date) }}</div>
-            <div class="daily-total">{{ Math.round(day.total) }}ml</div>
-            <div class="daily-breakdown">
-              <span v-if="day.breast > 0" class="feeding-type breast">{{ day.breast }} breast</span> &nbsp;,
-              <span v-if="day.formula > 0" class="feeding-type formula">{{ day.formula }} formula</span>
-            </div>
-            <div class="daily-count">{{ day.count }} feedings</div>
-          </div>
-        </div>
+        <h3>Daily Feeding Summary ({{ use8amWindow ? '8 AM to 8 AM' : '12 AM to 12 AM' }} Windows)</h3>
+
+
+        <Timeline v-for="day in dailyFeedings.filter(day => day.windowStart !== getCurrentWindowStart())"
+          :key="day.windowStart"
+          :title="formatDate(day.date)"
+          :events="getFeedingsForTimelineDate(new Date(day.windowStart))"
+          :diaperEvents="getDiapersForTimelineDate(new Date(day.windowStart))"
+          :hourLabelInterval="2"
+          :use8amWindow="use8amWindow"
+          :showCurrentTimeIndicator="false"
+          :totalLabel="`${Math.round(day.total)}ml total`"
+          :windowStart="getTimelineWindowStart(day.windowStart)"
+          :windowEnd="getTimelineWindowEnd(day.windowEnd)"
+        />
+        <!-- <div class="daily-breakdown">
+            <span class="daily-count">{{ day.count }} feedings</span>
+            <span v-if="day.breast > 0" class="feeding-type breast">{{ day.breast }} breast</span>
+            <span v-if="day.formula > 0" class="feeding-type formula">{{ day.formula }} formula</span>
+          </div> -->
+
       </div>
 
       <ul class="history-timeline">
@@ -1011,11 +977,8 @@ function getFeedingsForTimelineDate(date: Date) {
 
 /* Daily Feeding Summary Styles */
 .daily-feedings-section {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 1.5rem;
+
   margin-bottom: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .daily-feedings-section h3 {
@@ -1024,37 +987,29 @@ function getFeedingsForTimelineDate(date: Date) {
   color: #e0e0ff;
 }
 
-.daily-feedings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.daily-header {
+  display: flex;
   gap: 1rem;
-}
-
-.daily-feeding-card {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  align-items: baseline;
+  justify-content: baseline;
 }
 
 .daily-date {
-  font-size: 0.9rem;
+  font-size: 1.5rem;
   color: #a0a0e0;
-  margin-bottom: 0.25rem;
 }
 
 .daily-total {
   font-size: 1.5rem;
   font-weight: bold;
   color: #ffd700;
-  margin-bottom: 0.25rem;
 }
 
 .daily-breakdown {
+  display: flex;
+  gap: 0.5rem;
   font-size: 0.9rem;
   color: #a0a0e0;
-  margin-bottom: 0.25rem;
 }
 
 .feeding-type {

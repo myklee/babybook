@@ -88,6 +88,8 @@ interface Props {
   use8amWindow?: boolean
   showCurrentTimeIndicator?: boolean
   totalLabel?: string
+  windowStart?: string
+  windowEnd?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -99,6 +101,9 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 function getTimelineWindow() {
+  if (props.windowStart && props.windowEnd) {
+    return { start: new Date(props.windowStart), end: new Date(props.windowEnd) }
+  }
   const now = new Date()
   let start = new Date(now)
   let end
