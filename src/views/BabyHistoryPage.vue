@@ -211,6 +211,76 @@ const stats = computed(() => {
   }
 })
 
+// Cumulative stats computed property (last 7 days before today, respecting time window)
+const cumulativeStats = computed(() => {
+  if (!selectedBaby.value) return null
+
+  const feedings = store.getBabyFeedings(selectedBaby.value.id)
+  const diapers = store.getBabyDiaperChanges(selectedBaby.value.id)
+
+  // Get today's date boundaries
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  // Get 7 days ago
+  const sevenDaysAgo = new Date(today)
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  
+  // Apply time window logic to the date range
+  let windowStart = new Date(sevenDaysAgo)
+  let windowEnd = new Date(today)
+  
+  if (use8amWindow.value) {
+    // 8am to 8am window
+    windowStart.setHours(8, 0, 0, 0)
+    windowEnd.setHours(8, 0, 0, 0)
+  } else {
+    // 12am to 12am window
+    windowStart.setHours(0, 0, 0, 0)
+    windowEnd.setHours(0, 0, 0, 0)
+  }
+  
+  // Filter to only include data from the last 7 days before today, respecting time window
+  const last7DaysFeedings = feedings.filter(f => {
+    const feedingDate = new Date(f.timestamp)
+    return feedingDate >= windowStart && feedingDate < windowEnd
+  })
+  
+  const last7DaysDiapers = diapers.filter(d => {
+    const diaperDate = new Date(d.timestamp)
+    return diaperDate >= windowStart && diaperDate < windowEnd
+  })
+
+  if (last7DaysFeedings.length === 0) {
+    return {
+      avgAmountPerFeed: 0,
+      avgAmountPerDay: 0,
+      avgFeedsPerDay: 0,
+      avgPoopsPerDay: 0,
+      totalDays: 0
+    }
+  }
+
+  // Calculate totals for the 7-day period
+  const totalAmount = last7DaysFeedings.reduce((sum, f) => sum + (f.amount || 0) + ((f as any).topup_amount || 0), 0)
+  const totalFeeds = last7DaysFeedings.length
+  const totalPoops = last7DaysDiapers.filter(d => d.type === 'poop' || d.type === 'both').length
+
+  // Calculate averages over 7 days
+  const avgAmountPerFeed = totalFeeds > 0 ? totalAmount / totalFeeds : 0
+  const avgAmountPerDay = totalAmount / 7 // Always divide by 7 days
+  const avgFeedsPerDay = totalFeeds / 7 // Always divide by 7 days
+  const avgPoopsPerDay = totalPoops / 7 // Always divide by 7 days
+
+  return {
+    avgAmountPerFeed: Math.round(avgAmountPerFeed),
+    avgAmountPerDay: Math.round(avgAmountPerDay),
+    avgFeedsPerDay: Math.round(avgFeedsPerDay * 10) / 10, // Round to 1 decimal
+    avgPoopsPerDay: Math.round(avgPoopsPerDay * 10) / 10, // Round to 1 decimal
+    totalDays: 7
+  }
+})
+
 // Daily feeding summary
 const dailyFeedings = computed(() => {
   if (!selectedBaby.value) return []
@@ -430,20 +500,25 @@ function getTimelineWindowEnd(windowEnd: string) {
   return windowEnd
 }
 
-// Helper to get the current windowStart for today
-function getCurrentWindowStart() {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  if (use8amWindow.value) {
-    if (now.getHours() < 8) {
-      now.setDate(now.getDate() - 1);
-    }
-    now.setHours(8, 0, 0, 0);
-  } else {
-    now.setHours(0, 0, 0, 0);
-  }
-  return now.toISOString();
+// Helper function to get event breakdown for a specific day
+function getDayBreakdown(day: any) {
+  const feedings = getFeedingsForTimelineDate(new Date(day.windowStart))
+  const diapers = getDiapersForTimelineDate(new Date(day.windowStart))
+  
+  const breastCount = feedings.filter(f => f.type === 'breast').length
+  const formulaCount = feedings.filter(f => f.type === 'formula').length
+  const poopCount = diapers.filter(d => d.type === 'poop' || d.type === 'both').length
+  const peeCount = diapers.filter(d => d.type === 'pee' || d.type === 'both').length
+  
+  const breakdown = []
+  if (breastCount > 0) breakdown.push(`${breastCount} breast`)
+  if (formulaCount > 0) breakdown.push(`${formulaCount} formula`)
+  if (poopCount > 0) breakdown.push(`${poopCount} poop`)
+  if (peeCount > 0) breakdown.push(`${peeCount} pee`)
+  
+  return breakdown.join(', ')
 }
+
 </script>
 
 <template>
@@ -525,26 +600,39 @@ function getCurrentWindowStart() {
         :hourLabelInterval="2" :use8amWindow="use8amWindow" :showCurrentTimeIndicator="true"
         :totalLabel="`${Math.round(stats?.last24HoursMilk || 0)}ml total`" /> -->
 
+      <!-- Cumulative Stats Section -->
+      <div v-if="cumulativeStats" class="cumulative-stats-section">
+        <h3>Cumulative Stats ({{ cumulativeStats.totalDays }} days)</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number">{{ cumulativeStats.avgAmountPerFeed }}ml</div>
+            <div class="stat-label">Avg per feed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">{{ cumulativeStats.avgAmountPerDay }}ml</div>
+            <div class="stat-label">Avg per day</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">{{ cumulativeStats.avgFeedsPerDay }}</div>
+            <div class="stat-label">Avg feeds/day</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">{{ cumulativeStats.avgPoopsPerDay }}</div>
+            <div class="stat-label">Avg poops/day</div>
+          </div>
+        </div>
+      </div>
       <!-- Time Window Toggle -->
       <div v-if="dailyFeedings.length > 0" class="daily-feedings-section">
 
-        <Timeline v-for="day in dailyFeedings"
-          :key="day.windowStart"
+        <Timeline v-for="day in dailyFeedings" :key="day.windowStart" 
           :title="formatDate(day.date)"
+          :breakdown="getDayBreakdown(day)"
           :events="getFeedingsForTimelineDate(new Date(day.windowStart))"
-          :diaperEvents="getDiapersForTimelineDate(new Date(day.windowStart))"
-          :hourLabelInterval="2"
-          :use8amWindow="use8amWindow"
-          :showCurrentTimeIndicator="false"
-          :totalLabel="`${Math.round(day.total)}ml total`"
-          :windowStart="getTimelineWindowStart(day.windowStart)"
-          :windowEnd="getTimelineWindowEnd(day.windowEnd)"
-        />
-        <!-- <div class="daily-breakdown">
-            <span class="daily-count">{{ day.count }} feedings</span>
-            <span v-if="day.breast > 0" class="feeding-type breast">{{ day.breast }} breast</span>
-            <span v-if="day.formula > 0" class="feeding-type formula">{{ day.formula }} formula</span>
-          </div> -->
+          :diaperEvents="getDiapersForTimelineDate(new Date(day.windowStart))" :hourLabelInterval="2"
+          :use8amWindow="use8amWindow" :showCurrentTimeIndicator="false"
+          :totalLabel="`${Math.round(day.total)}ml total`" :windowStart="getTimelineWindowStart(day.windowStart)"
+          :windowEnd="getTimelineWindowEnd(day.windowEnd)" />
 
       </div>
 
@@ -566,7 +654,7 @@ function getCurrentWindowStart() {
               <!-- Feeding Info -->
               <span v-if="item.event_type === 'feeding'">
                 {{ item.feeding_type === 'breast' ? 'Breast' : 'Formula' }}: <span class="font-bold">{{ item.amount
-                  }}ml</span>
+                }}ml</span>
                 <span v-if="item.topup_amount && item.topup_amount > 0" class="topup-display">
                   + <span class="font-bold">{{ item.topup_amount }}ml formula</span>
                 </span>
@@ -826,6 +914,17 @@ function getCurrentWindowStart() {
 }
 
 .stats-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: #e0e0ff;
+}
+
+/* Cumulative Stats Section Styles */
+.cumulative-stats-section {
+  margin-bottom: 2rem;
+}
+
+.cumulative-stats-section h3 {
   margin: 0 0 1rem 0;
   font-size: 1.25rem;
   color: #e0e0ff;

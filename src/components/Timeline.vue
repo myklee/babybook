@@ -1,7 +1,10 @@
 <template>
   <div class="timeline">
     <div class="timeline-header">
-      <span class="timeline-title">{{ title }}</span>
+      <div class="timeline-title-section">
+        <span class="timeline-title">{{ title }}</span>
+        <span v-if="breakdown" class="timeline-breakdown">{{ breakdown }}</span>
+      </div>
       <span v-if="totalLabel" class="timeline-total">{{ totalLabel }}</span>
     </div>
     <div class="timeline-container">
@@ -90,6 +93,7 @@ interface Props {
   totalLabel?: string
   windowStart?: string
   windowEnd?: string
+  breakdown?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -97,7 +101,8 @@ const props = withDefaults(defineProps<Props>(), {
   use8amWindow: false,
   showCurrentTimeIndicator: false,
   totalLabel: '',
-  diaperEvents: () => []
+  diaperEvents: () => [],
+  breakdown: ''
 })
 
 function getTimelineWindow() {
@@ -258,10 +263,19 @@ function hideSnackbar() {
   align-items: center;
   margin-bottom: 1rem;
 }
+.timeline-title-section {
+  display: flex;
+  align-items: baseline;
+}
 .timeline-title {
   font-size: 1.25rem;
   font-weight: bold;
   color: #e0e0ff;
+}
+.timeline-breakdown {
+  font-size: 0.8rem;
+  color: var(--color-periwinkle);
+  margin-left: 0.5rem;
 }
 .timeline-total {
   font-size: 1.5rem;
