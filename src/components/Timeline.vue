@@ -136,9 +136,9 @@ function getEventPosition(event: { timestamp: string }) {
 }
 
 function formatHourLabel(hour: number) {
-  if (hour === 0 || hour === 24) return '12AM'
-  if (hour === 12) return '12PM'
-  return (hour > 12 ? (hour - 12) : hour) + (hour >= 12 ? 'PM' : 'AM')
+  if (hour === 0 || hour === 24) return '12am'
+  if (hour === 12) return '12pm'
+  return (hour > 12 ? (hour - 12) : hour)
 }
 
 function formatEventTooltip(event: { timestamp: string }) {
@@ -250,11 +250,7 @@ function hideSnackbar() {
 
 <style scoped>
 .timeline {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 1.5rem;
   margin-bottom: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .timeline-header {
   display: flex;
@@ -295,6 +291,11 @@ function hideSnackbar() {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  &:first-child {
+    .hour-line {    
+      display: none;
+    }
+  }
 }
 .hour-line {
   position: absolute;
@@ -309,10 +310,10 @@ function hideSnackbar() {
   top: -20px;
   left: 0;
   font-size: 0.7rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   white-space: nowrap;
   text-align: left;
-  transform: translateX(0);
+  transform: translateX(-50%);
 }
 .timeline-track {
   position: relative;
@@ -415,7 +416,7 @@ function hideSnackbar() {
 }
 
 .snackbar-time {
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
 }
@@ -428,7 +429,7 @@ function hideSnackbar() {
 .snackbar-close {
   background: none;
   border: none;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0;

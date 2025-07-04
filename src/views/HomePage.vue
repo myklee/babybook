@@ -449,7 +449,7 @@ function handleSleepClick() {
 
 .feeding-time {
   font-size: 0.75rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
 }
 
 .action-grid {
@@ -655,7 +655,7 @@ function handleSleepClick() {
 
 .time-label {
   font-size: 0.9rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   margin-right: 0.5rem;
 }
 
@@ -689,7 +689,7 @@ function handleSleepClick() {
 
 .next-feeding-actual-time {
   font-size: 0.75rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   margin-left: 0.5rem;
 }
 

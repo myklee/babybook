@@ -7,6 +7,7 @@
   --color-midnight: #0d1b1e;
   --color-raven: #23243a;
   --color-prince: #21022b;
+  --color-periwinkle: #a0a0e0;
 
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -206,7 +207,7 @@ textarea {
   border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   background-color: rgba(255, 255, 255, 0.05);
-  color: white;
+  color: var(--color-periwinkle);
   font-size: 1rem;
   transition: all 0.2s ease;
   box-sizing: border-box;
@@ -222,7 +223,7 @@ textarea {
 label {
   display: block;
   margin-bottom: 0.75rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   font-weight: 500;
   font-size: 0.95rem;
 }

@@ -104,7 +104,7 @@ function setAMPM(ampm: 'AM' | 'PM') {
 
 .ampm-group button {
   background: rgba(255, 255, 255, 0.05);
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 0.5em 0.75em;

@@ -222,7 +222,7 @@ function getRelativeDate(dateString: string): string {
 
 .history-section h3 {
   margin: 0 0 0.5rem 0;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   font-size: 0.9rem;
   text-transform: uppercase;
   padding-left: 0.5rem;
@@ -230,7 +230,7 @@ function getRelativeDate(dateString: string): string {
 
 .header-stat {
   font-size: 0.8rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   font-weight: 400;
 }
 
@@ -264,7 +264,7 @@ function getRelativeDate(dateString: string): string {
 
 .time {
   font-size: 0.9rem;
-  color: #c0c0ff;
+  color: var(--color-periwinkle);
   font-weight: 500;
   margin-bottom: 0.25rem;
 }
@@ -295,13 +295,13 @@ function getRelativeDate(dateString: string): string {
 
 .notes {
   font-size: 0.8rem;
-  color: #c0c0ff;
+  color: var(--color-periwinkle);
   margin-top: 0.25rem;
   word-break: break-word;
 }
 
 .empty-state {
-  color: #c0c0ff;
+  color: var(--color-periwinkle);
   font-style: italic;
   padding: 0.5rem;
   text-align: center;
@@ -322,7 +322,7 @@ function getRelativeDate(dateString: string): string {
 
 .topup-amount {
   font-size: 0.8rem;
-  color: #c0c0ff;
+  color: var(--color-periwinkle);
   font-weight: 400;
 }
 

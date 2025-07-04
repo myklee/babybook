@@ -332,7 +332,7 @@ async function signOut() {
 .form-group label {
   display: block;
   margin-bottom: 0.75rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   font-weight: 500;
   font-size: 0.95rem;
 }
@@ -419,7 +419,7 @@ async function signOut() {
 .empty-state {
   text-align: center;
   padding: 2rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
 }
 
 .empty-state p {

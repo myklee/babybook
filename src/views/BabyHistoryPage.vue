@@ -263,65 +263,6 @@ const dailyFeedings = computed(() => {
     .slice(0, 7) // Show last 7 days
 })
 
-// Add a computed for today's feedings in local time
-const todaysFeedings = computed(() => {
-  if (!selectedBaby.value) return [];
-  const feedings = store.getBabyFeedings(selectedBaby.value.id);
-  const now = new Date();
-  let start = new Date(now);
-  let end;
-  if (use8amWindow.value) {
-    if (now.getHours() >= 8) {
-      start.setHours(8, 0, 0, 0);
-    } else {
-      start.setDate(start.getDate() - 1);
-      start.setHours(8, 0, 0, 0);
-    }
-    end = new Date(start);
-    end.setDate(start.getDate() + 1);
-  } else {
-    start.setHours(0, 0, 0, 0);
-    end = new Date(start);
-    end.setDate(start.getDate() + 1);
-  }
-  return feedings.filter(f => {
-    const t = new Date(f.timestamp);
-    return t >= start && t < end;
-  }).map(f => ({
-    id: f.id,
-    timestamp: f.timestamp,
-    type: f.type,
-    amount: f.amount,
-    topup_amount: (f as any).topup_amount
-  }));
-});
-
-const todaysDiapers = computed(() => {
-  if (!selectedBaby.value) return [];
-  const diapers = store.getBabyDiaperChanges(selectedBaby.value.id);
-  const now = new Date();
-  let start = new Date(now);
-  let end;
-  if (use8amWindow.value) {
-    if (now.getHours() >= 8) {
-      start.setHours(8, 0, 0, 0);
-    } else {
-      start.setDate(start.getDate() - 1);
-      start.setHours(8, 0, 0, 0);
-    }
-    end = new Date(start);
-    end.setDate(start.getDate() + 1);
-  } else {
-    start.setHours(0, 0, 0, 0);
-    end = new Date(start);
-    end.setDate(start.getDate() + 1);
-  }
-  return diapers.filter(d => {
-    const t = new Date(d.timestamp);
-    return t >= start && t < end;
-  }).map(d => ({ id: d.id, timestamp: d.timestamp, type: d.type }));
-});
-
 function getIcon(item: HistoryEvent) {
   switch (item.event_type) {
     case 'feeding':
@@ -341,11 +282,7 @@ function formatTimestamp(dateString: string) {
 
 function formatDate(dateString: string) {
   const date = new Date(dateString)
-  if (use8amWindow.value) {
-    return format(date, 'MMM d') + ' (8am-8am)'
-  } else {
-    return format(date, 'MMM d') + ' (12am-12am)'
-  }
+  return format(date, 'MMMM d')
 }
 
 function formatBirthdate(birthdate: string) {
@@ -584,16 +521,14 @@ function getCurrentWindowStart() {
       </header>
 
       <!-- Day View Timeline -->
-      <Timeline v-if="selectedBaby" title="Today's Feedings" :events="todaysFeedings" :diaperEvents="todaysDiapers"
+      <!-- <Timeline v-if="selectedBaby" title="Today" :events="todaysFeedings" :diaperEvents="todaysDiapers"
         :hourLabelInterval="2" :use8amWindow="use8amWindow" :showCurrentTimeIndicator="true"
-        :totalLabel="`${Math.round(stats?.last24HoursMilk || 0)}ml total`" />
+        :totalLabel="`${Math.round(stats?.last24HoursMilk || 0)}ml total`" /> -->
 
       <!-- Time Window Toggle -->
       <div v-if="dailyFeedings.length > 0" class="daily-feedings-section">
-        <h3>Daily Feeding Summary ({{ use8amWindow ? '8 AM to 8 AM' : '12 AM to 12 AM' }} Windows)</h3>
 
-
-        <Timeline v-for="day in dailyFeedings.filter(day => day.windowStart !== getCurrentWindowStart())"
+        <Timeline v-for="day in dailyFeedings"
           :key="day.windowStart"
           :title="formatDate(day.date)"
           :events="getFeedingsForTimelineDate(new Date(day.windowStart))"
@@ -729,14 +664,16 @@ function getCurrentWindowStart() {
 
 .baby-birthdate {
   font-size: 0.9rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   margin-top: 0.25rem;
   text-align: center;
 }
 
 .header-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
 }
 
@@ -850,7 +787,7 @@ function getCurrentWindowStart() {
 
 .item-time {
   font-size: 0.8rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
 }
 
 .item-info {
@@ -864,7 +801,7 @@ function getCurrentWindowStart() {
 
 .item-notes {
   font-size: 0.9rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   margin-top: 0.5rem;
   background: rgba(0, 0, 0, 0.2);
   padding: 0.5rem;
@@ -876,7 +813,7 @@ function getCurrentWindowStart() {
   text-align: center;
   padding: 2rem;
   font-size: 1.1rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
 }
 
 /* Stats Section Styles */
@@ -918,7 +855,7 @@ function getCurrentWindowStart() {
 
 .stat-label {
   font-size: 0.85rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -969,7 +906,7 @@ function getCurrentWindowStart() {
 
 .daily-date {
   font-size: 1.5rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
 }
 
 .daily-total {
@@ -982,7 +919,7 @@ function getCurrentWindowStart() {
   display: flex;
   gap: 0.5rem;
   font-size: 0.9rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
 }
 
 .feeding-type {
@@ -992,7 +929,7 @@ function getCurrentWindowStart() {
 
 .daily-count {
   font-size: 0.9rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
 }
 
 .daily-feedings-header {
@@ -1012,7 +949,7 @@ function getCurrentWindowStart() {
 .toggle-text-right {
   font-size: 0.7rem;
   font-weight: bold;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   white-space: nowrap;
 }
 
@@ -1116,7 +1053,7 @@ function getCurrentWindowStart() {
   top: -20px;
   left: 0;
   font-size: 0.7rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   white-space: nowrap;
   text-align: left;
   transform: translateX(0);
@@ -1164,7 +1101,7 @@ function getCurrentWindowStart() {
 
 .topup-display {
   font-size: 0.8rem;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
 }
 
 .baby-header {
@@ -1266,7 +1203,7 @@ function getCurrentWindowStart() {
 .baby-selector-label {
   font-size: 0.9rem;
   font-weight: bold;
-  color: #a0a0e0;
+  color: var(--color-periwinkle);
   white-space: nowrap;
 }
 
