@@ -25,7 +25,11 @@ const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
 // Auth state
-const isAuthenticated = computed(() => !!store.currentUser)
+const isAuthenticated = computed(() => {
+  const authenticated = !!store.currentUser
+  console.log('Authentication state changed:', authenticated, store.currentUser?.email)
+  return authenticated
+})
 
 // Watch for when data is loaded but loading state might be stuck
 watch(() => store.babies, (newBabies) => {
@@ -93,8 +97,12 @@ async function signIn() {
   if (email && password) {
     try {
       await store.signIn(email, password)
-      // Redirect to homepage after successful sign-in
-      router.push('/')
+      
+      // Wait a moment for the authentication state to update
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Force a router navigation to refresh the page state
+      await router.push('/')
     } catch (error) {
       console.error('Sign in error:', error)
       alert('Failed to sign in. Please check your credentials.')

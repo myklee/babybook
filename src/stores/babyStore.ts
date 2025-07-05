@@ -790,11 +790,25 @@ export const useBabyStore = defineStore('baby', () => {
 
   // Sign in with email/password
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
     if (error) throw error
+    
+    // Manually update the current user and load data
+    if (data.user) {
+      currentUser.value = data.user
+      console.log('User signed in successfully:', data.user.email)
+      
+      // Load data for the newly signed-in user
+      try {
+        await loadData()
+      } catch (loadError) {
+        console.error('Error loading data after sign in:', loadError)
+        // Don't throw this error as the sign-in was successful
+      }
+    }
   }
 
   // Sign up with email/password
