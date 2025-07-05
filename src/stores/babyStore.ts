@@ -808,17 +808,9 @@ export const useBabyStore = defineStore('baby', () => {
 
   // Sign out
   async function signOut() {
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error('Supabase sign out error:', error)
-        // Don't throw the error, just log it
-      }
-    } catch (error) {
-      console.error('Sign out error:', error)
-      // Don't throw the error, just log it
-    } finally {
-      // Always clear local state regardless of Supabase response
+    // If no current user, just clear local state
+    if (!currentUser.value) {
+      console.log('No active session to sign out from')
       currentUser.value = null
       babies.value = []
       feedings.value = []
@@ -826,6 +818,36 @@ export const useBabyStore = defineStore('baby', () => {
       sleepSessions.value = []
       babySettings.value = []
       stopPolling()
+      return
+    }
+    
+    try {
+      // Try to sign out from Supabase, but don't fail if it doesn't work
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Supabase sign out error:', error)
+        // Continue with local cleanup even if remote sign out fails
+      }
+    } catch (error) {
+      console.error('Sign out error:', error)
+      // Continue with local cleanup even if remote sign out fails
+    } finally {
+      // Always clear local state and session storage
+      currentUser.value = null
+      babies.value = []
+      feedings.value = []
+      diaperChanges.value = []
+      sleepSessions.value = []
+      babySettings.value = []
+      stopPolling()
+      
+      // Clear any stored session data
+      try {
+        localStorage.removeItem('babybook-auth')
+        sessionStorage.removeItem('babybook-auth')
+      } catch (storageError) {
+        console.error('Error clearing storage:', storageError)
+      }
     }
   }
 
