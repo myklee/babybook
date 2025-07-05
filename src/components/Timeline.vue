@@ -28,7 +28,7 @@
           class="feeding-marker"
           :class="`feeding-marker-${event.type}`"
           :style="{ left: `calc(${getEventPosition(event)}% - 11px)` }"
-          :title="formatEventTooltip(event)"
+          :title="formatFeedingTooltip(event)"
           @click="showFeedingDetails(event)"
         ></div>
         <div
@@ -153,6 +153,30 @@ function formatEventTooltip(event: { timestamp: string }) {
     hour: '2-digit', minute: '2-digit',
     timeZoneName: 'short'
   })
+}
+
+function formatFeedingTooltip(event: Event) {
+  const date = new Date(event.timestamp)
+  const timeString = date.toLocaleString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  
+  let amountString = ''
+  if (event.amount && event.amount > 0) {
+    amountString = `${event.amount}ml`
+    if (event.topup_amount && event.topup_amount > 0) {
+      amountString += ` + ${event.topup_amount}ml top-up`
+    }
+  } else if (event.topup_amount && event.topup_amount > 0) {
+    amountString = `${event.topup_amount}ml top-up`
+  } else {
+    amountString = 'No amount'
+  }
+  
+  const typeString = event.type ? event.type.charAt(0).toUpperCase() + event.type.slice(1) : 'Unknown'
+  
+  return `${typeString} feeding: ${amountString} at ${timeString}`
 }
 
 function getHourForIndex(i: number) {
@@ -315,9 +339,9 @@ function hideSnackbar() {
   position: absolute;
   left: 0;
   top: 0;
-  width: 1px;
+  width: 2px;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--color-midnight);
 }
 .hour-label {
   position: absolute;
