@@ -315,7 +315,7 @@ function hideSnackbar() {
   position: absolute;
   left: 0;
   top: 0;
-  width: 2px;
+  width: 1px;
   height: 100%;
   background-color: rgba(255, 255, 255, 0.2);
 }
