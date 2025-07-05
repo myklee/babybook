@@ -808,8 +808,25 @@ export const useBabyStore = defineStore('baby', () => {
 
   // Sign out
   async function signOut() {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Supabase sign out error:', error)
+        // Don't throw the error, just log it
+      }
+    } catch (error) {
+      console.error('Sign out error:', error)
+      // Don't throw the error, just log it
+    } finally {
+      // Always clear local state regardless of Supabase response
+      currentUser.value = null
+      babies.value = []
+      feedings.value = []
+      diaperChanges.value = []
+      sleepSessions.value = []
+      babySettings.value = []
+      stopPolling()
+    }
   }
 
   function getTodaysFeedingsTotal(babyId: string) {

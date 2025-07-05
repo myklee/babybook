@@ -107,10 +107,13 @@ async function updatePassword() {
 async function signOut() {
   try {
     await store.signOut()
+    // Always redirect to home page, even if there was an error
     router.push('/')
   } catch (error) {
     console.error('Sign out error:', error)
-    alert('Failed to sign out. Please try again.')
+    // Don't show error alert for sign out - just redirect
+    // The store will have cleared local state anyway
+    router.push('/')
   }
 }
 </script>
