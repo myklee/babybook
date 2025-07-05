@@ -110,106 +110,6 @@ const combinedHistory = computed((): HistoryEvent[] => {
   return allEvents.sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime())
 })
 
-// Stats computed properties
-const stats = computed(() => {
-  if (!selectedBaby.value) return null
-
-  const feedings = store.getBabyFeedings(selectedBaby.value.id)
-  const diapers = store.getBabyDiaperChanges(selectedBaby.value.id)
-  const sleeps = store.getBabySleepSessions(selectedBaby.value.id)
-
-  // Total counts
-  const totalFeedings = feedings.length
-  const totalDiapers = diapers.length
-  const totalSleeps = sleeps.length
-
-  // Feeding stats
-  const totalMilk = feedings.reduce((sum, f) => sum + (f.amount || 0) + ((f as any).topup_amount || 0), 0)
-  const breastFeedings = feedings.filter(f => f.type === 'breast').length
-  const formulaFeedings = feedings.filter(f => f.type === 'formula').length
-
-  // Diaper stats
-  const peeDiapers = diapers.filter(d => d.type === 'pee').length
-  const poopDiapers = diapers.filter(d => d.type === 'poop').length
-  const bothDiapers = diapers.filter(d => d.type === 'both').length
-
-  // Sleep stats
-  const totalSleepMinutes = sleeps.reduce((sum, s) => {
-    if (s.end_time && s.start_time) {
-      return sum + ((new Date(s.end_time).getTime() - new Date(s.start_time).getTime()) / 60000)
-    }
-    return sum
-  }, 0)
-
-  // Recent activity (last 24 hours)
-  const now = new Date()
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-
-  const recentFeedings = feedings.filter(f => new Date(f.timestamp) > yesterday).length
-  const recentDiapers = diapers.filter(d => new Date(d.timestamp) > yesterday).length
-  const recentSleeps = sleeps.filter(s => new Date(s.start_time) > yesterday).length
-
-  // Last 24 hours milk amount (respects toggle setting)
-  const last24HoursMilk = (() => {
-    const now = new Date()
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    let windowStart
-
-    if (use8amWindow.value) {
-      // Since the most recent 8 AM
-      if (now.getHours() >= 8) {
-        // It's past 8am today, so use 8am today
-        windowStart = new Date(today)
-        windowStart.setHours(8, 0, 0, 0)
-      } else {
-        // It's before 8am today, so use 8am yesterday
-        const yesterday = new Date(today)
-        yesterday.setDate(yesterday.getDate() - 1)
-        windowStart = new Date(yesterday)
-        windowStart.setHours(8, 0, 0, 0)
-      }
-    } else {
-      // Since the most recent 12 AM (midnight)
-      if (now.getHours() >= 0) {
-        // It's past midnight today, so use midnight today
-        windowStart = new Date(today)
-        windowStart.setHours(0, 0, 0, 0)
-      } else {
-        // This shouldn't happen since hours are 0-23, but just in case
-        const yesterday = new Date(today)
-        yesterday.setDate(yesterday.getDate() - 1)
-        windowStart = yesterday
-      }
-    }
-
-    return feedings.filter(feeding => {
-      const feedingTimestamp = new Date(feeding.timestamp)
-      return (
-        (feeding.type === 'breast' || feeding.type === 'formula') &&
-        feeding.amount != null &&
-        feedingTimestamp >= windowStart
-      )
-    }).reduce((sum, feeding) => sum + (feeding.amount || 0) + ((feeding as any).topup_amount || 0), 0)
-  })()
-
-  return {
-    totalFeedings,
-    totalDiapers,
-    totalSleeps,
-    totalMilk,
-    breastFeedings,
-    formulaFeedings,
-    peeDiapers,
-    poopDiapers,
-    bothDiapers,
-    totalSleepMinutes,
-    recentFeedings,
-    recentDiapers,
-    recentSleeps,
-    last24HoursMilk
-  }
-})
 
 // Cumulative stats computed property (last 7 days before today, respecting time window)
 const cumulativeStats = computed(() => {
@@ -572,9 +472,9 @@ function getDayBreakdown(day: any) {
               <img :src="dropletsIcon" alt="Pee" class="icon" />
               <span>Pee</span>
             </button>
-            <button class="action-btn sleep" @click="handleSleepClick()" title="Record Sleep Session">
-              <span v-if="store.isBabySleeping(selectedBaby?.id)">⏹️ Wake</span>
-              <span v-else>😴 Sleep</span>
+            <button :class="['action-btn', store.isBabySleeping(selectedBaby?.id) ? 'wake' : 'sleep']" @click="handleSleepClick()" title="Record Sleep Session">
+              <span v-if="store.isBabySleeping(selectedBaby?.id)">Wake</span>
+              <span v-else>Sleep</span>
             </button>
           </div>
 
@@ -1402,6 +1302,16 @@ function getDayBreakdown(day: any) {
 .action-btn.pee {
   background-color: #ffd700;
   /* gold */
+}
+
+.action-btn.wake {
+  background-color: #05409e;
+  color: white;
+}
+
+.action-btn.sleep {
+  background-color: #090524;
+  color: white;
 }
 
 .sleeping-banner {
