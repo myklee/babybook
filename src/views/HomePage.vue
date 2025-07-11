@@ -9,6 +9,7 @@ import IconButton from '../components/IconButton.vue'
 import SleepingAnimation from '../components/SleepingAnimation.vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
+import spoonIcon from '../assets/icons/spoon.svg'
 import bookUserIcon from '../assets/icons/book-user.svg'
 import addBabyIcon from '../assets/icons/add-baby.svg'
 import userRoundIcon from '../assets/icons/circle-user-round.svg'
@@ -176,6 +177,8 @@ function getFeedingIcon(type: string | undefined) {
     return breastIcon
   } else if (type === 'formula') {
     return formulaIcon
+  } else if (type === 'solid') {
+    return spoonIcon
   }
   return breastIcon // default
 }
@@ -291,6 +294,10 @@ function handleSleepClick() {
         <button class="action-btn formula" @click="openFeedingModal('formula')">
           <img src="../assets/icons/flask-conical.svg" class="icon" alt="Formula" />
           <span>Formula</span>
+        </button>
+        <button class="action-btn solid" @click="openFeedingModal('solid')">
+          <img src="../assets/icons/spoon.svg" class="icon" alt="Solid Food" />
+          <span>Solid</span>
         </button>
         <button class="action-btn poop" @click="openDiaperModal('poop')">
           <img src="../assets/icons/hugeicons_poop.svg" class="icon" alt="Poop" />
@@ -462,10 +469,10 @@ function handleSleepClick() {
 
 .action-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: clamp(0.5rem, 2vw, 1rem);
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
 }
 
 .action-btn {
@@ -506,9 +513,15 @@ function handleSleepClick() {
   /* aquamarine */
 }
 
+.action-btn.solid {
+  background-color: #ff6b6b;
+  /* coral/red for solid foods */
+}
+
 .action-btn.poop {
   background-color: saddlebrown;
   color: white;
+  grid-column: 1 / span 2;
 }
 
 .action-btn.poop .icon {
@@ -519,11 +532,12 @@ function handleSleepClick() {
 .action-btn.pee {
   background-color: #ffd700;
   /* gold */
+  grid-column: 3 / span 1;
 }
 
 .action-btn.wake,
 .action-btn.sleep {
-  grid-column: 1 / span 2;
+  grid-column: 1 / span 3;
   height: calc(clamp(100px, 25vw, 150px) / 2);
   color: white;
   width: 100%;

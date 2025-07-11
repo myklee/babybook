@@ -27,6 +27,20 @@ const isSaving = ref(false)
 const timeInput = ref<HTMLInputElement | null>(null)
 const amountInput = ref<HTMLInputElement | null>(null)
 
+// Solid food specific data
+const selectedFood = ref('')
+const selectedFoodCategory = ref<'western_traditional' | 'chinese' | 'japanese' | 'indian' | 'korean'>('western_traditional')
+const showFoodSearch = ref(false)
+
+// Food suggestions by category
+const foodSuggestions = {
+  western_traditional: ['Rice cereal', 'Oatmeal', 'Pureed apple', 'Pureed pear', 'Avocado', 'Sweet potato', 'Banana', 'Carrots'],
+  chinese: ['Rice porridge (congee)', 'Millet porridge', 'Steamed egg custard', 'Bone broth', 'Soft rice'],
+  japanese: ['Rice porridge (okayu)', 'Mashed tofu', 'Fish paste', 'Seaweed broth', 'Soft vegetables'],
+  indian: ['Rice water', 'Dal with rice', 'Ragi porridge', 'Khichdi', 'Mashed banana'],
+  korean: ['Rice porridge (juk)', 'Miyeok-guk (seaweed soup)', 'Soft tofu', 'Pumpkin porridge']
+}
+
 onMounted(() => {
   const now = new Date()
   // Set default date
@@ -84,6 +98,12 @@ function selectAmountText() {
   }
 }
 
+// Handle food selection
+function selectFood(food: string) {
+  selectedFood.value = food
+  showFoodSearch.value = false
+}
+
 function getSelectedDateTime() {
   if (!customDate.value) return new Date()
   const [year, month, day] = customDate.value.split('-').map(Number)
@@ -104,13 +124,29 @@ async function handleSubmit() {
       timestamp = new Date()
     }
     
-    await store.addFeeding(
-      props.babyId,
-      amount.value,
-      feedingTypeRef.value,
-      notes.value,
-      timestamp
-    )
+    if (feedingTypeRef.value === 'solid') {
+      // For solid foods, add to solid foods table
+      if (!selectedFood.value.trim()) {
+        alert('Please select or enter a food name.')
+        return
+      }
+      
+      await store.addSolidFood(
+        props.babyId,
+        selectedFood.value.trim(),
+        selectedFoodCategory.value,
+        notes.value || undefined
+      )
+    } else {
+      // For breast/formula, add to feedings table
+      await store.addFeeding(
+        props.babyId,
+        amount.value,
+        feedingTypeRef.value,
+        notes.value,
+        timestamp
+      )
+    }
 
     emit('saved')
     emit('close')
@@ -138,7 +174,7 @@ async function handleSubmit() {
           <TimePicker v-model="time" />
         </div>
 
-        <div class="form-group">
+        <div v-if="feedingTypeRef !== 'solid'" class="form-group">
           <label>Amount (ml)</label>
           <input 
             ref="amountInput"
@@ -208,6 +244,45 @@ async function handleSubmit() {
           </div>
         </div>
 
+        <div v-if="feedingTypeRef === 'solid'" class="form-group">
+          <label>Food Category</label>
+          <select v-model="selectedFoodCategory">
+            <option value="western_traditional">Western Traditional</option>
+            <option value="chinese">Chinese</option>
+            <option value="japanese">Japanese</option>
+            <option value="indian">Indian</option>
+            <option value="korean">Korean</option>
+          </select>
+        </div>
+
+        <div v-if="feedingTypeRef === 'solid'" class="form-group">
+          <label>Food Name</label>
+          <input 
+            v-model="selectedFood"
+            type="text" 
+            placeholder="Enter food name or select from suggestions"
+            @focus="showFoodSearch = true"
+            required
+          >
+          <div v-if="showFoodSearch" class="food-suggestions">
+            <div class="suggestions-header">
+              <span>Common {{ selectedFoodCategory.replace('_', ' ') }} foods:</span>
+              <button type="button" @click="showFoodSearch = false" class="close-suggestions">×</button>
+            </div>
+            <div class="suggestions-grid">
+              <button 
+                v-for="food in foodSuggestions[selectedFoodCategory]" 
+                :key="food"
+                type="button"
+                @click="selectFood(food)"
+                class="suggestion-item"
+              >
+                {{ food }}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Type</label>
           <select v-model="feedingTypeRef">
@@ -236,5 +311,90 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-/* Component-specific styles only - global styles are handled in style.css */
+.food-suggestions {
+  position: relative;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  margin-top: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.suggestions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #ddd;
+  border-radius: 8px 8px 0 0;
+  font-weight: 500;
+}
+
+.close-suggestions {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  color: #666;
+}
+
+.close-suggestions:hover {
+  color: #333;
+}
+
+.suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.suggestion-item {
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  text-align: center;
+}
+
+.suggestion-item:hover {
+  background: #e9ecef;
+  border-color: #007bff;
+}
+
+.preset-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.preset-btn:hover {
+  background: #e9ecef;
+  border-color: #007bff;
+}
+
+.preset-btn.active {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+}
 </style> 
