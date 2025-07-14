@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useBabyStore } from "../stores/babyStore";
 import TimePicker from "./TimePicker.vue";
 import DatePicker from "./DatePicker.vue";
@@ -37,6 +37,9 @@ const selectedFoodCategory = ref<
     "western_traditional" | "chinese" | "japanese" | "indian" | "korean"
 >("western_traditional");
 const showFoodSearch = ref(false);
+
+// UI state
+const showAdvanced = ref(false);
 
 // Food suggestions by category
 const foodSuggestions = {
@@ -80,6 +83,9 @@ const foodSuggestions = {
 };
 
 onMounted(() => {
+    // Lock body scroll when modal opens
+    document.body.style.overflow = "hidden";
+
     const now = new Date();
     // Set default date
     const year = now.getFullYear();
@@ -109,16 +115,25 @@ onMounted(() => {
             settings.default_breast_amount > 0
         ) {
             amount.value = settings.default_breast_amount;
-        } else if (
-            feedingTypeRef.value === "formula" &&
-            settings.default_formula_amount > 0
-        ) {
-            amount.value = settings.default_formula_amount;
+        } else if (feedingTypeRef.value === "formula") {
+            // Use custom setting if available, otherwise default to 200ml
+            amount.value =
+                settings.default_formula_amount > 0
+                    ? settings.default_formula_amount
+                    : 200;
         }
+    } else if (feedingTypeRef.value === "formula") {
+        // No settings found, use default of 200ml for formula
+        amount.value = 200;
     }
 
     nextTick();
     timeInput.value?.focus();
+});
+
+onUnmounted(() => {
+    // Restore body scroll when modal is destroyed
+    document.body.style.overflow = "";
 });
 
 // Watch for feeding type changes to update default amount
@@ -127,14 +142,20 @@ watch(feedingTypeRef, (newType) => {
     if (settings) {
         if (newType === "breast" && settings.default_breast_amount > 0) {
             amount.value = settings.default_breast_amount;
-        } else if (
-            newType === "formula" &&
-            settings.default_formula_amount > 0
-        ) {
-            amount.value = settings.default_formula_amount;
+        } else if (newType === "formula") {
+            // Use custom setting if available, otherwise default to 200ml
+            amount.value =
+                settings.default_formula_amount > 0
+                    ? settings.default_formula_amount
+                    : 200;
         } else {
             amount.value = 0;
         }
+    } else if (newType === "formula") {
+        // No settings found, use default of 200ml for formula
+        amount.value = 200;
+    } else {
+        amount.value = 0;
     }
 });
 
@@ -253,7 +274,7 @@ async function handleSubmit() {
                             <button
                                 type="button"
                                 class="preset-btn"
-                                @click="amount = 100"
+                                @click="amount = 160"
                                 :class="{ active: amount === 160 }"
                             >
                                 160ml
@@ -265,6 +286,14 @@ async function handleSubmit() {
                                 :class="{ active: amount === 200 }"
                             >
                                 200ml
+                            </button>
+                            <button
+                                type="button"
+                                class="preset-btn"
+                                @click="amount = 240"
+                                :class="{ active: amount === 240 }"
+                            >
+                                240ml
                             </button>
                         </div>
                         <div
@@ -352,20 +381,42 @@ async function handleSubmit() {
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Type</label>
-                    <select v-model="feedingTypeRef">
-                        <option value="breast">Breast</option>
-                        <option value="formula">Formula</option>
-                        <option value="solid">Solid</option>
-                    </select>
+                <!-- Advanced Options Toggle -->
+                <div class="advanced-toggle">
+                    <button
+                        type="button"
+                        @click="showAdvanced = !showAdvanced"
+                        class="toggle-btn"
+                    >
+                        <span
+                            >{{ showAdvanced ? "Hide" : "More" }} Options</span
+                        >
+                        <span class="arrow" :class="{ rotated: showAdvanced }"
+                            >▼</span
+                        >
+                    </button>
                 </div>
-                <section id="additional-options">
+
+                <!-- Advanced Options -->
+                <div v-if="showAdvanced" class="advanced-options">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select v-model="feedingTypeRef">
+                            <option value="breast">Breast</option>
+                            <option value="formula">Formula</option>
+                            <option value="solid">Solid</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label>Notes</label>
-                        <textarea v-model="notes" rows="2"></textarea>
+                        <textarea
+                            v-model="notes"
+                            rows="2"
+                            placeholder="Optional notes..."
+                        ></textarea>
                     </div>
-                </section>
+                </div>
                 <div class="form-actions">
                     <button
                         type="submit"
@@ -461,9 +512,9 @@ async function handleSubmit() {
 
 .preset-btn {
     padding: 8px 16px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-lavendar);
     border-radius: 6px;
-    background: #f8f9fa;
+    background: var(--color-lavendar);
     cursor: pointer;
     transition: all 0.2s;
     font-size: 14px;
@@ -471,12 +522,50 @@ async function handleSubmit() {
 
 .preset-btn:hover {
     background: #e9ecef;
-    border-color: #007bff;
+    border-color: #fff;
 }
 
 .preset-btn.active {
-    background: #007bff;
-    border-color: #007bff;
+    background: var(--color-prince);
+    border-color: var(--color-lavendar);
     color: white;
+}
+
+.advanced-toggle {
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+    color: var(--color-lavendar);
+    background-color: var(--color-midnight);
+    text-decoration: underline;
+}
+
+.arrow {
+    transition: transform 0.2s;
+}
+
+.arrow.rotated {
+    transform: rotate(180deg);
+}
+
+.advanced-options {
+    padding-top: 1rem;
+    margin-top: 1rem;
 }
 </style>

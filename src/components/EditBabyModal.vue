@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import DatePicker from './DatePicker.vue'
 
@@ -24,11 +24,19 @@ const showDeleteConfirm = ref(false)
 const previewUrl = ref<string | null>(null)
 
 onMounted(async () => {
+  // Lock body scroll when modal opens
+  document.body.style.overflow = 'hidden'
+  
   name.value = props.baby.name
   birthdate.value = props.baby.birthdate || ''
   previewUrl.value = props.baby.image_url || null
   await nextTick()
   nameInput.value?.focus()
+})
+
+onUnmounted(() => {
+  // Restore body scroll when modal is destroyed
+  document.body.style.overflow = ''
 })
 
 function handleFileChange(event: Event) {

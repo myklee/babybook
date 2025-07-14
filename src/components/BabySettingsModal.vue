@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 
 const props = defineProps<{
@@ -38,6 +38,9 @@ function selectFormulaAmountText() {
 }
 
 onMounted(() => {
+  // Lock body scroll when modal opens
+  document.body.style.overflow = 'hidden'
+  
   // Load current settings
   const settings = store.getBabySettings(props.babyId)
   if (settings) {
@@ -45,6 +48,11 @@ onMounted(() => {
     defaultBreastAmount.value = settings.default_breast_amount
     defaultFormulaAmount.value = settings.default_formula_amount
   }
+})
+
+onUnmounted(() => {
+  // Restore body scroll when modal is destroyed
+  document.body.style.overflow = ''
 })
 
 async function handleSubmit() {

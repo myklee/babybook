@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
@@ -31,6 +31,9 @@ const options = [
 ]
 
 onMounted(() => {
+  // Lock body scroll when modal opens
+  document.body.style.overflow = 'hidden'
+  
   console.log('DiaperModal mounted with babyName:', props.babyName)
   
   // Pre-fill current date and time
@@ -48,6 +51,11 @@ onMounted(() => {
   if (hour12 === 0) hour12 = 12
   time.value.hour = String(hour12)
   time.value.minute = String(now.getMinutes()).padStart(2, '0')
+})
+
+onUnmounted(() => {
+  // Restore body scroll when modal is destroyed
+  document.body.style.overflow = ''
 })
 
 function getSelectedDateTime() {
