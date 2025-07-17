@@ -29,9 +29,17 @@ export const useBabyStore = defineStore("baby", () => {
 
   function startPolling() {
     if (pollingInterval) return; // Already polling
-    pollingInterval = setInterval(() => {
+    pollingInterval = setInterval(async () => {
       if (currentUser.value) {
-        loadData();
+        try {
+          await loadData();
+        } catch (error: any) {
+          // If we get auth errors during polling, stop polling
+          if (error?.code === 'PGRST301' || error?.message?.includes('JWT expired') || error?.message?.includes('Auth session missing')) {
+            console.log("Authentication error during polling, stopping polling");
+            stopPolling();
+          }
+        }
       }
     }, 15000); // 15 seconds
   }
@@ -376,9 +384,38 @@ export const useBabyStore = defineStore("baby", () => {
       }
 
       console.log("Data loading complete");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading data:", error);
-      // Don't clear existing data on error, just log it
+      
+      // Handle JWT expiration specifically
+      if (error?.code === 'PGRST301' || error?.message?.includes('JWT expired')) {
+        console.log("JWT expired, attempting to refresh session...");
+        try {
+          const { data, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.error("Failed to refresh session:", refreshError);
+            // Clear user and stop polling on refresh failure
+            currentUser.value = null;
+            stopPolling();
+            // Clear data
+            babies.value = [];
+            feedings.value = [];
+            diaperChanges.value = [];
+            sleepSessions.value = [];
+            solidFoods.value = [];
+            babySettings.value = [];
+          } else if (data.session) {
+            console.log("Session refreshed successfully");
+            currentUser.value = data.session.user;
+            // Don't retry immediately, let the next polling cycle handle it
+          }
+        } catch (refreshError) {
+          console.error("Error refreshing session:", refreshError);
+          currentUser.value = null;
+          stopPolling();
+        }
+      }
+      // Don't clear existing data on other errors, just log them
     } finally {
       clearTimeout(timeoutId);
       isLoading.value = false;
@@ -652,6 +689,8 @@ export const useBabyStore = defineStore("baby", () => {
         type,
         notes: notes || null,
         user_id: currentUser.value!.id,
+        start_time: null,
+        end_time: null,
       };
 
       const { data, error } = await supabase
@@ -673,6 +712,102 @@ export const useBabyStore = defineStore("baby", () => {
     }
   }
 
+  // Add a new nursing session (with start/end times)
+  async function addNursingSession(
+    babyId: string,
+    startTime: Date,
+    endTime?: Date,
+    notes?: string,
+  ) {
+    try {
+      await ensureValidSession();
+
+      const feedingData = {
+        baby_id: babyId,
+        timestamp: startTime.toISOString(), // Keep timestamp for compatibility
+        amount: null,
+        type: "nursing" as const,
+        notes: notes || null,
+        user_id: currentUser.value!.id,
+        start_time: startTime.toISOString(),
+        end_time: endTime ? endTime.toISOString() : null,
+      };
+
+      const { data, error } = await supabase
+        .from("feedings")
+        .insert(feedingData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error adding nursing session:", error);
+        throw error;
+      }
+
+      feedings.value.unshift(data);
+      return data;
+    } catch (error) {
+      console.error("Error in addNursingSession:", error);
+      throw error;
+    }
+  }
+
+  // Start a new nursing session (no end time)
+  async function startNursingSession(babyId: string, notes?: string) {
+    if (!currentUser.value) throw new Error("User not authenticated");
+    
+    const { data, error } = await supabase
+      .from("feedings")
+      .insert({
+        baby_id: babyId,
+        timestamp: new Date().toISOString(),
+        amount: null,
+        type: "nursing",
+        notes: notes || null,
+        user_id: currentUser.value.id,
+        start_time: new Date().toISOString(),
+        end_time: null,
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    feedings.value.unshift(data);
+    return data;
+  }
+
+  // End the current nursing session (set end_time to now)
+  async function endNursingSession(babyId: string) {
+    if (!currentUser.value) throw new Error("User not authenticated");
+    
+    const openSession = feedings.value.find(
+      (f) => f.baby_id === babyId && f.type === "nursing" && f.start_time && !f.end_time,
+    );
+    
+    if (!openSession) throw new Error("No open nursing session found");
+    
+    const { data, error } = await supabase
+      .from("feedings")
+      .update({ end_time: new Date().toISOString() })
+      .eq("id", openSession.id)
+      .eq("user_id", currentUser.value.id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    const index = feedings.value.findIndex((f) => f.id === openSession.id);
+    if (index !== -1) feedings.value[index] = data;
+    return data;
+  }
+
+  // Check if a baby is currently nursing (has an open session)
+  function isBabyNursing(babyId: string) {
+    return feedings.value.some(
+      (f) => f.baby_id === babyId && f.type === "nursing" && f.start_time && !f.end_time
+    );
+  }
+
   // Add top-up to an existing breast feeding
   async function addTopUpToFeeding(feedingId: string, topupAmount: number) {
     if (!currentUser.value) throw new Error("User not authenticated");
@@ -680,8 +815,8 @@ export const useBabyStore = defineStore("baby", () => {
     // First, get the current feeding to verify it's a breast feeding
     const currentFeeding = feedings.value.find((f) => f.id === feedingId);
     if (!currentFeeding) throw new Error("Feeding not found");
-    if (currentFeeding.type !== "breast")
-      throw new Error("Can only add top-up to breast feedings");
+    if (currentFeeding.type !== "breast" && currentFeeding.type !== "nursing")
+      throw new Error("Can only add top-up to breast and nursing feedings");
 
     const { data, error } = await supabase
       .from("feedings")
@@ -1376,6 +1511,10 @@ export const useBabyStore = defineStore("baby", () => {
     updateBaby,
     deleteBaby,
     addFeeding,
+    addNursingSession,
+    startNursingSession,
+    endNursingSession,
+    isBabyNursing,
     addTopUpToFeeding,
     addDiaperChange,
     addSleepSession,

@@ -38,7 +38,7 @@ const babyName = computed(() => {
 
 function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep') {
   if (category === 'feeding') {
-    if (item.type === 'breast') return breastIcon;
+    if (item.type === 'breast' || item.type === 'nursing') return breastIcon;
     if (item.type === 'formula') return formulaIcon;
     return formulaIcon; // Default for 'solid' or others
   }
@@ -134,10 +134,22 @@ function getRelativeDate(dateString: string): string {
       <ul v-else class="history-list">
         <li v-for="feeding in feedings.slice(0, 8)" :key="feeding.id" class="history-item"
           @click="openEditModal(feeding, 'feeding')">
-          <div class="time">{{ formatDateTime(feeding.timestamp) }}</div>
+          <div class="time">
+            <span v-if="feeding.type === 'nursing' && (feeding as any).start_time && (feeding as any).end_time && isSameDay((feeding as any).start_time, (feeding as any).end_time)">
+              {{ getRelativeDate((feeding as any).start_time) }}, {{ format(new Date((feeding as any).start_time), 'h:mm a') }} - {{ format(new Date((feeding as any).end_time), 'h:mm a') }}
+            </span>
+            <span v-else-if="feeding.type === 'nursing' && (feeding as any).start_time">
+              {{ formatDateTime((feeding as any).start_time) }}
+              <span v-if="(feeding as any).end_time"> - {{ formatDateTime((feeding as any).end_time) }}</span>
+              <span v-else class="sleeping-indicator"> - Nursing</span>
+            </span>
+            <span v-else>{{ formatDateTime(feeding.timestamp) }}</span>
+          </div>
           <div class="details">
             <img :src="getIcon(feeding, 'feeding') || ''" class="item-icon" alt="Feeding" />
-            <span v-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
+            <span v-if="feeding.type === 'nursing' && (feeding as any).start_time && (feeding as any).end_time" class="amount">{{ ((new Date((feeding as any).end_time).getTime() - new Date((feeding as any).start_time).getTime()) / 60000).toFixed(0) }} min</span>
+            <span v-else-if="feeding.type === 'nursing' && (feeding as any).start_time" class="sleeping-duration">Ongoing</span>
+            <span v-else-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
             <span v-if="(feeding as any).topup_amount && (feeding as any).topup_amount > 0" class="topup-amount">+{{
               (feeding as any).topup_amount }}</span>
           </div>

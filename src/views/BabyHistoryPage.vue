@@ -27,8 +27,8 @@ type HistoryEvent = {
   event_time: string;
   notes: string | null;
   // Feeding specific
-  feeding_type?: 'breast' | 'formula' | 'solid';
-  amount?: number;
+  feeding_type?: 'breast' | 'formula' | 'solid' | 'nursing';
+  amount?: number | null;
   // Diaper specific
   diaper_type?: 'pee' | 'poop' | 'both';
   // Sleep specific
@@ -56,7 +56,7 @@ const showSettingsModal = ref(false)
 // Modal state for feeding and diaper actions
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
-const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
+const feedingType = ref<'breast' | 'formula' | 'solid' | 'nursing'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
 // When the component mounts, get the baby ID from the route.
@@ -236,7 +236,10 @@ const dailyFeedings = computed(() => {
 function getIcon(item: HistoryEvent) {
   switch (item.event_type) {
     case 'feeding':
-      return item.feeding_type === 'breast' ? breastIcon : formulaIcon
+      if (item.feeding_type === 'breast' || item.feeding_type === 'nursing') {
+        return breastIcon
+      }
+      return formulaIcon
     case 'diaper':
       return item.diaper_type === 'pee' ? dropletsIcon : poopIcon
     case 'sleep':
@@ -317,7 +320,7 @@ function closeEditModal() {
   store.initializeStore()
 }
 
-function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
+function openFeedingModal(type: 'breast' | 'formula' | 'solid' | 'nursing') {
   feedingType.value = type
   showFeedingModal.value = true
 }
@@ -405,7 +408,7 @@ function getDayBreakdown(day: any) {
   const feedings = getFeedingsForTimelineDate(new Date(day.windowStart))
   const diapers = getDiapersForTimelineDate(new Date(day.windowStart))
   
-  const breastCount = feedings.filter(f => f.type === 'breast').length
+  const breastCount = feedings.filter(f => f.type === 'breast' || f.type === 'nursing').length
   const formulaCount = feedings.filter(f => f.type === 'formula').length
   const poopCount = diapers.filter(d => d.type === 'poop' || d.type === 'both').length
   const peeCount = diapers.filter(d => d.type === 'pee' || d.type === 'both').length
@@ -459,6 +462,10 @@ function getDayBreakdown(day: any) {
             <button class="action-btn breast" @click="openFeedingModal('breast')" title="Record Breast Feeding">
               <img :src="breastIcon" alt="Breast" class="icon" />
               <span>Breast</span>
+            </button>
+            <button class="action-btn nursing" @click="openFeedingModal('nursing')" title="Record Nursing">
+              <img :src="breastIcon" alt="Nursing" class="icon" />
+              <span>Nursing</span>
             </button>
             <button class="action-btn formula" @click="openFeedingModal('formula')" title="Record Formula Feeding">
               <img :src="formulaIcon" alt="Formula" class="icon" />
@@ -553,8 +560,14 @@ function getDayBreakdown(day: any) {
             <div class="item-info">
               <!-- Feeding Info -->
               <span v-if="item.event_type === 'feeding'">
-                {{ item.feeding_type === 'breast' ? 'Breast' : 'Formula' }}: <span class="font-bold">{{ item.amount
-                }}ml</span>
+                {{ item.feeding_type === 'breast' ? 'Breast' : item.feeding_type === 'nursing' ? 'Nursing' : item.feeding_type === 'formula' ? 'Formula' : 'Solid' }}: 
+                <span v-if="item.feeding_type === 'nursing' && item.start_time && item.end_time" class="font-bold">
+                  {{ ((new Date(item.end_time).getTime() - new Date(item.start_time).getTime()) / 60000).toFixed(0) }} min
+                </span>
+                <span v-else-if="item.feeding_type === 'nursing' && item.start_time" class="font-bold">
+                  Ongoing
+                </span>
+                <span v-else class="font-bold">{{ item.amount }}ml</span>
                 <span v-if="item.topup_amount && item.topup_amount > 0" class="topup-display">
                   + <span class="font-bold">{{ item.topup_amount }}ml formula</span>
                 </span>
@@ -1282,6 +1295,11 @@ function getDayBreakdown(day: any) {
 .action-btn.breast {
   background-color: #f5f5dc;
   /* beige */
+}
+
+.action-btn.nursing {
+  background-color: #dda0dd;
+  /* plum */
 }
 
 .action-btn.formula {

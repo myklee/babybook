@@ -5,7 +5,7 @@ import TimePicker from "./TimePicker.vue";
 import DatePicker from "./DatePicker.vue";
 
 const props = defineProps<{
-    feedingType?: "breast" | "formula" | "solid";
+    feedingType?: "breast" | "formula" | "solid" | "nursing";
     babyId: string;
     babyName: string;
 }>();
@@ -19,7 +19,7 @@ const store = useBabyStore();
 
 // Form data
 const amount = ref(0);
-const feedingTypeRef = ref<"breast" | "formula" | "solid">("breast");
+const feedingTypeRef = ref<"breast" | "formula" | "solid" | "nursing">("breast");
 const notes = ref("");
 const customDate = ref("");
 const time = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
@@ -30,6 +30,19 @@ const time = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
 const isSaving = ref(false);
 const timeInput = ref<HTMLInputElement | null>(null);
 const amountInput = ref<HTMLInputElement | null>(null);
+
+// Nursing session data
+const nursingStartTime = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
+    hour: "",
+    minute: "",
+    ampm: "AM",
+});
+const nursingEndTime = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
+    hour: "",
+    minute: "",
+    ampm: "AM",
+});
+const nursingDuration = ref(20); // Default 20 minutes
 
 // Solid food specific data
 const selectedFood = ref("");
@@ -99,6 +112,16 @@ onMounted(() => {
     if (hour12 === 0) hour12 = 12;
     time.value.hour = String(hour12);
     time.value.minute = String(now.getMinutes()).padStart(2, "0");
+
+    // Initialize nursing times
+    nursingStartTime.value = { ...time.value };
+    const endTime = new Date(now.getTime() + nursingDuration.value * 60000);
+    let endHour = endTime.getHours();
+    nursingEndTime.value.ampm = endHour >= 12 ? "PM" : "AM";
+    let endHour12 = endHour % 12;
+    if (endHour12 === 0) endHour12 = 12;
+    nursingEndTime.value.hour = String(endHour12);
+    nursingEndTime.value.minute = String(endTime.getMinutes()).padStart(2, "0");
 
     console.log("FeedingModal mounted with babyName:", props.babyName);
 
@@ -189,17 +212,43 @@ function getSelectedDateTime() {
     );
 }
 
+function getNursingStartDateTime() {
+    if (!customDate.value) return new Date();
+    const [year, month, day] = customDate.value.split("-").map(Number);
+    let hour = Number(nursingStartTime.value.hour);
+    if (nursingStartTime.value.ampm === "PM" && hour < 12) hour += 12;
+    if (nursingStartTime.value.ampm === "AM" && hour === 12) hour = 0;
+    return new Date(
+        year,
+        month - 1,
+        day,
+        hour,
+        Number(nursingStartTime.value.minute),
+        0,
+        0,
+    );
+}
+
+function getNursingEndDateTime() {
+    if (!customDate.value) return new Date();
+    const [year, month, day] = customDate.value.split("-").map(Number);
+    let hour = Number(nursingEndTime.value.hour);
+    if (nursingEndTime.value.ampm === "PM" && hour < 12) hour += 12;
+    if (nursingEndTime.value.ampm === "AM" && hour === 12) hour = 0;
+    return new Date(
+        year,
+        month - 1,
+        day,
+        hour,
+        Number(nursingEndTime.value.minute),
+        0,
+        0,
+    );
+}
+
 async function handleSubmit() {
     isSaving.value = true;
     try {
-        let timestamp;
-        if (customDate.value && getSelectedDateTime()) {
-            // Create timestamp in local timezone
-            timestamp = getSelectedDateTime();
-        } else {
-            timestamp = new Date();
-        }
-
         if (feedingTypeRef.value === "solid") {
             // For solid foods, add to solid foods table
             if (!selectedFood.value.trim()) {
@@ -213,8 +262,27 @@ async function handleSubmit() {
                 selectedFoodCategory.value,
                 notes.value || undefined,
             );
+        } else if (feedingTypeRef.value === "nursing") {
+            // For nursing sessions, use start/end times
+            const startTime = getNursingStartDateTime();
+            const endTime = getNursingEndDateTime();
+            
+            await store.addNursingSession(
+                props.babyId,
+                startTime,
+                endTime,
+                notes.value || undefined,
+            );
         } else {
             // For breast/formula, add to feedings table
+            let timestamp;
+            if (customDate.value && getSelectedDateTime()) {
+                // Create timestamp in local timezone
+                timestamp = getSelectedDateTime();
+            } else {
+                timestamp = new Date();
+            }
+
             await store.addFeeding(
                 props.babyId,
                 amount.value,
@@ -245,12 +313,26 @@ async function handleSubmit() {
                     <label for="feeding-date">Date</label>
                     <DatePicker v-model="customDate" id="feeding-date" />
                 </div>
-                <div class="form-group">
+                
+                <!-- For nursing sessions, show start/end times -->
+                <div v-if="feedingTypeRef === 'nursing'">
+                    <div class="form-group">
+                        <label>Start Time</label>
+                        <TimePicker v-model="nursingStartTime" />
+                    </div>
+                    <div class="form-group">
+                        <label>End Time</label>
+                        <TimePicker v-model="nursingEndTime" />
+                    </div>
+                </div>
+                
+                <!-- For other feeding types, show single time -->
+                <div v-else class="form-group">
                     <label for="feeding-time">Time</label>
                     <TimePicker v-model="time" />
                 </div>
 
-                <div v-if="feedingTypeRef !== 'solid'" class="form-group">
+                <div v-if="feedingTypeRef !== 'solid' && feedingTypeRef !== 'nursing'" class="form-group">
                     <label>Amount (ml)</label>
                     <div class="amount-form">
                         <input
@@ -403,6 +485,7 @@ async function handleSubmit() {
                         <label>Type</label>
                         <select v-model="feedingTypeRef">
                             <option value="breast">Breast</option>
+                            <option value="nursing">Nursing</option>
                             <option value="formula">Formula</option>
                             <option value="solid">Solid</option>
                         </select>

@@ -48,31 +48,37 @@ export interface Database {
           id: string;
           baby_id: string;
           timestamp: string;
-          amount: number;
-          type: "breast" | "formula" | "solid";
+          amount: number | null;
+          type: "breast" | "formula" | "solid" | "nursing";
           notes: string | null;
           created_at: string;
           user_id: string;
+          start_time: string | null;
+          end_time: string | null;
         };
         Insert: {
           id?: string;
           baby_id: string;
-          timestamp: string;
-          amount: number;
-          type: "breast" | "formula" | "solid";
+          timestamp?: string;
+          amount?: number | null;
+          type: "breast" | "formula" | "solid" | "nursing";
           notes?: string | null;
           created_at?: string;
           user_id: string;
+          start_time?: string | null;
+          end_time?: string | null;
         };
         Update: {
           id?: string;
           baby_id?: string;
           timestamp?: string;
-          amount?: number;
-          type?: "breast" | "formula" | "solid";
+          amount?: number | null;
+          type?: "breast" | "formula" | "solid" | "nursing";
           notes?: string | null;
           created_at?: string;
           user_id?: string;
+          start_time?: string | null;
+          end_time?: string | null;
         };
       };
       diaper_changes: {

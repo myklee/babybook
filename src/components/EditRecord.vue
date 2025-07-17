@@ -20,7 +20,7 @@ const store = useBabyStore()
 
 // Form data
 const amount = ref(0)
-const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
+const feedingType = ref<'breast' | 'formula' | 'solid' | 'nursing'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 const notes = ref('')
 const customDate = ref('')
@@ -236,6 +236,7 @@ async function handleDelete() {
           <label>Type</label>
           <select v-model="feedingType">
             <option value="breast">Breast</option>
+            <option value="nursing">Nursing</option>
             <option value="formula">Formula</option>
             <option value="solid">Solid</option>
           </select>

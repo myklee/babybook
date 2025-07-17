@@ -22,7 +22,7 @@ const router = useRouter()
 const selectedBaby = ref<any>(null)
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
-const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
+const feedingType = ref<'breast' | 'formula' | 'solid' | 'nursing'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
 // Auth state
@@ -66,7 +66,7 @@ function selectBaby(baby: any) {
 }
 
 // Functions
-function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
+function openFeedingModal(type: 'breast' | 'formula' | 'solid' | 'nursing') {
   feedingType.value = type
   showFeedingModal.value = true
 }
@@ -174,6 +174,8 @@ function getLastFeedingTime(babyId: string) {
 // Get feeding icon based on type
 function getFeedingIcon(type: string | undefined) {
   if (type === 'breast') {
+    return breastIcon
+  } else if (type === 'nursing') {
     return breastIcon
   } else if (type === 'formula') {
     return formulaIcon
@@ -290,6 +292,10 @@ function handleSleepClick() {
         <button class="action-btn breast" @click="openFeedingModal('breast')">
           <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Breast" />
           <span>Breast</span>
+        </button>
+        <button class="action-btn nursing" @click="openFeedingModal('nursing')">
+          <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Nursing" />
+          <span>Nursing</span>
         </button>
         <button class="action-btn formula" @click="openFeedingModal('formula')">
           <img src="../assets/icons/flask-conical.svg" class="icon" alt="Formula" />
@@ -468,28 +474,31 @@ function handleSleepClick() {
 }
 
 .action-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: clamp(0.5rem, 2vw, 1rem);
   width: 100%;
   max-width: 600px;
 }
 
 .action-btn {
-  padding: clamp(1rem, 3vw, 1.5rem);
+  padding: clamp(0.67rem, 2vw, 1rem);
   border-radius: 1.5rem;
   border: none;
-  font-size: clamp(1rem, 3vw, 1.5rem);
+  font-size: clamp(0.87rem, 2.5vw, 1.25rem);
   font-weight: 600;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(0.5rem, 2vw, 1rem);
-  height: clamp(100px, 25vw, 150px);
+  gap: clamp(0.33rem, 1.33vw, 0.67rem);
+  height: clamp(67px, 17vw, 100px);
+  width: clamp(80px, 20vw, 107px);
   color: black;
   transition: transform 0.2s ease;
+  flex: 0 0 auto;
 }
 
 .action-btn:hover {
@@ -497,8 +506,8 @@ function handleSleepClick() {
 }
 
 .icon {
-  width: clamp(32px, 8vw, 48px);
-  height: clamp(32px, 8vw, 48px);
+  width: clamp(21px, 5.33vw, 32px);
+  height: clamp(21px, 5.33vw, 32px);
   stroke-width: 1;
   flex-shrink: 0;
 }
@@ -506,6 +515,11 @@ function handleSleepClick() {
 .action-btn.breast {
   background-color: #f5f5dc;
   /* beige */
+}
+
+.action-btn.nursing {
+  background-color: #dda0dd;
+  /* plum */
 }
 
 .action-btn.formula {
@@ -521,7 +535,6 @@ function handleSleepClick() {
 .action-btn.poop {
   background-color: saddlebrown;
   color: white;
-  grid-column: 1 / span 2;
 }
 
 .action-btn.poop .icon {
@@ -532,15 +545,11 @@ function handleSleepClick() {
 .action-btn.pee {
   background-color: #ffd700;
   /* gold */
-  grid-column: 3 / span 1;
 }
 
 .action-btn.wake,
 .action-btn.sleep {
-  grid-column: 1 / span 3;
-  height: calc(clamp(100px, 25vw, 150px) / 2);
   color: white;
-  width: 100%;
 }
 
 .action-btn.wake {
@@ -643,8 +652,8 @@ function handleSleepClick() {
   }
 
   .action-btn {
-    padding: 1rem;
-    height: 100px;
+    padding: 0.67rem;
+    height: 67px;
   }
 }
 

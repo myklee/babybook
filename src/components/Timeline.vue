@@ -72,8 +72,8 @@ import dropletsIcon from '../assets/icons/droplets.svg'
 interface Event {
   id: string | number
   timestamp: string // ISO string in UTC
-  type?: 'breast' | 'formula' | 'solid'
-  amount?: number
+  type?: 'breast' | 'formula' | 'solid' | 'nursing'
+  amount?: number | null
   topup_amount?: number
 }
 
@@ -195,7 +195,7 @@ function getCurrentTimePosition() {
 
 function getFeedingIcon(event: Event) {
   if (event.type === 'formula') return formulaIcon
-  if (event.type === 'breast') return breastIcon
+  if (event.type === 'breast' || event.type === 'nursing') return breastIcon
   return ''
 }
 
@@ -372,6 +372,10 @@ function hideSnackbar() {
 }
 .feeding-marker-breast {
   background: var(--breast-color);
+}
+.feeding-marker-nursing {
+  background: var(--breast-color);
+  border: 2px solid #dda0dd;
 }
 .feeding-marker-formula {
   background: var(--formula-color);
