@@ -192,8 +192,9 @@ function handleEdit() {
   border: 1px solid #dda0dd;
   border-radius: 0.75rem;
   padding: 1rem;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   position: relative;
+  animation: fadeInUp 0.4s ease-out;
 }
 
 .nursing-session-display.clickable {
@@ -430,11 +431,24 @@ function handleEdit() {
   }
 }
 
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .nursing-session-display,
   .edit-indicator {
     transition: none;
+    animation: none;
   }
   
   .nursing-session-display.clickable:hover {

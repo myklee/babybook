@@ -530,7 +530,8 @@ function handleSleepClick() {
 }
 
 .action-btn:hover {
-  transform: scale(1.05);
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .icon {
