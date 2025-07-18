@@ -55,6 +55,10 @@ export interface Database {
           user_id: string;
           start_time: string | null;
           end_time: string | null;
+          breast_used: "left" | "right" | "both" | null;
+          left_duration: number;
+          right_duration: number;
+          total_duration: number;
         };
         Insert: {
           id?: string;
@@ -67,6 +71,10 @@ export interface Database {
           user_id: string;
           start_time?: string | null;
           end_time?: string | null;
+          breast_used?: "left" | "right" | "both" | null;
+          left_duration?: number;
+          right_duration?: number;
+          total_duration?: number;
         };
         Update: {
           id?: string;
@@ -79,6 +87,10 @@ export interface Database {
           user_id?: string;
           start_time?: string | null;
           end_time?: string | null;
+          breast_used?: "left" | "right" | "both" | null;
+          left_duration?: number;
+          right_duration?: number;
+          total_duration?: number;
         };
       };
       diaper_changes: {

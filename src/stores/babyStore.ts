@@ -3,6 +3,19 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import { supabase } from "../lib/supabase";
 import type { Database } from "../lib/supabase";
 import { startOfToday, set } from "date-fns";
+import type { 
+  BreastType, 
+  NursingSession, 
+  ActiveNursingSession, 
+  CompletedNursingSession,
+  CreateNursingSessionData,
+  NursingAnalytics,
+  DateRange
+} from "../types/nursing";
+import { 
+  validateDualTimerNursingSession,
+  computeBreastUsed
+} from "../types/nursing";
 
 type Baby = Database["public"]["Tables"]["babies"]["Row"] & {
   image_url?: string | null;
@@ -752,28 +765,111 @@ export const useBabyStore = defineStore("baby", () => {
     }
   }
 
-  // Start a new nursing session (no end time)
-  async function startNursingSession(babyId: string, notes?: string) {
-    if (!currentUser.value) throw new Error("User not authenticated");
-    
-    const { data, error } = await supabase
-      .from("feedings")
-      .insert({
+  // Save nursing session with dual-timer durations
+  async function saveNursingSession(
+    babyId: string,
+    leftDuration: number,
+    rightDuration: number,
+    notes?: string,
+    timestamp?: Date
+  ): Promise<NursingSession> {
+    try {
+      await ensureValidSession();
+
+      // Validate dual-timer data
+      const validation = validateDualTimerNursingSession(leftDuration, rightDuration);
+      if (!validation.is_valid) {
+        throw new Error(validation.errors.map(e => e.message).join(', '));
+      }
+
+      // Determine breast used based on durations
+      const breastUsed = computeBreastUsed(leftDuration, rightDuration);
+      const totalDuration = leftDuration + rightDuration;
+      const sessionTimestamp = timestamp || new Date();
+      const startTime = new Date(sessionTimestamp.getTime() - (totalDuration * 1000));
+
+      const sessionData = {
         baby_id: babyId,
-        timestamp: new Date().toISOString(),
+        timestamp: sessionTimestamp.toISOString(),
         amount: null,
-        type: "nursing",
+        type: "nursing" as const,
         notes: notes || null,
-        user_id: currentUser.value.id,
-        start_time: new Date().toISOString(),
+        user_id: currentUser.value!.id,
+        start_time: startTime.toISOString(),
+        end_time: sessionTimestamp.toISOString(),
+        breast_used: breastUsed,
+        left_duration: leftDuration,
+        right_duration: rightDuration,
+        total_duration: totalDuration,
+      };
+
+      const { data, error } = await supabase
+        .from("feedings")
+        .insert(sessionData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error saving nursing session:", error);
+        throw error;
+      }
+
+      feedings.value.unshift(data);
+      return data as NursingSession;
+    } catch (error) {
+      console.error("Error in saveNursingSession:", error);
+      throw error;
+    }
+  }
+
+  // Start a new nursing session with breast selection
+  async function startNursingSession(
+    babyId: string, 
+    breastUsed: BreastType, 
+    notes?: string
+  ): Promise<NursingSession> {
+    try {
+      await ensureValidSession();
+
+      // Check if there's already an active nursing session for this baby
+      const existingSession = feedings.value.find(
+        (f) => f.baby_id === babyId && f.type === "nursing" && f.start_time && !f.end_time
+      );
+
+      if (existingSession) {
+        throw new Error("There is already an active nursing session for this baby");
+      }
+
+      const startTime = new Date();
+      const sessionData = {
+        baby_id: babyId,
+        timestamp: startTime.toISOString(),
+        amount: null,
+        type: "nursing" as const,
+        notes: notes || null,
+        user_id: currentUser.value!.id,
+        start_time: startTime.toISOString(),
         end_time: null,
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    feedings.value.unshift(data);
-    return data;
+        breast_used: breastUsed,
+      };
+
+      const { data, error } = await supabase
+        .from("feedings")
+        .insert(sessionData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error starting nursing session:", error);
+        throw error;
+      }
+
+      feedings.value.unshift(data);
+      return data as NursingSession;
+    } catch (error) {
+      console.error("Error in startNursingSession:", error);
+      throw error;
+    }
   }
 
   // End the current nursing session (set end_time to now)
@@ -806,6 +902,365 @@ export const useBabyStore = defineStore("baby", () => {
     return feedings.value.some(
       (f) => f.baby_id === babyId && f.type === "nursing" && f.start_time && !f.end_time
     );
+  }
+
+  // Get active nursing session for a baby
+  function getActiveNursingSession(babyId: string): ActiveNursingSession | null {
+    const activeSession = feedings.value.find(
+      (f) => f.baby_id === babyId && f.type === "nursing" && f.start_time && !f.end_time
+    ) as NursingSession | undefined;
+
+    if (!activeSession) return null;
+
+    const startTime = new Date(activeSession.start_time);
+    const now = new Date();
+    const durationMs = now.getTime() - startTime.getTime();
+    const durationMinutes = Math.floor(durationMs / (1000 * 60));
+    const hours = Math.floor(durationMinutes / 60);
+    const minutes = durationMinutes % 60;
+    const elapsedDisplay = hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}` : `${minutes}:${Math.floor((durationMs % 60000) / 1000).toString().padStart(2, '0')}`;
+
+    return {
+      ...activeSession,
+      is_active: true,
+      duration_minutes: durationMinutes,
+      elapsed_display: elapsedDisplay,
+    } as ActiveNursingSession;
+  }
+
+  // Update nursing session notes
+  async function updateNursingNotes(sessionId: string, notes: string): Promise<void> {
+    try {
+      await ensureValidSession();
+
+      const { error } = await supabase
+        .from("feedings")
+        .update({ notes })
+        .eq("id", sessionId)
+        .eq("user_id", currentUser.value!.id)
+        .eq("type", "nursing");
+
+      if (error) {
+        console.error("Error updating nursing notes:", error);
+        throw error;
+      }
+
+      // Update local state
+      const index = feedings.value.findIndex((f) => f.id === sessionId);
+      if (index !== -1) {
+        feedings.value[index].notes = notes;
+      }
+    } catch (error) {
+      console.error("Error in updateNursingNotes:", error);
+      throw error;
+    }
+  }
+
+  // Get nursing sessions for a baby
+  function getNursingSessions(babyId: string): NursingSession[] {
+    return feedings.value
+      .filter((f) => f.baby_id === babyId && f.type === "nursing")
+      .map((f) => f as NursingSession)
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+  }
+
+  // Get completed nursing sessions for a baby
+  function getCompletedNursingSessions(babyId: string): CompletedNursingSession[] {
+    return feedings.value
+      .filter((f) => f.baby_id === babyId && f.type === "nursing" && f.end_time)
+      .map((f) => {
+        const session = f as NursingSession;
+        const startTime = new Date(session.start_time);
+        const endTime = new Date(session.end_time!);
+        const durationMs = endTime.getTime() - startTime.getTime();
+        const durationMinutes = Math.floor(durationMs / (1000 * 60));
+        const durationDisplay = durationMinutes >= 60 
+          ? `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`
+          : `${durationMinutes} minutes`;
+
+        return {
+          ...session,
+          is_active: false,
+          duration_minutes: durationMinutes,
+          duration_display: durationDisplay,
+        } as CompletedNursingSession;
+      })
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+  }
+
+  // Get nursing summary for today
+  function getTodaysNursingSummary(babyId: string) {
+    const today = startOfToday();
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    
+    const todaysSessions = feedings.value
+      .filter((f) => f.baby_id === babyId && f.type === "nursing")
+      .filter((session) => {
+        const sessionDate = new Date(session.start_time || session.timestamp);
+        return sessionDate >= today && sessionDate < tomorrow;
+      });
+
+    const totalSessions = todaysSessions.length;
+    const totalDurationMinutes = Math.floor(
+      todaysSessions.reduce((sum, session) => {
+        return sum + (session.left_duration || 0) + (session.right_duration || 0);
+      }, 0) / 60
+    );
+
+    const leftSessions = todaysSessions.filter(s => (s.left_duration || 0) > 0).length;
+    const rightSessions = todaysSessions.filter(s => (s.right_duration || 0) > 0).length;
+    const bothSessions = todaysSessions.filter(s => (s.left_duration || 0) > 0 && (s.right_duration || 0) > 0).length;
+
+    return {
+      total_sessions: totalSessions,
+      total_duration_minutes: totalDurationMinutes,
+      left_sessions: leftSessions,
+      right_sessions: rightSessions,
+      both_sessions: bothSessions,
+      average_duration: totalSessions > 0 ? Math.round(totalDurationMinutes / totalSessions) : 0
+    };
+  }
+
+  // Get weekly nursing summary
+  function getWeeklyNursingSummary(babyId: string) {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    return getNursingAnalytics(babyId, { start: weekAgo, end: now });
+  }
+
+  // Get breast usage balance (percentage difference between left and right)
+  function getBreastUsageBalance(babyId: string, days: number = 7): { balance: number; recommendation: string } {
+    const now = new Date();
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    
+    const sessions = feedings.value
+      .filter((f) => f.baby_id === babyId && f.type === "nursing")
+      .filter((session) => {
+        const sessionDate = new Date(session.start_time || session.timestamp);
+        return sessionDate >= startDate;
+      });
+
+    const totalLeftDuration = sessions.reduce((sum, s) => sum + (s.left_duration || 0), 0);
+    const totalRightDuration = sessions.reduce((sum, s) => sum + (s.right_duration || 0), 0);
+    const totalDuration = totalLeftDuration + totalRightDuration;
+
+    if (totalDuration === 0) {
+      return { balance: 0, recommendation: "No nursing sessions recorded yet" };
+    }
+
+    const leftPercentage = (totalLeftDuration / totalDuration) * 100;
+    const rightPercentage = (totalRightDuration / totalDuration) * 100;
+    const balance = Math.abs(leftPercentage - rightPercentage);
+
+    let recommendation = "";
+    if (balance < 10) {
+      recommendation = "Great balance between both breasts";
+    } else if (balance < 20) {
+      recommendation = leftPercentage > rightPercentage 
+        ? "Consider using right breast more often" 
+        : "Consider using left breast more often";
+    } else {
+      recommendation = leftPercentage > rightPercentage 
+        ? "Try to use right breast more to maintain balance" 
+        : "Try to use left breast more to maintain balance";
+    }
+
+    return { balance: Math.round(balance), recommendation };
+  }
+
+  // Calculate nursing analytics for a baby with enhanced dual-timer support
+  function getNursingAnalytics(babyId: string, dateRange?: DateRange): NursingAnalytics {
+    const now = new Date();
+    const defaultStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+    const start = dateRange?.start || defaultStart;
+    const end = dateRange?.end || now;
+
+    // Get nursing sessions with duration data
+    const nursingSessions = feedings.value
+      .filter((f) => f.baby_id === babyId && f.type === "nursing")
+      .map((f) => f as NursingSession)
+      .filter((session) => {
+        const sessionDate = new Date(session.start_time);
+        return sessionDate >= start && sessionDate <= end;
+      });
+
+    const totalSessions = nursingSessions.length;
+    
+    // Calculate total duration from individual breast durations
+    const totalDurationSeconds = nursingSessions.reduce((sum, session) => {
+      return sum + (session.left_duration || 0) + (session.right_duration || 0);
+    }, 0);
+    const totalDurationMinutes = Math.floor(totalDurationSeconds / 60);
+    const averageDurationMinutes = totalSessions > 0 ? Math.round(totalDurationMinutes / totalSessions) : 0;
+
+    // Enhanced breast usage statistics with individual durations
+    const leftCount = nursingSessions.filter(s => (s.left_duration || 0) > 0).length;
+    const rightCount = nursingSessions.filter(s => (s.right_duration || 0) > 0).length;
+    const bothCount = nursingSessions.filter(s => (s.left_duration || 0) > 0 && (s.right_duration || 0) > 0).length;
+
+    // Calculate total time spent on each breast
+    const totalLeftDurationMinutes = Math.floor(nursingSessions.reduce((sum, s) => sum + (s.left_duration || 0), 0) / 60);
+    const totalRightDurationMinutes = Math.floor(nursingSessions.reduce((sum, s) => sum + (s.right_duration || 0), 0) / 60);
+
+    const leftPercentage = totalSessions > 0 ? Math.round((leftCount / totalSessions) * 100) : 0;
+    const rightPercentage = totalSessions > 0 ? Math.round((rightCount / totalSessions) * 100) : 0;
+    const bothPercentage = totalSessions > 0 ? Math.round((bothCount / totalSessions) * 100) : 0;
+
+    // Daily totals with enhanced duration tracking
+    const dailyTotals: Array<{ 
+      date: string; 
+      sessions: number; 
+      duration_minutes: number;
+      left_duration_minutes: number;
+      right_duration_minutes: number;
+    }> = [];
+    
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const dayStart = new Date(currentDate);
+      const dayEnd = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+      
+      const daySessions = nursingSessions.filter((session) => {
+        const sessionDate = new Date(session.start_time);
+        return sessionDate >= dayStart && sessionDate < dayEnd;
+      });
+
+      const dayLeftDuration = Math.floor(daySessions.reduce((sum, s) => sum + (s.left_duration || 0), 0) / 60);
+      const dayRightDuration = Math.floor(daySessions.reduce((sum, s) => sum + (s.right_duration || 0), 0) / 60);
+
+      dailyTotals.push({
+        date: dateStr,
+        sessions: daySessions.length,
+        duration_minutes: dayLeftDuration + dayRightDuration,
+        left_duration_minutes: dayLeftDuration,
+        right_duration_minutes: dayRightDuration,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Session patterns with enhanced duration analysis
+    const sessionDurations = nursingSessions.map(s => Math.floor(((s.left_duration || 0) + (s.right_duration || 0)) / 60));
+    const leftDurations = nursingSessions.filter(s => (s.left_duration || 0) > 0).map(s => Math.floor((s.left_duration || 0) / 60));
+    const rightDurations = nursingSessions.filter(s => (s.right_duration || 0) > 0).map(s => Math.floor((s.right_duration || 0) / 60));
+    
+    const hourCounts = new Array(24).fill(0);
+    nursingSessions.forEach((session) => {
+      const hour = new Date(session.start_time).getHours();
+      hourCounts[hour]++;
+    });
+
+    const peakHours = hourCounts
+      .map((count, hour) => ({ hour, session_count: count }))
+      .filter(h => h.session_count > 0)
+      .sort((a, b) => b.session_count - a.session_count)
+      .slice(0, 3);
+
+    return {
+      baby_id: babyId,
+      date_range: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      total_sessions: totalSessions,
+      total_duration_minutes: totalDurationMinutes,
+      average_duration_minutes: averageDurationMinutes,
+      breast_usage: {
+        left: leftCount,
+        right: rightCount,
+        both: bothCount,
+        left_percentage: leftPercentage,
+        right_percentage: rightPercentage,
+        both_percentage: bothPercentage,
+        left_total_duration_minutes: totalLeftDurationMinutes,
+        right_total_duration_minutes: totalRightDurationMinutes,
+      },
+      daily_totals: dailyTotals,
+      session_patterns: {
+        most_common_duration: sessionDurations.length > 0 ? Math.round(sessionDurations.reduce((a, b) => a + b, 0) / sessionDurations.length) : 0,
+        longest_session: sessionDurations.length > 0 ? Math.max(...sessionDurations) : 0,
+        shortest_session: sessionDurations.length > 0 ? Math.min(...sessionDurations) : 0,
+        peak_hours: peakHours,
+        average_left_duration: leftDurations.length > 0 ? Math.round(leftDurations.reduce((a, b) => a + b, 0) / leftDurations.length) : 0,
+        average_right_duration: rightDurations.length > 0 ? Math.round(rightDurations.reduce((a, b) => a + b, 0) / rightDurations.length) : 0,
+      },
+    };
+  }
+
+  // Validate nursing session data (enhanced for dual-timer)
+  function validateNursingSession(data: CreateNursingSessionData): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!data.baby_id) {
+      errors.push("Baby ID is required");
+    }
+
+    // For dual-timer sessions, validate durations instead of breast_used
+    if (data.left_duration !== undefined && data.right_duration !== undefined) {
+      const validation = validateDualTimerNursingSession(data.left_duration, data.right_duration);
+      if (!validation.is_valid) {
+        errors.push(...validation.errors.map(e => e.message));
+      }
+    } else if (!data.breast_used || !['left', 'right', 'both'].includes(data.breast_used)) {
+      errors.push("Valid breast selection is required");
+    }
+
+    if (data.start_time && data.start_time > new Date()) {
+      errors.push("Start time cannot be in the future");
+    }
+
+    // Check for existing active session
+    const existingSession = feedings.value.find(
+      (f) => f.baby_id === data.baby_id && f.type === "nursing" && f.start_time && !f.end_time
+    );
+
+    if (existingSession) {
+      errors.push("There is already an active nursing session for this baby");
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+
+  // Validate dual-timer nursing session data
+  function validateDualTimerSession(leftDuration: number, rightDuration: number): { isValid: boolean; errors: string[]; warnings: string[] } {
+    const validation = validateDualTimerNursingSession(leftDuration, rightDuration);
+    return {
+      isValid: validation.is_valid,
+      errors: validation.errors.map(e => e.message),
+      warnings: validation.warnings.map(w => w.message),
+    };
+  }
+
+  // Format nursing duration for display
+  function formatNursingDuration(durationMinutes: number): string {
+    if (durationMinutes < 60) {
+      return `${durationMinutes} minutes`;
+    }
+    
+    const hours = Math.floor(durationMinutes / 60);
+    const minutes = durationMinutes % 60;
+    
+    if (minutes === 0) {
+      return `${hours} hour${hours > 1 ? 's' : ''}`;
+    }
+    
+    return `${hours}h ${minutes}m`;
+  }
+
+  // Get nursing session duration in real-time
+  function getNursingSessionDuration(sessionId: string): number {
+    const session = feedings.value.find(f => f.id === sessionId && f.type === "nursing");
+    if (!session || !session.start_time) return 0;
+
+    const startTime = new Date(session.start_time);
+    const endTime = session.end_time ? new Date(session.end_time) : new Date();
+    
+    return Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60));
   }
 
   // Add top-up to an existing breast feeding
@@ -1512,9 +1967,22 @@ export const useBabyStore = defineStore("baby", () => {
     deleteBaby,
     addFeeding,
     addNursingSession,
+    saveNursingSession,
     startNursingSession,
     endNursingSession,
     isBabyNursing,
+    getActiveNursingSession,
+    updateNursingNotes,
+    getNursingSessions,
+    getCompletedNursingSessions,
+    getNursingAnalytics,
+    getTodaysNursingSummary,
+    getWeeklyNursingSummary,
+    getBreastUsageBalance,
+    validateNursingSession,
+    validateDualTimerSession,
+    formatNursingDuration,
+    getNursingSessionDuration,
     addTopUpToFeeding,
     addDiaperChange,
     addSleepSession,

@@ -3,6 +3,9 @@ import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useBabyStore } from "../stores/babyStore";
 import TimePicker from "./TimePicker.vue";
 import DatePicker from "./DatePicker.vue";
+import BreastSelector from "./BreastSelector.vue";
+import NursingTimer from "./NursingTimer.vue";
+import type { BreastType } from "../types/nursing";
 
 const props = defineProps<{
     feedingType?: "breast" | "formula" | "solid" | "nursing";
@@ -43,6 +46,8 @@ const nursingEndTime = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>(
     ampm: "AM",
 });
 const nursingDuration = ref(20); // Default 20 minutes
+const breastUsed = ref<BreastType>("left");
+const nursingMode = ref<"timer" | "completed">("timer"); // Timer mode or log completed session
 
 // Solid food specific data
 const selectedFood = ref("");
@@ -53,6 +58,7 @@ const showFoodSearch = ref(false);
 
 // UI state
 const showAdvanced = ref(false);
+const showNursingTimer = ref(false);
 
 // Food suggestions by category
 const foodSuggestions = {
@@ -246,6 +252,35 @@ function getNursingEndDateTime() {
     );
 }
 
+// Handle nursing timer save
+async function handleNursingTimerSave(data: { leftDuration: number; rightDuration: number; notes: string }) {
+    try {
+        // Validate that at least one timer was used
+        if (data.leftDuration === 0 && data.rightDuration === 0) {
+            alert('Please start at least one timer before saving.');
+            return;
+        }
+
+        // Create nursing session with calculated start and end times
+        const now = new Date();
+        const totalDuration = Math.max(data.leftDuration, data.rightDuration); // Use the longer duration
+        const startTime = new Date(now.getTime() - totalDuration * 60 * 1000);
+        
+        await store.addNursingSession(
+            props.babyId,
+            startTime,
+            now,
+            data.notes || undefined
+        );
+
+        emit("saved");
+        emit("close");
+    } catch (error) {
+        console.error("Error saving nursing session:", error);
+        alert("Failed to save nursing session. Please try again.");
+    }
+}
+
 async function handleSubmit() {
     isSaving.value = true;
     try {
@@ -263,16 +298,29 @@ async function handleSubmit() {
                 notes.value || undefined,
             );
         } else if (feedingTypeRef.value === "nursing") {
-            // For nursing sessions, use start/end times
-            const startTime = getNursingStartDateTime();
-            const endTime = getNursingEndDateTime();
-            
-            await store.addNursingSession(
-                props.babyId,
-                startTime,
-                endTime,
-                notes.value || undefined,
-            );
+            // For nursing sessions, handle timer vs completed modes
+            if (nursingMode.value === "timer") {
+                // Show the nursing timer modal
+                showNursingTimer.value = true;
+                return; // Don't close the modal yet
+            } else {
+                // Log a completed nursing session
+                const startTime = getNursingStartDateTime();
+                const endTime = getNursingEndDateTime();
+                
+                // Validate that end time is after start time
+                if (endTime <= startTime) {
+                    alert("End time must be after start time.");
+                    return;
+                }
+                
+                await store.addNursingSession(
+                    props.babyId,
+                    startTime,
+                    endTime,
+                    notes.value || undefined,
+                );
+            }
         } else {
             // For breast/formula, add to feedings table
             let timestamp;
@@ -314,15 +362,56 @@ async function handleSubmit() {
                     <DatePicker v-model="customDate" id="feeding-date" />
                 </div>
                 
-                <!-- For nursing sessions, show start/end times -->
-                <div v-if="feedingTypeRef === 'nursing'">
+                <!-- Nursing-specific options -->
+                <div v-if="feedingTypeRef === 'nursing'" class="nursing-options">
+                    <!-- Nursing Mode Selection -->
                     <div class="form-group">
+                        <label>Nursing Session Type</label>
+                        <div class="nursing-mode-selector">
+                            <button
+                                type="button"
+                                class="mode-btn"
+                                :class="{ active: nursingMode === 'timer' }"
+                                @click="nursingMode = 'timer'"
+                            >
+                                <span class="mode-icon">⏱️</span>
+                                <span>Start Timer</span>
+                            </button>
+                            <button
+                                type="button"
+                                class="mode-btn"
+                                :class="{ active: nursingMode === 'completed' }"
+                                @click="nursingMode = 'completed'"
+                            >
+                                <span class="mode-icon">📝</span>
+                                <span>Log Completed</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Breast Selection -->
+                    <div class="form-group">
+                        <label>Breast Used</label>
+                        <BreastSelector v-model="breastUsed" />
+                    </div>
+
+                    <!-- Timer Mode: Just start time -->
+                    <div v-if="nursingMode === 'timer'" class="form-group">
                         <label>Start Time</label>
                         <TimePicker v-model="nursingStartTime" />
+                        <p class="help-text">Timer will start immediately when you save</p>
                     </div>
-                    <div class="form-group">
-                        <label>End Time</label>
-                        <TimePicker v-model="nursingEndTime" />
+
+                    <!-- Completed Mode: Start and end times -->
+                    <div v-if="nursingMode === 'completed'">
+                        <div class="form-group">
+                            <label>Start Time</label>
+                            <TimePicker v-model="nursingStartTime" />
+                        </div>
+                        <div class="form-group">
+                            <label>End Time</label>
+                            <TimePicker v-model="nursingEndTime" />
+                        </div>
                     </div>
                 </div>
                 
@@ -520,6 +609,18 @@ async function handleSubmit() {
             </form>
         </div>
     </div>
+
+    <!-- Nursing Timer Modal -->
+    <div v-if="showNursingTimer" class="nursing-timer-overlay" @click="showNursingTimer = false">
+        <div @click.stop>
+            <NursingTimer
+                :baby-id="babyId"
+                :baby-name="babyName"
+                @save="handleNursingTimerSave"
+                @close="showNursingTimer = false"
+            />
+        </div>
+    </div>
 </template>
 
 <style scoped>
@@ -652,3 +753,111 @@ async function handleSubmit() {
     margin-top: 1rem;
 }
 </style>
+
+/* Nursing-specific styles */
+.nursing-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    border: 1px solid #dda0dd;
+    border-radius: 0.75rem;
+    margin: 1rem 0;
+}
+
+.nursing-mode-selector {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.mode-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 8rem;
+    flex: 1;
+}
+
+.mode-btn:hover {
+    border-color: #dda0dd;
+    background: #faf5ff;
+    transform: translateY(-1px);
+}
+
+.mode-btn.active {
+    border-color: #dda0dd;
+    background: #dda0dd;
+    color: white;
+}
+
+.mode-icon {
+    font-size: 1.5rem;
+}
+
+.mode-btn span:last-child {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.help-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-style: italic;
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+/* Responsive adjustments for nursing options */
+@media (max-width: 480px) {
+    .nursing-mode-selector {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .mode-btn {
+        min-width: auto;
+        padding: 0.75rem;
+    }
+    
+    .mode-icon {
+        font-size: 1.25rem;
+    }
+    
+    .nursing-options {
+        padding: 0.75rem;
+        margin: 0.75rem 0;
+    }
+}
+
+/* High contrast mode for nursing options */
+@media (prefers-contrast: high) {
+    .mode-btn {
+        border-width: 3px;
+    }
+    
+    .mode-btn.active {
+        background: #000;
+        border-color: #000;
+        color: white;
+    }
+}
+
+/* Reduced motion for nursing options */
+@media (prefers-reduced-motion: reduce) {
+    .mode-btn {
+        transition: none;
+    }
+    
+    .mode-btn:hover {
+        transform: none;
+    }
+}

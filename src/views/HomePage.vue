@@ -7,6 +7,7 @@ import DiaperModal from '../components/DiaperModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 import IconButton from '../components/IconButton.vue'
 import SleepingAnimation from '../components/SleepingAnimation.vue'
+import NursingTimerModal from '../components/NursingTimerModal.vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import spoonIcon from '../assets/icons/spoon.svg'
@@ -22,6 +23,7 @@ const router = useRouter()
 const selectedBaby = ref<any>(null)
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
+const showNursingTimerModal = ref(false)
 const feedingType = ref<'breast' | 'formula' | 'solid' | 'nursing'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
@@ -69,6 +71,23 @@ function selectBaby(baby: any) {
 function openFeedingModal(type: 'breast' | 'formula' | 'solid' | 'nursing') {
   feedingType.value = type
   showFeedingModal.value = true
+}
+
+// Open nursing timer modal
+function openNursingTimerModal() {
+  if (!selectedBaby.value) return
+  showNursingTimerModal.value = true
+}
+
+// Close nursing timer modal
+function closeNursingTimerModal() {
+  showNursingTimerModal.value = false
+}
+
+// Handle nursing session save
+function handleNursingSave(leftDuration: number, rightDuration: number, notes?: string) {
+  console.log('Nursing session saved:', { leftDuration, rightDuration, notes })
+  // The modal will close automatically after successful save
 }
 
 function openDiaperModal(type: 'pee' | 'poop' | 'both') {
@@ -237,6 +256,8 @@ function handleSleepClick() {
     store.startSleepSession(selectedBaby.value.id)
   }
 }
+
+
 </script>
 
 <template>
@@ -276,6 +297,8 @@ function handleSleepClick() {
         </div>
       </div>
 
+
+
       <div v-if="selectedBaby" class="full-history-link-container">
         <button @click="goToHistory" class="btn-link">
           View full history for {{ selectedBaby.name }}
@@ -293,7 +316,7 @@ function handleSleepClick() {
           <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Breast" />
           <span>Breast</span>
         </button>
-        <button class="action-btn nursing" @click="openFeedingModal('nursing')">
+        <button class="action-btn nursing" @click="openNursingTimerModal()">
           <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Nursing" />
           <span>Nursing</span>
         </button>
@@ -331,10 +354,15 @@ function handleSleepClick() {
 
     <DiaperModal v-if="showDiaperModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
       :diaperType="diaperType" @close="showDiaperModal = false" />
-    <!-- Hidden original content for reference or later use -->
-    <div style="display: none;">
-      <!-- ... (original content can be kept here if needed) ... -->
-    </div>
+
+    <NursingTimerModal 
+      v-if="selectedBaby"
+      :is-open="showNursingTimerModal" 
+      :baby-id="selectedBaby.id" 
+      :baby-name="selectedBaby.name"
+      @close="closeNursingTimerModal"
+      @save="handleNursingSave"
+    />
   </div>
 </template>
 
@@ -736,4 +764,6 @@ function handleSleepClick() {
   font-size: 1.2rem;
   vertical-align: middle;
 }
+
+
 </style>

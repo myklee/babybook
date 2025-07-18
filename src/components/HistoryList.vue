@@ -147,7 +147,19 @@ function getRelativeDate(dateString: string): string {
           </div>
           <div class="details">
             <img :src="getIcon(feeding, 'feeding') || ''" class="item-icon" alt="Feeding" />
-            <span v-if="feeding.type === 'nursing' && (feeding as any).start_time && (feeding as any).end_time" class="amount">{{ ((new Date((feeding as any).end_time).getTime() - new Date((feeding as any).start_time).getTime()) / 60000).toFixed(0) }} min</span>
+            <span v-if="feeding.type === 'nursing' && ((feeding as any).left_duration || (feeding as any).right_duration)" class="nursing-durations">
+              <span v-if="(feeding as any).left_duration && (feeding as any).right_duration" class="dual-breast">
+                L: {{ Math.floor((feeding as any).left_duration / 60) }}m {{ (feeding as any).left_duration % 60 }}s
+                R: {{ Math.floor((feeding as any).right_duration / 60) }}m {{ (feeding as any).right_duration % 60 }}s
+              </span>
+              <span v-else-if="(feeding as any).left_duration" class="single-breast">
+                <span class="breast-indicator">L</span> {{ Math.floor((feeding as any).left_duration / 60) }}m {{ (feeding as any).left_duration % 60 }}s
+              </span>
+              <span v-else-if="(feeding as any).right_duration" class="single-breast">
+                <span class="breast-indicator">R</span> {{ Math.floor((feeding as any).right_duration / 60) }}m {{ (feeding as any).right_duration % 60 }}s
+              </span>
+            </span>
+            <span v-else-if="feeding.type === 'nursing' && (feeding as any).start_time && (feeding as any).end_time" class="amount">{{ ((new Date((feeding as any).end_time).getTime() - new Date((feeding as any).start_time).getTime()) / 60000).toFixed(0) }} min</span>
             <span v-else-if="feeding.type === 'nursing' && (feeding as any).start_time" class="sleeping-duration">Ongoing</span>
             <span v-else-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
             <span v-if="(feeding as any).topup_amount && (feeding as any).topup_amount > 0" class="topup-amount">+{{
@@ -346,5 +358,39 @@ function getRelativeDate(dateString: string): string {
 .sleeping-duration {
   font-style: italic;
   color: var(--color-lavendar);
+}
+
+.nursing-durations {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.dual-breast {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: 0.9rem;
+}
+
+.single-breast {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 1rem;
+}
+
+.breast-indicator {
+  background: #dda0dd;
+  color: #581c87;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 1rem;
+  text-align: center;
 }
 </style>
