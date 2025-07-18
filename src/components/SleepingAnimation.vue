@@ -182,6 +182,4 @@ watch(() => props.isSleeping, (newValue) => {
   border-radius: 50%;
   z-index: 1;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Righteous&display=swap');
 </style> 
