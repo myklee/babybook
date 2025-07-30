@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 import DualBreastTimer from './DualBreastTimer.vue'
 import { useBabyStore } from '../stores/babyStore'
 
@@ -11,7 +11,7 @@ interface Props {
 
 interface Emits {
   (e: 'close'): void
-  (e: 'save', leftDuration: number, rightDuration: number, notes?: string): void
+  (e: 'save', leftDuration: number, rightDuration: number, notes?: string, startTime?: Date): void
 }
 
 const props = defineProps<Props>()
@@ -22,18 +22,55 @@ const modalRef = ref<HTMLElement>()
 const dualTimerRef = ref<InstanceType<typeof DualBreastTimer>>()
 const isSaving = ref(false)
 
+// Session persistence state
+const hasActiveSession = ref(false)
+const sessionStartTime = ref<Date | null>(null)
+const sessionNotes = ref('')
+const isRecoveringSession = ref(false)
+
 // Focus management
 let previousActiveElement: HTMLElement | null = null
 
+const activeSession = computed(() => {
+  return babyStore.getActiveNursingSession(props.babyId)
+})
+
+// Watch for active session changes
+watch(() => activeSession.value, (newSession) => {
+  hasActiveSession.value = !!newSession
+  if (newSession) {
+    sessionStartTime.value = new Date(newSession.start_time)
+    sessionNotes.value = newSession.notes || ''
+  }
+}, { immediate: true })
+
 // Handle save from dual timer
-async function handleSave(leftDuration: number, rightDuration: number, notes?: string) {
+async function handleSave(leftDuration: number, rightDuration: number, notes?: string, startTime?: Date) {
   if (isSaving.value) return
   
   isSaving.value = true
   
   try {
-    await babyStore.saveNursingSession(props.babyId, leftDuration, rightDuration, notes)
-    emit('save', leftDuration, rightDuration, notes)
+    // If we have an active session, end it instead of creating a new one
+    if (hasActiveSession.value) {
+      // Update the active session with final durations and notes
+      babyStore.updateActiveNursingSession(props.babyId, {
+        left_duration: leftDuration,
+        right_duration: rightDuration,
+        notes: notes || ''
+      })
+      
+      // End the active session and save to database
+      await babyStore.endActiveNursingSession(props.babyId)
+    } else {
+      // Create a new session (fallback for non-persistent sessions)
+      await babyStore.saveNursingSession(props.babyId, leftDuration, rightDuration, notes, startTime)
+    }
+    
+    emit('save', leftDuration, rightDuration, notes, startTime)
+    
+    // Clear session state and close modal
+    clearSessionState()
     handleClose()
   } catch (error) {
     console.error('Error saving nursing session:', error)
@@ -45,6 +82,16 @@ async function handleSave(leftDuration: number, rightDuration: number, notes?: s
 
 // Handle cancel from dual timer
 function handleCancel() {
+  // If there's an active session, cancel it properly
+  if (hasActiveSession.value) {
+    try {
+      babyStore.cancelActiveNursingSession(props.babyId)
+      clearSessionState()
+    } catch (error) {
+      console.error('Error canceling active session:', error)
+    }
+  }
+  
   handleClose()
 }
 
@@ -53,10 +100,41 @@ function handleClose() {
   emit('close')
 }
 
+
+// Clear session state
+function clearSessionState() {
+  hasActiveSession.value = false
+  sessionStartTime.value = null
+  sessionNotes.value = ''
+  isRecoveringSession.value = false
+}
+
+// Recover session when modal opens
+function recoverSession() {
+  if (!props.isOpen) return
+  
+  const existingSession = babyStore.getActiveNursingSession(props.babyId)
+  if (existingSession) {
+    isRecoveringSession.value = true
+    hasActiveSession.value = true
+    sessionStartTime.value = new Date(existingSession.start_time)
+    sessionNotes.value = existingSession.notes || ''
+    
+    console.log('Recovered active nursing session:', existingSession.id)
+    
+    // Notify the dual timer to recover its state
+    nextTick(() => {
+      if (dualTimerRef.value && typeof dualTimerRef.value.recoverSession === 'function') {
+        dualTimerRef.value.recoverSession(existingSession)
+      }
+      isRecoveringSession.value = false
+    })
+  }
+}
+
 // Handle backdrop click
 function handleBackdropClick(event: MouseEvent | TouchEvent) {
   if (event.target === event.currentTarget) {
-    // Just emit cancel, the DualBreastTimer will handle confirmation
     handleCancel()
   }
 }
@@ -69,7 +147,6 @@ function handleKeydown(event: KeyboardEvent) {
     case 'Escape':
       event.preventDefault()
       event.stopPropagation()
-      // Let the DualBreastTimer handle the cancel logic through its own event handler
       handleCancel()
       break
     
@@ -114,15 +191,33 @@ function trapFocus(event: KeyboardEvent) {
   }
 }
 
+// Handle app backgrounding and visibility changes
+function handleVisibilityChange() {
+  if (document.hidden && hasActiveSession.value) {
+    // App is being backgrounded with active session
+    console.log('App backgrounded with active nursing session')
+    // Session continues in background via store's background timer
+  } else if (!document.hidden && hasActiveSession.value) {
+    // App is being foregrounded with active session
+    console.log('App foregrounded with active nursing session')
+    // Recover session state if needed
+    recoverSession()
+  }
+}
+
 // Lifecycle management
 onMounted(() => {
   if (props.isOpen) {
     setupModal()
   }
+  
+  // Add visibility change listener for background handling
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onUnmounted(() => {
   cleanupModal()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 
 // Watch for isOpen changes
@@ -136,6 +231,9 @@ function setupModal() {
   // Add event listeners
   document.addEventListener('keydown', handleKeydown, true)
   document.addEventListener('keydown', trapFocus, true)
+  
+  // Recover session when modal opens
+  recoverSession()
   
   // Focus the modal after next tick to ensure it's rendered
   nextTick(() => {
@@ -160,25 +258,17 @@ function cleanupModal() {
   }
 }
 
-// Watch for prop changes
-function handleOpenChange() {
-  if (props.isOpen) {
-    setupModal()
-  } else {
-    cleanupModal()
-  }
-}
 
-// Use a watcher-like effect
-let isOpenWatcher: boolean = props.isOpen
-function checkOpenChange() {
-  if (isOpenWatcher !== props.isOpen) {
-    isOpenWatcher = props.isOpen
-    handleOpenChange()
+// Watch for prop changes
+watch(() => props.isOpen, (newValue, oldValue) => {
+  if (newValue !== oldValue) {
+    if (newValue) {
+      setupModal()
+    } else {
+      cleanupModal()
+    }
   }
-  requestAnimationFrame(checkOpenChange)
-}
-checkOpenChange()
+}, { immediate: false })
 </script>
 
 <template>
@@ -189,39 +279,40 @@ checkOpenChange()
     >
       <div
         v-if="isOpen"
-        class="nursing-timer-modal-overlay"
+        class="modal-overlay"
         @click="handleBackdropClick"
         @touchstart.passive="handleBackdropClick"
       >
         <div
           ref="modalRef"
-          class="nursing-timer-modal"
+          class="modal"
           role="dialog"
           aria-modal="true"
           :aria-label="`Nursing timer for ${babyName}`"
           tabindex="-1"
           @click.stop
         >
-          <!-- Close button for accessibility -->
-          <button
-            class="modal-close-button"
-            type="button"
-            aria-label="Close nursing timer"
-            @click="handleClose"
-          >
-            <span class="close-icon" aria-hidden="true">&times;</span>
-          </button>
+          <h3 class="modal-title">
+            Nursing Timer for {{ babyName }}
+          </h3>
+
+          <!-- Session recovery indicator -->
+          <div v-if="isRecoveringSession" class="session-recovery">
+            <div class="recovery-spinner"></div>
+            <span>Recovering session...</span>
+          </div>
 
           <!-- Main content -->
-          <div class="modal-content">
-            <DualBreastTimer
-              ref="dualTimerRef"
-              :baby-id="babyId"
-              :baby-name="babyName"
-              @save="handleSave"
-              @cancel="handleCancel"
-            />
-          </div>
+          <DualBreastTimer
+            ref="dualTimerRef"
+            :baby-id="babyId"
+            :baby-name="babyName"
+            :has-active-session="hasActiveSession"
+            :session-start-time="sessionStartTime"
+            :session-notes="sessionNotes"
+            @save="handleSave"
+            @cancel="handleCancel"
+          />
         </div>
       </div>
     </Transition>
@@ -229,253 +320,29 @@ checkOpenChange()
 </template>
 
 <style scoped>
-/* Modal Overlay */
-.nursing-timer-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+/* Session Recovery Indicator */
+.session-recovery {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  font-size: 0.875rem;
+  color: var(--color-periwinkle);
   justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-  backdrop-filter: blur(2px);
 }
 
-/* Modal Container */
-.nursing-timer-modal {
-  position: relative;
-  background: white;
-  border-radius: 1rem;
-  max-width: 700px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.15),
-    0 10px 20px rgba(0, 0, 0, 0.1);
-  outline: none;
-}
-
-/* Close Button */
-.modal-close-button {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  border: none;
-  background: rgba(255, 255, 255, 0.9);
+.recovery-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
   border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(4px);
+  animation: spin 1s linear infinite;
 }
 
-.modal-close-button:hover {
-  background: rgba(255, 255, 255, 1);
-  transform: scale(1.05);
-}
-
-.modal-close-button:focus {
-  outline: 2px solid #dda0dd;
-  outline-offset: 2px;
-}
-
-.close-icon {
-  font-size: 1.5rem;
-  color: #6b7280;
-  line-height: 1;
-}
-
-/* Modal Content */
-.modal-content {
-  width: 100%;
-  height: 100%;
-}
-
-/* Mobile Full-Screen Layout */
-@media (max-width: 768px) {
-  .nursing-timer-modal-overlay {
-    padding: 0;
-    align-items: stretch;
-    justify-content: stretch;
-  }
-
-  .nursing-timer-modal {
-    border-radius: 0;
-    max-width: none;
-    max-height: none;
-    height: 100vh;
-    width: 100vw;
-    overflow-y: auto;
-  }
-
-  .modal-close-button {
-    top: 0.75rem;
-    right: 0.75rem;
-    width: 2.25rem;
-    height: 2.25rem;
-    background: rgba(255, 255, 255, 0.95);
-  }
-
-  .close-icon {
-    font-size: 1.25rem;
-  }
-}
-
-/* Tablet Responsive */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .nursing-timer-modal-overlay {
-    padding: 0.5rem;
-  }
-
-  .nursing-timer-modal {
-    max-width: 90vw;
-    max-height: 95vh;
-  }
-}
-
-/* Transitions */
-.modal-enter-active,
-.modal-leave-active {
-  transition: all 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-from .nursing-timer-modal,
-.modal-leave-to .nursing-timer-modal {
-  transform: scale(0.9) translateY(2rem);
-}
-
-.modal-enter-to .nursing-timer-modal,
-.modal-leave-from .nursing-timer-modal {
-  transform: scale(1) translateY(0);
-}
-
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-  .nursing-timer-modal {
-    background: #1f2937;
-    color: white;
-  }
-
-  .modal-close-button {
-    background: rgba(31, 41, 55, 0.9);
-    color: #d1d5db;
-  }
-
-  .modal-close-button:hover {
-    background: rgba(31, 41, 55, 1);
-  }
-
-  .modal-close-button:focus {
-    outline-color: #a78bfa;
-  }
-
-  .close-icon {
-    color: #d1d5db;
-  }
-}
-
-/* High Contrast Mode */
-@media (prefers-contrast: high) {
-  .nursing-timer-modal {
-    border: 3px solid #000;
-  }
-
-  .modal-close-button {
-    border: 2px solid #000;
-    background: white;
-  }
-
-  .close-icon {
-    color: #000;
-  }
-}
-
-/* Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-  .modal-enter-active,
-  .modal-leave-active,
-  .modal-close-button {
-    transition: none;
-  }
-
-  .modal-enter-from .nursing-timer-modal,
-  .modal-leave-to .nursing-timer-modal {
-    transform: none;
-  }
-}
-
-/* Focus Visible */
-.modal-close-button:focus-visible {
-  outline: 2px solid #dda0dd;
-  outline-offset: 2px;
-}
-
-/* Print Styles */
-@media print {
-  .nursing-timer-modal-overlay {
-    position: static;
-    background: none;
-    backdrop-filter: none;
-  }
-
-  .nursing-timer-modal {
-    box-shadow: none;
-    border: 1px solid #000;
-  }
-
-  .modal-close-button {
-    display: none;
-  }
-}
-
-/* Large Screens */
-@media (min-width: 1200px) {
-  .nursing-timer-modal {
-    max-width: 800px;
-  }
-}
-
-/* Landscape Mobile */
-@media (max-height: 600px) and (orientation: landscape) {
-  .nursing-timer-modal-overlay {
-    align-items: flex-start;
-    padding-top: 0.5rem;
-  }
-
-  .nursing-timer-modal {
-    max-height: calc(100vh - 1rem);
-  }
-}
-
-/* Safe Area Support for iOS */
-@supports (padding: max(0px)) {
-  @media (max-width: 768px) {
-    .nursing-timer-modal {
-      padding-top: max(1rem, env(safe-area-inset-top));
-      padding-bottom: max(1rem, env(safe-area-inset-bottom));
-      padding-left: max(0px, env(safe-area-inset-left));
-      padding-right: max(0px, env(safe-area-inset-right));
-    }
-
-    .modal-close-button {
-      top: max(0.75rem, calc(env(safe-area-inset-top) + 0.75rem));
-      right: max(0.75rem, calc(env(safe-area-inset-right) + 0.75rem));
-    }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

@@ -58,22 +58,11 @@ const formattedDuration = computed(() => {
   return formatDuration(currentDuration.value)
 })
 
-// Timer state computed properties
-const isRunning = computed(() => backgroundTimer.isActive() && !backgroundTimer.isPaused())
-const isPaused = computed(() => backgroundTimer.isPaused() && backgroundTimer.state.startTime !== null)
-const isStopped = computed(() => !backgroundTimer.state.startTime)
+// Timer state computed properties - access state reactively
+const isRunning = computed(() => backgroundTimer.state.value.isActive && !backgroundTimer.state.value.isPaused)
+const isPaused = computed(() => backgroundTimer.state.value.isPaused && backgroundTimer.state.value.startTime !== null)
+const isStopped = computed(() => !backgroundTimer.state.value.startTime)
 
-// Button text based on state
-const buttonText = computed(() => {
-  if (isStopped.value) {
-    return 'Start'
-  } else if (isRunning.value) {
-    return 'Pause'
-  } else if (isPaused.value) {
-    return 'Resume'
-  }
-  return 'Start'
-})
 
 // Button state class
 const buttonStateClass = computed(() => {
@@ -141,6 +130,12 @@ function resetTimer() {
   haptic.lightTap()
 }
 
+// Stop timer (for cancellation)
+function stopTimer() {
+  backgroundTimer.stop()
+  haptic.lightTap()
+}
+
 // Watch for duration changes to emit
 watch(currentDuration, (newDuration) => {
   emit('durationChange', newDuration)
@@ -160,14 +155,15 @@ function handleKeydown(event: KeyboardEvent) {
 // Expose methods for parent components
 defineExpose({
   resetTimer,
+  stopTimer,
   getCurrentDuration: () => currentDuration.value,
   getTimerState: () => ({
-    isActive: backgroundTimer.isActive(),
-    isPaused: backgroundTimer.isPaused(),
-    startTime: backgroundTimer.state.startTime ? new Date(backgroundTimer.state.startTime) : null,
-    pausedDuration: backgroundTimer.state.pausedDuration,
+    isActive: backgroundTimer.state.value.isActive,
+    isPaused: backgroundTimer.state.value.isPaused,
+    startTime: backgroundTimer.state.value.startTime ? new Date(backgroundTimer.state.value.startTime) : null,
+    pausedDuration: backgroundTimer.state.value.pausedDuration,
     currentDuration: currentDuration.value,
-    lastPauseStart: backgroundTimer.state.lastPauseStart ? new Date(backgroundTimer.state.lastPauseStart) : null
+    lastPauseStart: backgroundTimer.state.value.lastPauseStart ? new Date(backgroundTimer.state.value.lastPauseStart) : null
   })
 })
 </script>
@@ -192,32 +188,29 @@ defineExpose({
       @click="toggleTimer"
       @keydown="handleKeydown"
     >
-      <!-- Breast Icon -->
-      <div class="breast-icon">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path 
-            d="M12 2C8.5 2 6 4.5 6 8C6 12 8 14 10 16C11 17 12 18 12 20V22H14V20C14 18 15 17 16 16C18 14 20 12 20 8C20 4.5 17.5 2 14 2H12Z" 
-            :fill="isRunning ? 'currentColor' : 'none'"
-            :stroke="isRunning ? 'none' : 'currentColor'"
-            stroke-width="2"
-          />
-          <circle cx="15" cy="8" r="1.5" fill="currentColor" />
+      <!-- Breast Label -->
+      <div class="breast-header">
+        <span class="breast-title">{{ breast === 'left' ? 'Left' : 'Right' }}</span>
+      </div>
+
+      <!-- Play/Pause Icon -->
+      <div class="timer-icon">
+        <svg v-if="isStopped" class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+        <svg v-else-if="isRunning" class="pause-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+        <svg v-else-if="isPaused" class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
         </svg>
       </div>
 
-      <!-- Timer Info -->
-      <div class="timer-info">
-        <span class="breast-label">{{ breast === 'left' ? 'Left' : 'Right' }} Breast</span>
+      <!-- Timer Display -->
+      <div class="timer-display">
         <span class="timer-duration">{{ formattedDuration }}</span>
-        <span class="timer-status">{{ buttonText }}</span>
       </div>
 
-      <!-- State Indicator -->
-      <div class="state-indicator" :class="buttonStateClass">
-        <div v-if="isRunning" class="pulse-dot"></div>
-        <div v-else-if="isPaused" class="pause-icon">⏸</div>
-        <div v-else class="play-icon">▶</div>
-      </div>
     </button>
   </div>
 </template>
@@ -234,18 +227,18 @@ defineExpose({
 
 .timer-button {
   width: 100%;
-  padding: 1.5rem 1rem;
-  border: 3px solid #e5e7eb;
-  border-radius: 1rem;
-  background: white;
+  padding: 1rem 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--color-periwinkle);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
-  position: relative;
-  min-height: 140px;
+  min-height: 120px;
   
   /* Touch-friendly for mobile */
   min-width: 44px;
@@ -254,46 +247,41 @@ defineExpose({
 }
 
 .timer-button:hover:not(.disabled) {
-  border-color: #dda0dd;
-  background: #faf5ff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(221, 160, 221, 0.2);
+  border-color: #9c27b0;
+  background: rgba(156, 39, 176, 0.1);
 }
 
 .timer-button:focus {
   outline: none;
-  border-color: #dda0dd;
-  box-shadow: 0 0 0 3px rgba(221, 160, 221, 0.3);
+  border-color: #9c27b0;
+  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
 }
 
 .timer-button:active:not(.disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(221, 160, 221, 0.3);
+  background: rgba(156, 39, 176, 0.15);
 }
 
-/* State-based button styles */
+/* State-based button styles - simplified */
 .timer-button.stopped {
   border-color: #d1d5db;
-  background: #f9fafb;
-  color: #6b7280;
+  background: white;
+  color: #374151;
 }
 
 .timer-button.stopped:hover:not(.disabled) {
-  border-color: #10b981;
-  background: #ecfdf5;
-  color: #065f46;
+  border-color: #9ca3af;
+  background: #f9fafb;
 }
 
 .timer-button.active {
   border-color: #10b981;
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  background: #f0fdf4;
   color: #065f46;
-  animation: pulse-border 2s infinite;
 }
 
 .timer-button.paused {
   border-color: #f59e0b;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: #fffbeb;
   color: #92400e;
 }
 
@@ -303,117 +291,94 @@ defineExpose({
   pointer-events: none;
 }
 
-/* Pulse animation for active state */
-@keyframes pulse-border {
-  0%, 100% { 
-    border-color: #10b981;
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-  }
-  50% { 
-    border-color: #059669;
-    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
-  }
-}
 
-/* Breast Icon */
-.breast-icon {
-  width: 3rem;
-  height: 3rem;
+
+/* Breast Header */
+.breast-header {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  padding: 0.5rem 0;
 }
 
-.breast-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-/* Timer Info */
-.timer-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  text-align: center;
-  flex-grow: 1;
-}
-
-.breast-label {
-  font-size: 0.875rem;
+.breast-title {
+  font-size: 1rem;
   font-weight: 600;
   color: currentColor;
-  opacity: 0.8;
+  text-align: center;
 }
 
+/* Timer Icon */
+.timer-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.5rem 0;
+}
+
+.play-icon,
+.pause-icon {
+  width: 3rem;
+  height: 3rem;
+  color: currentColor;
+  opacity: 0.8;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.timer-button:hover .play-icon,
+.timer-button:hover .pause-icon {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* Timer Display */
+.timer-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+
+
 .timer-duration {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 600;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   color: currentColor;
   letter-spacing: -0.02em;
   line-height: 1;
 }
 
-.timer-status {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: currentColor;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.7;
-}
-
-/* State Indicator */
-.state-indicator {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  width: 1.5rem;
-  height: 1.5rem;
+/* Status Text */
+.status-text {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  font-size: 0.75rem;
+  text-align: center;
 }
 
-.state-indicator.active {
-  background: rgba(16, 185, 129, 0.2);
-}
-
-.state-indicator.paused {
-  background: rgba(245, 158, 11, 0.2);
-}
-
-.state-indicator.stopped {
-  background: rgba(107, 114, 128, 0.2);
-}
-
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  background: #10b981;
-  border-radius: 50%;
-  animation: pulse-dot 1.5s infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { 
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% { 
-    opacity: 0.5;
-    transform: scale(1.2);
-  }
-}
-
-.pause-icon,
-.play-icon {
+.status-label {
+  font-size: 0.875rem;
+  font-weight: 500;
   color: currentColor;
-  opacity: 0.7;
+  opacity: 0.8;
+}
+
+/* Action Text */
+.action-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.action-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: currentColor;
+  text-transform: none;
 }
 
 /* Size Variations */
@@ -422,21 +387,17 @@ defineExpose({
   min-height: 120px;
 }
 
-.size-small .breast-icon {
-  width: 2.5rem;
-  height: 2.5rem;
+.size-small .breast-title {
+  font-size: 0.875rem;
 }
 
 .size-small .timer-duration {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
 }
 
-.size-small .breast-label {
-  font-size: 0.8125rem;
-}
-
-.size-small .timer-status {
-  font-size: 0.6875rem;
+.size-small .status-label,
+.size-small .action-label {
+  font-size: 0.75rem;
 }
 
 .size-large .timer-button {
@@ -444,42 +405,30 @@ defineExpose({
   min-height: 180px;
 }
 
-.size-large .breast-icon {
-  width: 3.5rem;
-  height: 3.5rem;
+.size-large .breast-title {
+  font-size: 1.125rem;
 }
 
 .size-large .timer-duration {
-  font-size: 1.75rem;
+  font-size: 2rem;
 }
 
-.size-large .breast-label {
+.size-large .status-label,
+.size-large .action-label {
   font-size: 1rem;
 }
 
-.size-large .timer-status {
-  font-size: 0.875rem;
-}
-
-/* Breast-specific styling */
+/* Simplified breast-specific styling */
 .breast-left .timer-button.active {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  background: #eff6ff;
   border-color: #3b82f6;
   color: #1e40af;
 }
 
-.breast-left .timer-button.active .pulse-dot {
-  background: #3b82f6;
-}
-
 .breast-right .timer-button.active {
-  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+  background: #fdf2f8;
   border-color: #ec4899;
   color: #be185d;
-}
-
-.breast-right .timer-button.active .pulse-dot {
-  background: #ec4899;
 }
 
 /* Responsive Design */
@@ -493,35 +442,24 @@ defineExpose({
     min-height: 130px;
   }
   
-  .breast-icon {
-    width: 2.5rem;
-    height: 2.5rem;
+  .breast-title {
+    font-size: 0.875rem;
   }
   
   .timer-duration {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
   }
   
-  .breast-label {
-    font-size: 0.8125rem;
-  }
-  
-  .timer-status {
-    font-size: 0.6875rem;
-  }
-  
-  .state-indicator {
-    width: 1.25rem;
-    height: 1.25rem;
-    top: 0.5rem;
-    right: 0.5rem;
+  .status-label,
+  .action-label {
+    font-size: 0.75rem;
   }
 }
 
 /* High Contrast Mode */
 @media (prefers-contrast: high) {
   .timer-button {
-    border-width: 4px;
+    border-width: 3px;
   }
   
   .timer-button.active {
@@ -545,19 +483,8 @@ defineExpose({
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-  .timer-button,
-  .pulse-dot,
-  .state-indicator {
-    animation: none;
+  .timer-button {
     transition: none;
-  }
-  
-  .timer-button:hover:not(.disabled) {
-    transform: none;
-  }
-  
-  .timer-button:active:not(.disabled) {
-    transform: none;
   }
 }
 
@@ -571,7 +498,7 @@ defineExpose({
   
   .timer-button:hover:not(.disabled) {
     background: #4b5563;
-    border-color: #a78bfa;
+    border-color: #6b7280;
   }
   
   .timer-button.stopped {
@@ -581,27 +508,15 @@ defineExpose({
   }
   
   .timer-button.active {
-    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+    background: #064e3b;
     border-color: #10b981;
     color: #a7f3d0;
   }
   
   .timer-button.paused {
-    background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+    background: #78350f;
     border-color: #f59e0b;
     color: #fde68a;
-  }
-  
-  .state-indicator.active {
-    background: rgba(16, 185, 129, 0.3);
-  }
-  
-  .state-indicator.paused {
-    background: rgba(245, 158, 11, 0.3);
-  }
-  
-  .state-indicator.stopped {
-    background: rgba(156, 163, 175, 0.3);
   }
 }
 
@@ -615,11 +530,6 @@ defineExpose({
     border: 2px solid #000;
     background: white;
     color: black;
-  }
-  
-  .state-indicator,
-  .pulse-dot {
-    display: none;
   }
 }
 </style>

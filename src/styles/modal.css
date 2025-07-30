@@ -1,0 +1,420 @@
+/**
+ * Shared Modal Styles
+ * 
+ * Common CSS classes for consistent modal styling across the application.
+ * Import this file in modal components to maintain visual consistency.
+ * 
+ * Usage:
+ * @import '@/styles/modal.css';
+ */
+
+/* Modal Base Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.modal-container {
+  position: relative;
+  background: white;
+  border-radius: 1rem;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 10px 20px rgba(0, 0, 0, 0.1);
+  outline: none;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.modal-subtitle {
+  font-weight: 400;
+  color: #6b7280;
+}
+
+/* Modal Content */
+.modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+}
+
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  gap: 1rem;
+}
+
+.modal-footer-left {
+  display: flex;
+  gap: 1rem;
+}
+
+.modal-footer-right {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Close Button */
+.modal-close-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #6b7280;
+}
+
+.modal-close-button:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-close-button:focus {
+  outline: 2px solid #dda0dd;
+  outline-offset: 2px;
+}
+
+.close-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+/* Common Button Styles */
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px solid transparent;
+  min-width: 120px;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-primary {
+  background: #dda0dd;
+  color: white;
+  border-color: #dda0dd;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #d8b4fe;
+  border-color: #d8b4fe;
+}
+
+.btn-secondary {
+  background: white;
+  color: #6b7280;
+  border-color: #d1d5db;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* Form Elements */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #dda0dd;
+  box-shadow: 0 0 0 3px rgba(221, 160, 221, 0.1);
+}
+
+.form-input.error {
+  border-color: #ef4444;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Validation Errors */
+.field-errors {
+  margin-top: 0.5rem;
+}
+
+.field-error {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-bottom: 0.25rem;
+}
+
+.field-error:last-child {
+  margin-bottom: 0;
+}
+
+/* Modal Transitions */
+.modal-enter-active,
+.modal-leave-active {
+  transition: all 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-container,
+.modal-leave-to .modal-container {
+  transform: scale(0.9) translateY(2rem);
+}
+
+.modal-enter-to .modal-container,
+.modal-leave-from .modal-container {
+  transform: scale(1) translateY(0);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .modal-container {
+    border-radius: 0;
+    max-width: none;
+    max-height: none;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .modal-header {
+    padding: 1rem 1.5rem 0.75rem;
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+  }
+
+  .modal-content {
+    padding: 1rem 1.5rem;
+  }
+
+  .modal-footer {
+    padding: 0.75rem 1.5rem 1rem;
+    flex-direction: column-reverse;
+  }
+
+  .modal-footer-left,
+  .modal-footer-right {
+    width: 100%;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .modal-close-button {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .close-icon {
+    font-size: 1.25rem;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .modal-container {
+    background: #1f2937;
+    color: white;
+  }
+
+  .modal-header {
+    border-color: #374151;
+  }
+
+  .modal-title {
+    color: white;
+  }
+
+  .modal-subtitle {
+    color: #d1d5db;
+  }
+
+  .modal-footer {
+    border-color: #374151;
+  }
+
+  .modal-close-button {
+    color: #d1d5db;
+  }
+
+  .modal-close-button:hover {
+    background: #374151;
+    color: #f3f4f6;
+  }
+
+  .form-label {
+    color: #f3f4f6;
+  }
+
+  .form-input {
+    background: #374151;
+    border-color: #4b5563;
+    color: white;
+  }
+
+  .form-input:focus {
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+  }
+
+  .form-input::placeholder {
+    color: #6b7280;
+  }
+
+  .btn-secondary {
+    background: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    border-color: #6b7280;
+    color: #f3f4f6;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .modal-container {
+    border: 3px solid #000;
+  }
+
+  .btn {
+    border-width: 3px;
+  }
+
+  .form-input {
+    border-width: 3px;
+  }
+
+  .modal-close-button {
+    border: 2px solid #000;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .modal-enter-active,
+  .modal-leave-active,
+  .modal-close-button,
+  .btn,
+  .form-input {
+    transition: none;
+  }
+
+  .modal-enter-from .modal-container,
+  .modal-leave-to .modal-container {
+    transform: none;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .modal-overlay {
+    position: static;
+    background: none;
+    backdrop-filter: none;
+  }
+
+  .modal-container {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .modal-close-button {
+    display: none;
+  }
+
+  .modal-footer {
+    display: none;
+  }
+}

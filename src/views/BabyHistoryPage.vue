@@ -8,6 +8,7 @@ import EditRecord from '../components/EditRecord.vue'
 import BabySettingsModal from '../components/BabySettingsModal.vue'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
+import NursingTimerModal from '../components/NursingTimerModal.vue'
 import settingsIcon from '../assets/icons/settings-2.svg'
 import IconButton from '../components/IconButton.vue'
 import pencilIcon from '../assets/icons/lucide_pencil.svg'
@@ -56,7 +57,8 @@ const showSettingsModal = ref(false)
 // Modal state for feeding and diaper actions
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
-const feedingType = ref<'breast' | 'formula' | 'solid' | 'nursing'>('breast')
+const showNursingModal = ref(false)
+const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
 // When the component mounts, get the baby ID from the route.
@@ -320,9 +322,13 @@ function closeEditModal() {
   store.initializeStore()
 }
 
-function openFeedingModal(type: 'breast' | 'formula' | 'solid' | 'nursing') {
+function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
   feedingType.value = type
   showFeedingModal.value = true
+}
+
+function openNursingModal() {
+  showNursingModal.value = true
 }
 
 function openDiaperModal(type: 'pee' | 'poop' | 'both') {
@@ -463,7 +469,7 @@ function getDayBreakdown(day: any) {
               <img :src="breastIcon" alt="Breast" class="icon" />
               <span>Breast</span>
             </button>
-            <button class="action-btn nursing" @click="openFeedingModal('nursing')" title="Record Nursing">
+            <button class="action-btn nursing" @click="openNursingModal()" title="Record Nursing">
               <img :src="breastIcon" alt="Nursing" class="icon" />
               <span>Nursing</span>
             </button>
@@ -609,6 +615,9 @@ function getDayBreakdown(day: any) {
 
     <DiaperModal v-if="showDiaperModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
       :diaperType="diaperType" @close="showDiaperModal = false" @saved="showDiaperModal = false" />
+
+    <NursingTimerModal v-if="showNursingModal && selectedBaby" :isOpen="showNursingModal" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
+      @close="showNursingModal = false" @save="showNursingModal = false" />
   </div>
 </template>
 

@@ -317,8 +317,8 @@ export function useBackgroundTimer(options: BackgroundTimerOptions = {}) {
   })
   
   return {
-    // State
-    state: state.value,
+    // State - make reactive by returning refs directly
+    state,
     currentDuration,
     isActive: () => state.value.isActive,
     isPaused: () => state.value.isPaused,

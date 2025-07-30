@@ -1,25 +1,30 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import BreastTimer from './BreastTimer.vue'
 import type { BreastTimerState } from '../types/nursing'
-import { validateDualTimerNursingSession, computeBreastUsed } from '../types/nursing'
+import { computeBreastUsed } from '../types/nursing'
 import { useHapticFeedback } from '../composables/useHapticFeedback'
+import { useBabyStore } from '../stores/babyStore'
 
 interface Props {
   babyId: string
   babyName: string
+  hasActiveSession?: boolean
+  sessionStartTime?: Date | null
+  sessionNotes?: string
 }
 
 interface Emits {
-  (e: 'save', leftDuration: number, rightDuration: number, notes?: string): void
+  (e: 'save', leftDuration: number, rightDuration: number, notes?: string, startTime?: Date): void
   (e: 'cancel'): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-// Haptic feedback
+// Haptic feedback and store
 const haptic = useHapticFeedback()
+const babyStore = useBabyStore()
 
 // Component state
 const leftDuration = ref(0)
@@ -27,8 +32,14 @@ const rightDuration = ref(0)
 const notes = ref('')
 const isSaving = ref(false)
 const hasStartedAnyTimer = ref(false)
+const isSessionRecovered = ref(false)
+const showAdvanced = ref(false)
 
 // Timer state tracking
+// Template refs for timer components
+const leftTimerRef = ref<InstanceType<typeof BreastTimer>>()
+const rightTimerRef = ref<InstanceType<typeof BreastTimer>>()
+
 const leftTimerState = ref<BreastTimerState>({
   isActive: false,
   isPaused: false,
@@ -57,57 +68,8 @@ const breastUsed = computed(() => {
   return computeBreastUsed(leftDuration.value, rightDuration.value)
 })
 
-const validation = computed(() => {
-  // Enhanced validation with edge case handling
-  const baseValidation = validateDualTimerNursingSession(leftDuration.value, rightDuration.value)
-  
-  // Additional edge case validations
-  const additionalErrors: Array<{field: string, message: string}> = []
-  const additionalWarnings: Array<{field: string, message: string}> = []
-  
-  // Check for extremely long sessions (over 2 hours)
-  const totalMinutes = Math.floor((leftDuration.value + rightDuration.value) / 60)
-  if (totalMinutes > 120) {
-    additionalWarnings.push({
-      field: 'duration',
-      message: 'This is a very long nursing session. Please verify the duration is correct.'
-    })
-  }
-  
-  // Check for very short sessions (under 30 seconds)
-  if (hasStartedAnyTimer.value && (leftDuration.value + rightDuration.value) < 30) {
-    additionalWarnings.push({
-      field: 'duration',
-      message: 'This is a very short nursing session. Consider if this was intentional.'
-    })
-  }
-  
-  // Check for unbalanced sessions (one side much longer than the other)
-  if (leftDuration.value > 0 && rightDuration.value > 0) {
-    const ratio = Math.max(leftDuration.value, rightDuration.value) / Math.min(leftDuration.value, rightDuration.value)
-    if (ratio > 5) {
-      additionalWarnings.push({
-        field: 'balance',
-        message: 'One breast was used much longer than the other. This is normal but worth noting.'
-      })
-    }
-  }
-  
-  return {
-    ...baseValidation,
-    errors: [...baseValidation.errors, ...additionalErrors],
-    warnings: [...baseValidation.warnings, ...additionalWarnings]
-  }
-})
 
-const canSave = computed(() => {
-  return validation.value.is_valid && !isSaving.value && hasStartedAnyTimer.value
-})
 
-const isAnyTimerActive = computed(() => {
-  return (leftTimerState.value.isActive && !leftTimerState.value.isPaused) ||
-         (rightTimerState.value.isActive && !rightTimerState.value.isPaused)
-})
 
 const formattedTotalDuration = computed(() => {
   const minutes = Math.floor(totalDuration.value / 60)
@@ -120,6 +82,18 @@ function handleLeftDurationChange(duration: number) {
   leftDuration.value = duration
   if (duration > 0) {
     hasStartedAnyTimer.value = true
+    
+    // Start active session if not already started and not recovered
+    if (!props.hasActiveSession && !isSessionRecovered.value) {
+      try {
+        babyStore.startActiveNursingSession(props.babyId, 'left', notes.value)
+      } catch (error) {
+        // Only log if it's not the "already active" error
+        if (error instanceof Error && !error.message.includes('already an active nursing session')) {
+          console.error('Error starting active session:', error)
+        }
+      }
+    }
   }
 }
 
@@ -127,6 +101,18 @@ function handleRightDurationChange(duration: number) {
   rightDuration.value = duration
   if (duration > 0) {
     hasStartedAnyTimer.value = true
+    
+    // Start active session if not already started and not recovered
+    if (!props.hasActiveSession && !isSessionRecovered.value) {
+      try {
+        babyStore.startActiveNursingSession(props.babyId, 'right', notes.value)
+      } catch (error) {
+        // Only log if it's not the "already active" error
+        if (error instanceof Error && !error.message.includes('already an active nursing session')) {
+          console.error('Error starting active session:', error)
+        }
+      }
+    }
   }
 }
 
@@ -139,13 +125,19 @@ function handleRightStateChange(state: BreastTimerState) {
 }
 
 async function handleSave() {
-  if (!canSave.value) return
+  if (isSaving.value) return
 
   isSaving.value = true
   
   try {
+    // Automatic time handling: Calculate actual start time from timer states
+    const actualStartTime = calculateActualStartTime()
+    
     haptic.success()
-    emit('save', leftDuration.value, rightDuration.value, notes.value || undefined)
+    emit('save', leftDuration.value, rightDuration.value, notes.value || undefined, actualStartTime)
+    
+    // Reset both timers after successful save, but preserve notes
+    resetTimersOnly()
   } catch (error) {
     console.error('Error saving nursing session:', error)
     haptic.error()
@@ -155,17 +147,49 @@ async function handleSave() {
   }
 }
 
-function handleCancel() {
-  // Check if any timers are active and warn user
-  if (isAnyTimerActive.value || hasStartedAnyTimer.value) {
-    const confirmCancel = confirm(
-      'You have active timers or recorded time. Are you sure you want to cancel without saving?'
-    )
-    if (!confirmCancel) {
-      return
+// Calculate the actual start time based on timer states
+function calculateActualStartTime(): Date {
+  const now = new Date()
+  
+  // Find the earliest start time from both timers
+  let earliestStartTime: Date | null = null
+  
+  if (leftTimerState.value.startTime) {
+    earliestStartTime = leftTimerState.value.startTime
+  }
+  
+  if (rightTimerState.value.startTime) {
+    if (!earliestStartTime || rightTimerState.value.startTime < earliestStartTime) {
+      earliestStartTime = rightTimerState.value.startTime
     }
   }
   
+  // If we have an actual start time from timers, use it
+  if (earliestStartTime) {
+    return earliestStartTime
+  }
+  
+  // Fallback: calculate from total duration (existing behavior)
+  const totalDuration = leftDuration.value + rightDuration.value
+  return new Date(now.getTime() - (totalDuration * 1000))
+}
+
+function handleCancel() {
+  // Show simple confirmation if there's any timer activity or notes
+  if (hasStartedAnyTimer.value || notes.value.trim()) {
+    const shouldCancel = confirm('Cancel this nursing session?')
+    
+    if (shouldCancel) {
+      // User chose "OK" (Cancel) - reset timers and close
+      stopAllTimers()
+      haptic.lightTap()
+      emit('cancel')
+    }
+    // If user chose "Cancel" (Continue nursing session), do nothing - timers keep running
+    return
+  }
+  
+  // No activity, just close
   haptic.lightTap()
   emit('cancel')
 }
@@ -177,36 +201,131 @@ function handleKeydown(event: KeyboardEvent) {
     handleCancel()
   } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
     event.preventDefault()
-    if (canSave.value) {
-      handleSave()
-    }
+    handleSave()
   }
 }
+
+// Session recovery method (called by parent modal)
+function recoverSession(activeSession: any) {
+  if (!activeSession) return
+  
+  console.log('Recovering session in DualBreastTimer:', activeSession)
+  
+  // Restore session data
+  leftDuration.value = activeSession.left_duration || 0
+  rightDuration.value = activeSession.right_duration || 0
+  notes.value = activeSession.notes || ''
+  hasStartedAnyTimer.value = true
+  isSessionRecovered.value = true
+  
+  // The individual BreastTimer components will handle their own state recovery
+  // based on the durations we've set here
+}
+
+// Reset only timers (called after successful save)
+function resetTimersOnly() {
+  // Stop timers via component refs
+  if (leftTimerRef.value?.stopTimer) {
+    leftTimerRef.value.stopTimer()
+  }
+  if (rightTimerRef.value?.stopTimer) {
+    rightTimerRef.value.stopTimer()
+  }
+  
+  // Reset timer state but preserve notes and advanced options
+  leftDuration.value = 0
+  rightDuration.value = 0
+  hasStartedAnyTimer.value = false
+  isSessionRecovered.value = false
+}
+
+// Stop all timers (called when cancelling session)
+function stopAllTimers() {
+  // Reset timers
+  resetTimersOnly()
+  
+  // Also clear notes and advanced options
+  notes.value = ''
+  showAdvanced.value = false
+}
+
+// Initialize from props if active session exists
+function initializeFromProps() {
+  if (props.hasActiveSession && props.sessionNotes) {
+    notes.value = props.sessionNotes
+    hasStartedAnyTimer.value = true
+  }
+}
+
+// Debounced notes update
+let notesUpdateTimeout: ReturnType<typeof setTimeout> | null = null
+
+// Watch for changes in notes and sync with active session
+watch(notes, (newNotes) => {
+  if (props.hasActiveSession && hasStartedAnyTimer.value) {
+    // Clear existing timeout
+    if (notesUpdateTimeout) {
+      clearTimeout(notesUpdateTimeout)
+    }
+    
+    // Set new timeout for debounced update
+    notesUpdateTimeout = setTimeout(() => {
+      try {
+        babyStore.updateActiveNursingSession(props.babyId, {
+          notes: newNotes
+        })
+      } catch (error) {
+        console.error('Error updating session notes:', error)
+      }
+    }, 500)
+  }
+})
+
+// Watch for duration changes and sync with active session
+watch([leftDuration, rightDuration], ([newLeft, newRight]) => {
+  if (props.hasActiveSession && hasStartedAnyTimer.value) {
+    try {
+      babyStore.updateActiveNursingSession(props.babyId, {
+        left_duration: newLeft,
+        right_duration: newRight
+      })
+    } catch (error) {
+      console.error('Error updating session durations:', error)
+    }
+  }
+})
 
 // Lifecycle
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
+  initializeFromProps()
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
+  
+  // Clean up notes update timeout
+  if (notesUpdateTimeout) {
+    clearTimeout(notesUpdateTimeout)
+  }
+})
+
+// Expose methods for parent component
+defineExpose({
+  recoverSession,
+  handleSave,
+  stopAllTimers
 })
 </script>
 
 <template>
   <div class="dual-breast-timer">
-    <!-- Header -->
-    <div class="timer-header">
-      <h2 class="timer-title">
-        <span class="nursing-icon">🤱</span>
-        Nursing Timer - {{ babyName }}
-      </h2>
-      <div v-if="totalDuration > 0" class="total-duration">
-        Total: {{ formattedTotalDuration }}
-        <span v-if="breastUsed" class="breast-indicator">
-          ({{ breastUsed === 'both' ? 'Both' : breastUsed === 'left' ? 'Left' : 'Right' }})
-        </span>
-      </div>
+    <!-- Duration Display -->
+    <div v-if="totalDuration > 0" class="duration-display">
+      <span class="duration-time">{{ formattedTotalDuration }}</span>
+      <span v-if="breastUsed" class="breast-used">
+        {{ breastUsed === 'both' ? 'Both Breasts' : breastUsed === 'left' ? 'Left Breast' : 'Right Breast' }}
+      </span>
     </div>
 
     <!-- Timer Controls -->
@@ -214,6 +333,7 @@ onUnmounted(() => {
       <div class="breast-timers">
         <div class="timer-container">
           <BreastTimer
+            ref="leftTimerRef"
             breast="left"
             size="large"
             @duration-change="handleLeftDurationChange"
@@ -223,12 +343,13 @@ onUnmounted(() => {
         
         <div class="timer-separator">
           <div class="separator-line"></div>
-          <div class="separator-text">vs</div>
+          <div class="separator-text">and</div>
           <div class="separator-line"></div>
         </div>
         
         <div class="timer-container">
           <BreastTimer
+            ref="rightTimerRef"
             breast="right"
             size="large"
             @duration-change="handleRightDurationChange"
@@ -238,74 +359,50 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Notes Section -->
-    <div class="notes-section">
-      <label for="nursing-notes" class="notes-label">
-        Notes (optional)
-      </label>
-      <textarea
-        id="nursing-notes"
-        v-model="notes"
-        class="notes-input"
-        placeholder="Add any notes about this nursing session..."
-        rows="3"
-        maxlength="500"
-      ></textarea>
-      <div class="notes-counter">
-        {{ notes.length }}/500
+    <!-- Advanced Options Toggle -->
+    <div class="advanced-toggle">
+      <button
+        type="button"
+        @click="showAdvanced = !showAdvanced"
+        class="toggle-btn"
+      >
+        <span>{{ showAdvanced ? "Hide" : "More" }} Options</span>
+        <span class="arrow" :class="{ rotated: showAdvanced }">▼</span>
+      </button>
+    </div>
+
+    <!-- Advanced Options -->
+    <div v-if="showAdvanced" class="advanced-options">
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea
+          v-model="notes"
+          rows="2"
+          placeholder="Optional notes..."
+          maxlength="500"
+        ></textarea>
+        <div class="notes-counter">{{ notes.length }}/500</div>
       </div>
     </div>
 
-    <!-- Validation Messages -->
-    <div v-if="validation.errors.length > 0" class="validation-messages errors">
-      <div class="validation-title">Please fix the following:</div>
-      <ul class="validation-list">
-        <li v-for="error in validation.errors" :key="error.field" class="validation-item">
-          {{ error.message }}
-        </li>
-      </ul>
-    </div>
-
-    <div v-if="validation.warnings.length > 0" class="validation-messages warnings">
-      <div class="validation-title">Please note:</div>
-      <ul class="validation-list">
-        <li v-for="warning in validation.warnings" :key="warning.field" class="validation-item">
-          {{ warning.message }}
-        </li>
-      </ul>
-    </div>
-
     <!-- Action Buttons -->
-    <div class="action-buttons">
+    <div class="form-actions">
       <button
         type="button"
-        class="action-button cancel-button"
+        class="btn btn-save"
+        @click="handleSave"
+        :disabled="isSaving"
+      >
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-cancel"
         @click="handleCancel"
         :disabled="isSaving"
       >
         Cancel
       </button>
-      
-      <button
-        type="button"
-        class="action-button save-button"
-        @click="handleSave"
-        :disabled="!canSave"
-        :class="{ saving: isSaving }"
-      >
-        <span v-if="isSaving" class="saving-spinner"></span>
-        {{ isSaving ? 'Saving...' : 'Save Session' }}
-      </button>
-    </div>
-
-    <!-- Keyboard Shortcuts Help -->
-    <div class="keyboard-shortcuts">
-      <span class="shortcut">
-        <kbd>Esc</kbd> Cancel
-      </span>
-      <span class="shortcut">
-        <kbd>⌘</kbd> + <kbd>Enter</kbd> Save
-      </span>
     </div>
   </div>
 </template>
@@ -315,445 +412,115 @@ onUnmounted(() => {
 .dual-breast-timer {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  padding: 1.5rem;
-  max-width: 600px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  gap: 1.5rem;
+  padding: 0;
 }
 
-/* Header */
-.timer-header {
+/* Duration Display */
+.duration-display {
   text-align: center;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.timer-title {
+.duration-time {
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0 0 0.5rem 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.nursing-icon {
-  font-size: 1.75rem;
-}
-
-.total-duration {
-  font-size: 1.125rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-periwinkle);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  display: block;
 }
 
-.breast-indicator {
+.breast-used {
   font-size: 0.875rem;
-  font-weight: 500;
-  color: #9ca3af;
-  font-family: inherit;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.25rem;
+  display: block;
 }
 
 /* Timer Controls */
 .timer-controls {
-  flex: 1;
+  padding: 0 1rem;
 }
 
 .breast-timers {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
   justify-content: center;
 }
 
 .timer-container {
   flex: 1;
-  max-width: 200px;
+  max-width: 150px;
 }
 
 .timer-separator {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
   flex-shrink: 0;
   opacity: 0.6;
 }
 
 .separator-line {
   width: 1px;
-  height: 2rem;
-  background: #d1d5db;
+  height: 1.5rem;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .separator-text {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.6);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-/* Notes Section */
-.notes-section {
-  display: flex;
-  flex-direction: column;
+/* Advanced Toggle */
+.advanced-toggle {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
   gap: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: all 0.2s;
 }
 
-.notes-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
+.toggle-btn:hover {
+  color: var(--color-periwinkle);
+  text-decoration: underline;
 }
 
-.notes-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  resize: vertical;
-  min-height: 80px;
-  transition: border-color 0.2s ease;
+.arrow {
+  transition: transform 0.2s;
 }
 
-.notes-input:focus {
-  outline: none;
-  border-color: #dda0dd;
-  box-shadow: 0 0 0 3px rgba(221, 160, 221, 0.1);
+.arrow.rotated {
+  transform: rotate(180deg);
 }
 
-.notes-input::placeholder {
-  color: #9ca3af;
+/* Advanced Options */
+.advanced-options {
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .notes-counter {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.5);
   text-align: right;
-}
-
-/* Validation Messages */
-.validation-messages {
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.validation-messages.errors {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-}
-
-.validation-messages.warnings {
-  background: #fffbeb;
-  border: 1px solid #fed7aa;
-  color: #d97706;
-}
-
-.validation-title {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.validation-list {
-  margin: 0;
-  padding-left: 1.25rem;
-}
-
-.validation-item {
-  margin-bottom: 0.25rem;
-}
-
-.validation-item:last-child {
-  margin-bottom: 0;
-}
-
-/* Action Buttons */
-.action-buttons {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.action-button {
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 120px;
-  justify-content: center;
-}
-
-.cancel-button {
-  background: white;
-  border: 2px solid #d1d5db;
-  color: #6b7280;
-}
-
-.cancel-button:hover:not(:disabled) {
-  border-color: #9ca3af;
-  color: #374151;
-}
-
-.save-button {
-  background: #dda0dd;
-  border: 2px solid #dda0dd;
-  color: white;
-}
-
-.save-button:hover:not(:disabled) {
-  background: #d8b4fe;
-  border-color: #d8b4fe;
-}
-
-.save-button:disabled {
-  background: #e5e7eb;
-  border-color: #e5e7eb;
-  color: #9ca3af;
-  cursor: not-allowed;
-}
-
-.save-button.saving {
-  background: #a78bfa;
-  border-color: #a78bfa;
-}
-
-.saving-spinner {
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Keyboard Shortcuts */
-.keyboard-shortcuts {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  font-size: 0.75rem;
-  color: #6b7280;
-  padding-top: 0.5rem;
-  border-top: 1px solid #f3f4f6;
-}
-
-.shortcut {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-kbd {
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
-  padding: 0.125rem 0.25rem;
-  font-size: 0.6875rem;
-  font-family: inherit;
-}
-
-/* Mobile Responsive */
-@media (max-width: 640px) {
-  .dual-breast-timer {
-    padding: 1rem;
-    gap: 1.5rem;
-  }
-
-  .timer-title {
-    font-size: 1.25rem;
-  }
-
-  .breast-timers {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .timer-separator {
-    flex-direction: row;
-    width: 100%;
-  }
-
-  .separator-line {
-    width: 2rem;
-    height: 1px;
-    flex: 1;
-  }
-
-  .timer-container {
-    max-width: none;
-    width: 100%;
-  }
-
-  .action-buttons {
-    flex-direction: column-reverse;
-  }
-
-  .action-button {
-    width: 100%;
-  }
-
-  .keyboard-shortcuts {
-    display: none;
-  }
-}
-
-/* Tablet Responsive */
-@media (max-width: 768px) and (min-width: 641px) {
-  .breast-timers {
-    gap: 1rem;
-  }
-
-  .timer-container {
-    max-width: 180px;
-  }
-}
-
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-  .dual-breast-timer {
-    background: #1f2937;
-    color: white;
-  }
-
-  .timer-title {
-    color: white;
-  }
-
-  .total-duration {
-    color: #d1d5db;
-  }
-
-  .breast-indicator {
-    color: #9ca3af;
-  }
-
-  .notes-label {
-    color: #f3f4f6;
-  }
-
-  .notes-input {
-    background: #374151;
-    border-color: #4b5563;
-    color: white;
-  }
-
-  .notes-input:focus {
-    border-color: #a78bfa;
-    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
-  }
-
-  .notes-input::placeholder {
-    color: #6b7280;
-  }
-
-  .notes-counter {
-    color: #9ca3af;
-  }
-
-  .validation-messages.errors {
-    background: #7f1d1d;
-    border-color: #dc2626;
-    color: #fca5a5;
-  }
-
-  .validation-messages.warnings {
-    background: #78350f;
-    border-color: #d97706;
-    color: #fcd34d;
-  }
-
-  .cancel-button {
-    background: #374151;
-    border-color: #4b5563;
-    color: #d1d5db;
-  }
-
-  .cancel-button:hover:not(:disabled) {
-    border-color: #6b7280;
-    color: #f3f4f6;
-  }
-
-  .keyboard-shortcuts {
-    color: #9ca3af;
-    border-color: #374151;
-  }
-
-  kbd {
-    background: #374151;
-    border-color: #4b5563;
-    color: #d1d5db;
-  }
-}
-
-/* High Contrast Mode */
-@media (prefers-contrast: high) {
-  .dual-breast-timer {
-    border: 3px solid #000;
-  }
-
-  .action-button {
-    border-width: 3px;
-  }
-
-  .notes-input {
-    border-width: 3px;
-  }
-
-  .validation-messages {
-    border-width: 3px;
-  }
-}
-
-/* Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-  .action-button,
-  .notes-input,
-  .saving-spinner {
-    transition: none;
-    animation: none;
-  }
-}
-
-/* Print Styles */
-@media print {
-  .dual-breast-timer {
-    box-shadow: none;
-    border: 1px solid #000;
-  }
-
-  .action-buttons,
-  .keyboard-shortcuts {
-    display: none;
-  }
-
-  .validation-messages {
-    border: 1px solid #000;
-    background: white;
-    color: black;
-  }
+  margin-top: 0.25rem;
 }
 </style>

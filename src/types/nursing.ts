@@ -203,11 +203,12 @@ export function computeBreastUsed(leftDuration: number, rightDuration: number): 
 }
 
 /**
- * Validates dual-timer nursing session data
+ * Validates dual-timer nursing session data (enhanced for automatic timing)
  */
 export function validateDualTimerNursingSession(
   leftDuration: number,
-  rightDuration: number
+  rightDuration: number,
+  startTime?: Date
 ): NursingSessionValidation {
   const errors: Array<{ field: string; message: string }> = [];
   const warnings: Array<{ field: string; message: string }> = [];
@@ -235,6 +236,38 @@ export function validateDualTimerNursingSession(
     });
   }
 
+  // Validate start time if provided (automatic timing validation)
+  if (startTime) {
+    const now = new Date();
+    const totalDuration = leftDuration + rightDuration;
+    const calculatedEndTime = new Date(startTime.getTime() + (totalDuration * 1000));
+    
+    // Error: Start time cannot be in the future
+    if (startTime > now) {
+      errors.push({
+        field: 'start_time',
+        message: 'Session start time cannot be in the future'
+      });
+    }
+    
+    // Error: Calculated end time cannot be in the future
+    if (calculatedEndTime > now) {
+      errors.push({
+        field: 'timing',
+        message: 'Session duration extends beyond current time'
+      });
+    }
+    
+    // Warning: Session started more than 24 hours ago
+    const hoursAgo = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    if (hoursAgo > 24) {
+      warnings.push({
+        field: 'start_time',
+        message: 'Session started more than 24 hours ago'
+      });
+    }
+  }
+
   // Warning: Individual breast duration over 60 minutes (3600 seconds)
   if (leftDuration > 3600) {
     warnings.push({
@@ -256,6 +289,14 @@ export function validateDualTimerNursingSession(
     warnings.push({
       field: 'total_duration',
       message: 'Total nursing session is over 2 hours'
+    });
+  }
+
+  // Warning: Very short session (less than 30 seconds)
+  if (totalDuration > 0 && totalDuration < 30) {
+    warnings.push({
+      field: 'total_duration',
+      message: 'This is a very short nursing session'
     });
   }
 

@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import { format } from 'date-fns'
 import EditRecord from './EditRecord.vue'
+import NursingEditModal from './NursingEditModal.vue'
+import type { CompletedNursingSession, BreastType } from '../types/nursing'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
@@ -54,6 +56,13 @@ const showEditModal = ref(false)
 const editingRecord = ref<any>(null)
 const editingType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 
+// Nursing edit modal state
+const showNursingEditModal = ref(false)
+const editingNursingSession = ref<CompletedNursingSession | null>(null)
+
+// Computed property to ensure proper typing
+const nursingSessionForEdit = computed(() => editingNursingSession.value as CompletedNursingSession | null)
+
 
 function formatSleepDate(dateString: string) {
   const date = new Date(dateString)
@@ -85,14 +94,91 @@ function formatDateTime(dateString: string) {
 }
 
 function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep') {
+  // Check if this is a nursing session and use the dedicated modal
+  if (type === 'feeding' && record.type === 'nursing') {
+    openNursingEditModal(record)
+    return
+  }
+  
   editingRecord.value = record
   editingType.value = type
   showEditModal.value = true
 }
 
+function openNursingEditModal(nursingSession: any) {
+  // Convert the feeding record to a CompletedNursingSession
+  const durationMinutes = nursingSession.end_time && nursingSession.start_time 
+    ? Math.floor((new Date(nursingSession.end_time).getTime() - new Date(nursingSession.start_time).getTime()) / (1000 * 60))
+    : 0
+    
+  // Create a properly typed CompletedNursingSession
+  const completedSession: CompletedNursingSession = {
+    id: nursingSession.id,
+    baby_id: nursingSession.baby_id,
+    timestamp: nursingSession.timestamp,
+    type: 'nursing',
+    notes: nursingSession.notes || '',
+    created_at: nursingSession.created_at,
+    user_id: nursingSession.user_id,
+    // Ensure required fields have default values
+    start_time: nursingSession.start_time || nursingSession.timestamp,
+    end_time: nursingSession.end_time || nursingSession.timestamp,
+    left_duration: nursingSession.left_duration || 0,
+    right_duration: nursingSession.right_duration || 0,
+    total_duration: nursingSession.total_duration || durationMinutes * 60, // Convert to seconds
+    breast_used: (nursingSession.breast_used || 'left') as BreastType,
+    amount: null, // Always null for nursing sessions
+    is_active: false,
+    duration_minutes: durationMinutes,
+    duration_display: durationMinutes > 0 ? `${durationMinutes} minute${durationMinutes !== 1 ? 's' : ''}` : '0 minutes'
+  }
+  
+  editingNursingSession.value = completedSession
+  showNursingEditModal.value = true
+}
+
 function closeEditModal() {
   showEditModal.value = false
   editingRecord.value = null
+}
+
+function closeNursingEditModal() {
+  showNursingEditModal.value = false
+  editingNursingSession.value = null
+}
+
+async function handleNursingSessionSave(updatedSession: CompletedNursingSession) {
+  try {
+    // Update the nursing session using the store's updateNursingSession method
+    await store.updateNursingSession(updatedSession.id, {
+      start_time: updatedSession.start_time,
+      end_time: updatedSession.end_time,
+      left_duration: updatedSession.left_duration,
+      right_duration: updatedSession.right_duration,
+      total_duration: updatedSession.total_duration,
+      breast_used: updatedSession.breast_used,
+      notes: updatedSession.notes,
+      timestamp: updatedSession.start_time // Keep timestamp for compatibility
+    })
+    
+    closeNursingEditModal()
+  } catch (error) {
+    console.error('Error updating nursing session:', error)
+    // Error handling is managed by the NursingEditModal component
+  }
+}
+
+async function handleNursingSessionDelete(sessionId: string) {
+  try {
+    // Delete the nursing session using the store's deleteNursingSession method
+    await store.deleteNursingSession(sessionId)
+    
+    closeNursingEditModal()
+  } catch (error) {
+    console.error('Error deleting nursing session:', error)
+    // Error handling is managed by the NursingEditModal component
+    throw error
+  }
 }
 
 function isSameDay(date1: string, date2: string): boolean {
@@ -223,6 +309,17 @@ function getRelativeDate(dateString: string): string {
     <!-- Edit Modal -->
     <EditRecord v-if="showEditModal && editingRecord" :record="editingRecord" :type="editingType" :babyName="babyName"
       @close="closeEditModal" @saved="closeEditModal" />
+
+    <!-- Nursing Edit Modal -->
+    <NursingEditModal 
+      :is-open="showNursingEditModal"
+      :session="nursingSessionForEdit"
+      :baby-name="babyName"
+      @close="closeNursingEditModal"
+      @cancel="closeNursingEditModal"
+      @save="handleNursingSessionSave"
+      @delete="handleNursingSessionDelete"
+    />
   </div>
 </template>
 

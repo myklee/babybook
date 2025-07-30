@@ -8,6 +8,7 @@ import HistoryList from '../components/HistoryList.vue'
 import IconButton from '../components/IconButton.vue'
 import SleepingAnimation from '../components/SleepingAnimation.vue'
 import NursingTimerModal from '../components/NursingTimerModal.vue'
+import PersistentNursingIndicator from '../components/PersistentNursingIndicator.vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import spoonIcon from '../assets/icons/spoon.svg'
@@ -84,10 +85,28 @@ function closeNursingTimerModal() {
   showNursingTimerModal.value = false
 }
 
-// Handle nursing session save
-function handleNursingSave(leftDuration: number, rightDuration: number, notes?: string) {
-  console.log('Nursing session saved:', { leftDuration, rightDuration, notes })
+// Handle nursing session save (with automatic time handling)
+function handleNursingSave(leftDuration: number, rightDuration: number, notes?: string, startTime?: Date) {
+  console.log('Nursing session saved:', { leftDuration, rightDuration, notes, startTime })
   // The modal will close automatically after successful save
+}
+
+// Get active nursing session for selected baby
+const activeNursingSession = computed(() => {
+  if (!selectedBaby.value) return null
+  return store.getActiveNursingSession(selectedBaby.value.id)
+})
+
+// Show persistent indicator when there's an active session and modal is closed
+const showPersistentIndicator = computed(() => {
+  return activeNursingSession.value && !showNursingTimerModal.value
+})
+
+// Handle tap on persistent indicator to reopen modal
+function handleIndicatorTap() {
+  if (activeNursingSession.value) {
+    showNursingTimerModal.value = true
+  }
 }
 
 function openDiaperModal(type: 'pee' | 'poop' | 'both') {
@@ -262,6 +281,15 @@ function handleSleepClick() {
 
 <template>
   <div class="home-page">
+    <!-- Persistent Nursing Indicator -->
+    <PersistentNursingIndicator
+      v-if="showPersistentIndicator && selectedBaby"
+      :baby-id="selectedBaby.id"
+      :baby-name="selectedBaby.name"
+      :active-session="activeNursingSession"
+      @tap="handleIndicatorTap"
+    />
+    
     <div v-if="isAuthenticated" class="app-content">
       <div class="header">
         <IconButton v-if="store.babies.length === 0" :icon="addBabyIcon" alt="Add Baby" title="Add Baby"

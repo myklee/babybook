@@ -16,6 +16,11 @@ import {
   validateDualTimerNursingSession,
   computeBreastUsed
 } from "../types/nursing";
+import { 
+  useNursingSessionPersistence,
+  type PersistedNursingSession,
+  type SessionRecoveryData
+} from "../composables/useNursingSessionPersistence";
 
 type Baby = Database["public"]["Tables"]["babies"]["Row"] & {
   image_url?: string | null;
@@ -37,6 +42,9 @@ export const useBabyStore = defineStore("baby", () => {
   const currentUser = ref<any>(null);
   const isDataLoading = ref(false); // Guard to prevent multiple simultaneous loads
   const authListenerSet = ref(false);
+
+  // Initialize session persistence system
+  const sessionPersistence = useNursingSessionPersistence();
 
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -64,14 +72,31 @@ export const useBabyStore = defineStore("baby", () => {
     }
   }
 
+
+
   // Initialize store and load data
   async function initializeStore() {
     console.log("Initializing store...");
     try {
+      // Initialize session persistence system
+      const recovery = sessionPersistence.initialize();
+      if (recovery.recovered > 0) {
+        console.log(`Recovered ${recovery.recovered} active nursing sessions`);
+      }
+      if (recovery.errors.length > 0) {
+        console.warn('Session recovery errors:', recovery.errors);
+      }
+      
       await loadUser();
       if (currentUser.value) {
         console.log("User authenticated, loading data...");
         await loadData();
+        
+        // Clean up expired sessions after data load
+        const expired = sessionPersistence.clearExpiredSessions();
+        if (expired > 0) {
+          console.log(`Cleared ${expired} expired sessions`);
+        }
       } else {
         console.log("No user found, clearing data...");
         babies.value = [];
@@ -79,6 +104,9 @@ export const useBabyStore = defineStore("baby", () => {
         diaperChanges.value = [];
         sleepSessions.value = [];
         solidFoods.value = [];
+        
+        // Clear active sessions if no user
+        sessionPersistence.clearAllData();
       }
     } catch (error) {
       console.error("Error initializing store:", error);
@@ -94,6 +122,7 @@ export const useBabyStore = defineStore("baby", () => {
         diaperChanges.value = [];
         sleepSessions.value = [];
         solidFoods.value = [];
+        sessionPersistence.clearAllData();
         return;
       }
       // For other errors, just log them but don't throw
@@ -155,12 +184,19 @@ export const useBabyStore = defineStore("baby", () => {
             if (!isDataLoading.value) {
               await loadData();
             }
+            // Recover active sessions on sign in
+            const recovery = sessionPersistence.recoverActiveSessions();
+            if (recovery.recovered > 0) {
+              console.log(`Recovered ${recovery.recovered} sessions on sign in`);
+            }
           } else if (event === "SIGNED_OUT") {
             babies.value = [];
             feedings.value = [];
             diaperChanges.value = [];
             sleepSessions.value = [];
             solidFoods.value = [];
+            // Clear active sessions on sign out
+            sessionPersistence.clearAllData();
           }
         });
         authListenerSet.value = true;
@@ -216,7 +252,7 @@ export const useBabyStore = defineStore("baby", () => {
       const babiesResult = (await Promise.race([
         babiesPromise,
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Babies loading timeout")), 5000),
+          setTimeout(() => reject(new Error("Babies loading timeout")), 10000),
         ),
       ])) as any;
 
@@ -243,7 +279,7 @@ export const useBabyStore = defineStore("baby", () => {
           new Promise((_, reject) =>
             setTimeout(
               () => reject(new Error("Settings loading timeout")),
-              5000,
+              10000,
             ),
           ),
         ])) as any;
@@ -265,7 +301,11 @@ export const useBabyStore = defineStore("baby", () => {
           console.log("Loaded baby settings:", babySettings.value.length);
         }
       } catch (settingsTableError) {
-        console.error("Baby settings table error:", settingsTableError);
+        if (settingsTableError.message.includes('timeout')) {
+          console.warn("Baby settings loading timed out, continuing with empty data");
+        } else {
+          console.error("Baby settings table error:", settingsTableError);
+        }
         babySettings.value = [];
       }
 
@@ -280,7 +320,7 @@ export const useBabyStore = defineStore("baby", () => {
       const feedingsResult = (await Promise.race([
         feedingsPromise,
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Feedings loading timeout")), 5000),
+          setTimeout(() => reject(new Error("Feedings loading timeout")), 10000),
         ),
       ])) as any;
 
@@ -304,7 +344,7 @@ export const useBabyStore = defineStore("baby", () => {
         new Promise((_, reject) =>
           setTimeout(
             () => reject(new Error("Diaper changes loading timeout")),
-            5000,
+            10000,
           ),
         ),
       ])) as any;
@@ -330,7 +370,7 @@ export const useBabyStore = defineStore("baby", () => {
           new Promise((_, reject) =>
             setTimeout(
               () => reject(new Error("Sleep sessions loading timeout")),
-              5000,
+              10000,
             ),
           ),
         ])) as any;
@@ -370,7 +410,7 @@ export const useBabyStore = defineStore("baby", () => {
           new Promise((_, reject) =>
             setTimeout(
               () => reject(new Error("Solid foods loading timeout")),
-              5000,
+              10000,
             ),
           ),
         ])) as any;
@@ -398,7 +438,11 @@ export const useBabyStore = defineStore("baby", () => {
 
       console.log("Data loading complete");
     } catch (error: any) {
-      console.error("Error loading data:", error);
+      if (error?.message?.includes('timeout')) {
+        console.warn("Data loading timed out, some data may be incomplete");
+      } else {
+        console.error("Error loading data:", error);
+      }
       
       // Handle JWT expiration specifically
       if (error?.code === 'PGRST301' || error?.message?.includes('JWT expired')) {
@@ -765,19 +809,19 @@ export const useBabyStore = defineStore("baby", () => {
     }
   }
 
-  // Save nursing session with dual-timer durations
+  // Save nursing session with dual-timer durations (automatic time handling)
   async function saveNursingSession(
     babyId: string,
     leftDuration: number,
     rightDuration: number,
     notes?: string,
-    timestamp?: Date
+    startTime?: Date
   ): Promise<NursingSession> {
     try {
       await ensureValidSession();
 
-      // Validate dual-timer data
-      const validation = validateDualTimerNursingSession(leftDuration, rightDuration);
+      // Validate dual-timer data with automatic timing
+      const validation = validateDualTimerNursingSession(leftDuration, rightDuration, startTime);
       if (!validation.is_valid) {
         throw new Error(validation.errors.map(e => e.message).join(', '));
       }
@@ -785,22 +829,24 @@ export const useBabyStore = defineStore("baby", () => {
       // Determine breast used based on durations
       const breastUsed = computeBreastUsed(leftDuration, rightDuration);
       const totalDuration = leftDuration + rightDuration;
-      const sessionTimestamp = timestamp || new Date();
-      const startTime = new Date(sessionTimestamp.getTime() - (totalDuration * 1000));
+      
+      // Automatic time handling: Use provided start time or calculate from current time
+      const endTime = new Date();
+      const sessionStartTime = startTime || new Date(endTime.getTime() - (totalDuration * 1000));
 
       const sessionData = {
         baby_id: babyId,
-        timestamp: sessionTimestamp.toISOString(),
+        timestamp: endTime.toISOString(), // End time for compatibility
         amount: null,
         type: "nursing" as const,
         notes: notes || null,
         user_id: currentUser.value!.id,
-        start_time: startTime.toISOString(),
-        end_time: sessionTimestamp.toISOString(),
+        start_time: sessionStartTime.toISOString(), // Automatically captured start time
+        end_time: endTime.toISOString(), // Automatically captured end time
         breast_used: breastUsed,
-        left_duration: leftDuration,
-        right_duration: rightDuration,
-        total_duration: totalDuration,
+        left_duration: leftDuration, // Automatically calculated from timers
+        right_duration: rightDuration, // Automatically calculated from timers
+        total_duration: totalDuration, // Automatically calculated total
       };
 
       const { data, error } = await supabase
@@ -815,6 +861,12 @@ export const useBabyStore = defineStore("baby", () => {
       }
 
       feedings.value.unshift(data);
+      
+      // Clear any active session for this baby after successful save
+      if (sessionPersistence.getActiveSession(babyId)) {
+        sessionPersistence.removeActiveSession(babyId);
+      }
+      
       return data as NursingSession;
     } catch (error) {
       console.error("Error in saveNursingSession:", error);
@@ -904,8 +956,41 @@ export const useBabyStore = defineStore("baby", () => {
     );
   }
 
-  // Get active nursing session for a baby
+  // Get active nursing session for a baby (enhanced with persistence)
   function getActiveNursingSession(babyId: string): ActiveNursingSession | null {
+    // First check if we have a persisted active session
+    const persistedSession = sessionPersistence.getActiveSession(babyId);
+    if (persistedSession && persistedSession.is_active) {
+      const startTime = new Date(persistedSession.start_time);
+      const now = new Date();
+      const durationMs = now.getTime() - startTime.getTime();
+      const durationMinutes = Math.floor(durationMs / (1000 * 60));
+      const hours = Math.floor(durationMinutes / 60);
+      const minutes = durationMinutes % 60;
+      const elapsedDisplay = hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}` : `${minutes}:${Math.floor((durationMs % 60000) / 1000).toString().padStart(2, '0')}`;
+
+      return {
+        id: persistedSession.id,
+        baby_id: persistedSession.baby_id,
+        timestamp: persistedSession.start_time,
+        amount: null,
+        type: "nursing" as const,
+        notes: persistedSession.notes,
+        user_id: currentUser.value?.id || '',
+        start_time: persistedSession.start_time,
+        end_time: null,
+        breast_used: persistedSession.current_breast,
+        left_duration: persistedSession.left_duration,
+        right_duration: persistedSession.right_duration,
+        total_duration: persistedSession.left_duration + persistedSession.right_duration,
+        created_at: persistedSession.start_time,
+        is_active: true,
+        duration_minutes: durationMinutes,
+        elapsed_display: elapsedDisplay,
+      } as ActiveNursingSession;
+    }
+
+    // Fallback to database check for active sessions
     const activeSession = feedings.value.find(
       (f) => f.baby_id === babyId && f.type === "nursing" && f.start_time && !f.end_time
     ) as NursingSession | undefined;
@@ -926,6 +1011,143 @@ export const useBabyStore = defineStore("baby", () => {
       duration_minutes: durationMinutes,
       elapsed_display: elapsedDisplay,
     } as ActiveNursingSession;
+  }
+
+  // Start a new active nursing session with persistence
+  function startActiveNursingSession(
+    babyId: string, 
+    breastUsed: BreastType, 
+    notes: string = ''
+  ): PersistedNursingSession {
+    // Check if there's already an active session for this baby
+    if (sessionPersistence.getActiveSession(babyId)) {
+      throw new Error('There is already an active nursing session for this baby');
+    }
+
+    const now = new Date();
+    const sessionId = `nursing_${babyId}_${now.getTime()}`;
+    
+    const newSession: PersistedNursingSession = {
+      id: sessionId,
+      baby_id: babyId,
+      start_time: now.toISOString(),
+      current_breast: breastUsed,
+      left_duration: 0,
+      right_duration: 0,
+      notes,
+      last_update: now.toISOString(),
+      device_id: sessionPersistence.deviceId,
+      is_active: true
+    };
+
+    const success = sessionPersistence.addActiveSession(newSession);
+    if (!success) {
+      throw new Error('Failed to create active nursing session');
+    }
+
+    return newSession;
+  }
+
+  // Update active nursing session
+  function updateActiveNursingSession(
+    babyId: string,
+    updates: {
+      current_breast?: BreastType;
+      left_duration?: number;
+      right_duration?: number;
+      notes?: string;
+    }
+  ): void {
+    const session = sessionPersistence.getActiveSession(babyId);
+    if (!session || !session.is_active) {
+      throw new Error('No active nursing session found for this baby');
+    }
+
+    // Update the session using the persistence system
+    const success = sessionPersistence.updateActiveSession(babyId, updates);
+    if (!success) {
+      throw new Error('Failed to update active nursing session');
+    }
+  }
+
+  // End active nursing session and save to database
+  async function endActiveNursingSession(babyId: string): Promise<NursingSession> {
+    const session = sessionPersistence.getActiveSession(babyId);
+    if (!session || !session.is_active) {
+      throw new Error('No active nursing session found for this baby');
+    }
+
+    try {
+      await ensureValidSession();
+
+      // Determine breast used based on durations
+      const breastUsed = computeBreastUsed(session.left_duration, session.right_duration);
+      const totalDuration = session.left_duration + session.right_duration;
+      const endTime = new Date();
+
+      const sessionData = {
+        baby_id: babyId,
+        timestamp: endTime.toISOString(),
+        amount: null,
+        type: "nursing" as const,
+        notes: session.notes || null,
+        user_id: currentUser.value!.id,
+        start_time: session.start_time,
+        end_time: endTime.toISOString(),
+        breast_used: breastUsed,
+        left_duration: session.left_duration,
+        right_duration: session.right_duration,
+        total_duration: totalDuration,
+      };
+
+      const { data, error } = await supabase
+        .from("feedings")
+        .insert(sessionData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error saving nursing session:", error);
+        throw error;
+      }
+
+      // Remove from active sessions using persistence system
+      sessionPersistence.removeActiveSession(babyId);
+
+      // Add to feedings array
+      feedings.value.unshift(data);
+      
+      return data as NursingSession;
+    } catch (error) {
+      console.error("Error in endActiveNursingSession:", error);
+      throw error;
+    }
+  }
+
+  // Cancel active nursing session without saving
+  function cancelActiveNursingSession(babyId: string): void {
+    const session = sessionPersistence.getActiveSession(babyId);
+    if (!session || !session.is_active) {
+      throw new Error('No active nursing session found for this baby');
+    }
+
+    // Remove from active sessions using persistence system
+    sessionPersistence.removeActiveSession(babyId);
+  }
+
+  // Get all active nursing sessions
+  function getAllActiveNursingSessions(): Map<string, PersistedNursingSession> {
+    return sessionPersistence.getAllActiveSessions();
+  }
+
+  // Check if any baby has an active nursing session
+  function hasAnyActiveNursingSession(): boolean {
+    return sessionPersistence.hasActiveSessions();
+  }
+
+  // Get session recovery data for debugging
+  function getSessionRecoveryData(): SessionRecoveryData[] {
+    return sessionPersistence.getRecoveryData();
   }
 
   // Update nursing session notes
@@ -952,6 +1174,71 @@ export const useBabyStore = defineStore("baby", () => {
       }
     } catch (error) {
       console.error("Error in updateNursingNotes:", error);
+      throw error;
+    }
+  }
+
+  // Update a nursing session
+  async function updateNursingSession(
+    id: string,
+    updates: Partial<Omit<NursingSession, "id" | "baby_id" | "user_id" | "created_at">>
+  ): Promise<NursingSession> {
+    try {
+      await ensureValidSession();
+
+      const { data, error } = await supabase
+        .from("feedings")
+        .update(updates)
+        .eq("id", id)
+        .eq("user_id", currentUser.value!.id)
+        .eq("type", "nursing")
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating nursing session:", error);
+        throw error;
+      }
+
+      // Update local state
+      const index = feedings.value.findIndex((f) => f.id === id);
+      if (index !== -1) {
+        feedings.value[index] = data;
+      }
+
+      return data as NursingSession;
+    } catch (error) {
+      console.error("Error in updateNursingSession:", error);
+      throw error;
+    }
+  }
+
+  // Delete a nursing session
+  async function deleteNursingSession(id: string): Promise<boolean> {
+    try {
+      await ensureValidSession();
+
+      const { error } = await supabase
+        .from("feedings")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", currentUser.value!.id)
+        .eq("type", "nursing");
+
+      if (error) {
+        console.error("Error deleting nursing session:", error);
+        throw error;
+      }
+
+      // Remove from local state
+      const index = feedings.value.findIndex((f) => f.id === id);
+      if (index !== -1) {
+        feedings.value.splice(index, 1);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in deleteNursingSession:", error);
       throw error;
     }
   }
@@ -1587,10 +1874,14 @@ export const useBabyStore = defineStore("baby", () => {
       babySettings.value = [];
       stopPolling();
 
+      // Clear active nursing sessions
+      sessionPersistence.clearAllData();
+
       // Clear any stored session data
       try {
         localStorage.removeItem("babybook-auth");
         sessionStorage.removeItem("babybook-auth");
+        localStorage.removeItem("baby-app-active-nursing-sessions");
       } catch (storageError) {
         console.error("Error clearing storage:", storageError);
       }
@@ -1938,6 +2229,7 @@ export const useBabyStore = defineStore("baby", () => {
   // Stop polling when the store is disposed
   onUnmounted(() => {
     stopPolling();
+    sessionPersistence.cleanup();
   });
 
   // Also start/stop polling on auth state changes
@@ -1948,6 +2240,8 @@ export const useBabyStore = defineStore("baby", () => {
       stopPolling();
     }
   });
+
+
 
   return {
     // State
@@ -1972,7 +2266,16 @@ export const useBabyStore = defineStore("baby", () => {
     endNursingSession,
     isBabyNursing,
     getActiveNursingSession,
+    startActiveNursingSession,
+    updateActiveNursingSession,
+    endActiveNursingSession,
+    cancelActiveNursingSession,
+    getAllActiveNursingSessions,
+    hasAnyActiveNursingSession,
+    getSessionRecoveryData,
     updateNursingNotes,
+    updateNursingSession,
+    deleteNursingSession,
     getNursingSessions,
     getCompletedNursingSessions,
     getNursingAnalytics,

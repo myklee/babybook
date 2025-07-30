@@ -65,3 +65,4 @@ The Nursing UI Improvements feature focuses on enhancing the user experience of 
 3. WHEN editing nursing session timing THEN the system SHALL validate that times are logical and provide helpful error messages
 4. WHEN saving nursing session edits THEN the system SHALL update the session data and refresh all related displays
 5. WHEN canceling nursing session edits THEN the system SHALL discard changes and return to the previous state without affecting the original session
+6. WHEN in the nursing edit modal THEN the system SHALL provide a delete option with confirmation to permanently remove the session
