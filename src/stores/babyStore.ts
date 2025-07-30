@@ -300,8 +300,8 @@ export const useBabyStore = defineStore("baby", () => {
           babySettings.value = settingsResult.data || [];
           console.log("Loaded baby settings:", babySettings.value.length);
         }
-      } catch (settingsTableError) {
-        if (settingsTableError.message.includes('timeout')) {
+      } catch (settingsTableError: any) {
+        if (settingsTableError?.message?.includes('timeout')) {
           console.warn("Baby settings loading timed out, continuing with empty data");
         } else {
           console.error("Baby settings table error:", settingsTableError);

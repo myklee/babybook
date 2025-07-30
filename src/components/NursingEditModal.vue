@@ -428,7 +428,7 @@ function setupModal() {
     try {
       if (firstInputRef.value) {
         // Check if it's a Vue component with $el or a DOM element
-        const element = firstInputRef.value.$el || firstInputRef.value
+        const element = (firstInputRef.value as any)?.$el || firstInputRef.value
         if (element && typeof element.focus === 'function') {
           element.focus()
         } else if (element && element.querySelector) {
