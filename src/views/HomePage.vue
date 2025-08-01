@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
+import SolidFoodModal from '../components/SolidFoodModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 import IconButton from '../components/IconButton.vue'
 import SleepingAnimation from '../components/SleepingAnimation.vue'
@@ -25,7 +26,8 @@ const selectedBaby = ref<any>(null)
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
 const showNursingTimerModal = ref(false)
-const feedingType = ref<'breast' | 'formula' | 'solid' | 'nursing'>('breast')
+const showSolidFoodModal = ref(false)
+const feedingType = ref<'breast' | 'formula'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
 // Auth state
@@ -69,9 +71,15 @@ function selectBaby(baby: any) {
 }
 
 // Functions
-function openFeedingModal(type: 'breast' | 'formula' | 'solid' | 'nursing') {
+function openFeedingModal(type: 'breast' | 'formula') {
   feedingType.value = type
   showFeedingModal.value = true
+}
+
+// Open solid food modal
+function openSolidFoodModal() {
+  if (!selectedBaby.value) return
+  showSolidFoodModal.value = true
 }
 
 // Open nursing timer modal
@@ -178,16 +186,27 @@ async function addBaby() {
   }
 }
 
-// Get last feeding time for a specific baby
+// Get last feeding time for a specific baby (including solid foods)
 function getLastFeedingTime(babyId: string) {
   try {
     const feedings = store.getBabyFeedings(babyId)
-    if (feedings.length === 0) return null
+    const solidFoods = store.getBabySolidFoods(babyId)
+    
+    // Combine feedings and solid foods with their timestamps
+    const allFeedingEvents = [
+      ...feedings.map(f => ({ ...f, event_time: f.timestamp, event_type: 'feeding' })),
+      ...solidFoods.map(sf => ({ ...sf, event_time: sf.last_tried_date, event_type: 'solid', type: 'solid' }))
+    ]
+    
+    if (allFeedingEvents.length === 0) return null
 
-    const lastFeeding = feedings[0]
-    const lastFeedingTime = new Date(lastFeeding.timestamp)
+    // Sort by most recent
+    allFeedingEvents.sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime())
+    
+    const lastEvent = allFeedingEvents[0]
+    const lastEventTime = new Date(lastEvent.event_time)
     const now = new Date()
-    const diffMs = now.getTime() - lastFeedingTime.getTime()
+    const diffMs = now.getTime() - lastEventTime.getTime()
 
     const hours = Math.floor(diffMs / (1000 * 60 * 60))
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
@@ -201,7 +220,7 @@ function getLastFeedingTime(babyId: string) {
 
     return {
       time: timeString,
-      type: lastFeeding.type
+      type: lastEvent.type
     }
   } catch (error) {
     console.error('Error getting last feeding time:', error)
@@ -223,18 +242,29 @@ function getFeedingIcon(type: string | undefined) {
   return breastIcon // default
 }
 
-// Get next feeding time based on baby settings
+// Get next feeding time based on baby settings (including solid foods)
 function getNextFeedingTime(babyId: string) {
   try {
     const settings = store.getBabySettings(babyId)
     if (!settings || settings.feeding_interval_hours <= 0) return null
 
     const feedings = store.getBabyFeedings(babyId)
-    if (feedings.length === 0) return null
+    const solidFoods = store.getBabySolidFoods(babyId)
+    
+    // Combine feedings and solid foods with their timestamps
+    const allFeedingEvents = [
+      ...feedings.map(f => ({ timestamp: f.timestamp })),
+      ...solidFoods.map(sf => ({ timestamp: sf.last_tried_date }))
+    ]
+    
+    if (allFeedingEvents.length === 0) return null
 
-    const lastFeeding = feedings[0]
-    const lastFeedingTime = new Date(lastFeeding.timestamp)
-    const nextFeedingTime = new Date(lastFeedingTime.getTime() + (settings.feeding_interval_hours * 60 * 60 * 1000))
+    // Sort by most recent
+    allFeedingEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    
+    const lastEvent = allFeedingEvents[0]
+    const lastEventTime = new Date(lastEvent.timestamp)
+    const nextFeedingTime = new Date(lastEventTime.getTime() + (settings.feeding_interval_hours * 60 * 60 * 1000))
     const now = new Date()
 
     if (nextFeedingTime <= now) {
@@ -352,7 +382,7 @@ function handleSleepClick() {
           <img src="../assets/icons/flask-conical.svg" class="icon" alt="Formula" />
           <span>Formula</span>
         </button>
-        <button class="action-btn solid" @click="openFeedingModal('solid')">
+        <button class="action-btn solid" @click="openSolidFoodModal()">
           <img src="../assets/icons/spoon.svg" class="icon" alt="Solid Food" />
           <span>Solid</span>
         </button>
@@ -391,6 +421,8 @@ function handleSleepClick() {
       @close="closeNursingTimerModal"
       @save="handleNursingSave"
     />
+    <SolidFoodModal v-if="showSolidFoodModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
+      @close="showSolidFoodModal = false" @saved="showSolidFoodModal = false" />
   </div>
 </template>
 

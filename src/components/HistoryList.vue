@@ -4,12 +4,14 @@ import { useBabyStore } from '../stores/babyStore'
 import { format } from 'date-fns'
 import EditRecord from './EditRecord.vue'
 import NursingEditModal from './NursingEditModal.vue'
+import SolidFoodEditModal from './SolidFoodEditModal.vue'
 import type { CompletedNursingSession, BreastType } from '../types/nursing'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import poopIcon from '../assets/icons/hugeicons_poop.svg'
 import dropletsIcon from '../assets/icons/droplets.svg'
+import spoonIcon from '../assets/icons/spoon.svg'
 
 const props = defineProps<{
   babyId: string
@@ -25,6 +27,32 @@ const feedings = computed(() => {
   return store.getBabyFeedings(props.babyId)
 })
 
+const solidFoods = computed(() => {
+  return store.getBabySolidFoods(props.babyId)
+})
+
+// Combined feedings that includes both regular feedings and solid foods
+const combinedFeedings = computed(() => {
+  const regularFeedings = feedings.value.map(f => ({
+    ...f,
+    event_type: 'feeding' as const,
+    sort_time: new Date(f.timestamp).getTime()
+  }))
+  
+  const solidFeedingEvents = solidFoods.value.map(sf => ({
+    ...sf,
+    id: sf.id,
+    event_type: 'solid' as const,
+    timestamp: sf.last_tried_date,
+    type: 'solid' as const,
+    sort_time: new Date(sf.last_tried_date).getTime()
+  }))
+  
+  // Combine and sort by most recent
+  const combined = [...regularFeedings, ...solidFeedingEvents]
+  return combined.sort((a, b) => b.sort_time - a.sort_time)
+})
+
 const diaperChanges = computed(() => {
   return store.getBabyDiaperChanges(props.babyId)
 })
@@ -38,7 +66,7 @@ const babyName = computed(() => {
   return baby?.name || ''
 })
 
-function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep') {
+function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep' | 'solid') {
   if (category === 'feeding') {
     if (item.type === 'breast' || item.type === 'nursing') return breastIcon;
     if (item.type === 'formula') return formulaIcon;
@@ -47,6 +75,9 @@ function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep') {
   if (category === 'diaper') {
     if (item.type === 'pee') return dropletsIcon
     return poopIcon // for 'poop' and 'both'
+  }
+  if (category === 'solid') {
+    return spoonIcon
   }
   return null // No icon for sleep yet
 }
@@ -59,6 +90,10 @@ const editingType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 // Nursing edit modal state
 const showNursingEditModal = ref(false)
 const editingNursingSession = ref<CompletedNursingSession | null>(null)
+
+// Solid food edit modal state
+const showSolidFoodEditModal = ref(false)
+const editingSolidFood = ref<any>(null)
 
 // Computed property to ensure proper typing
 const nursingSessionForEdit = computed(() => editingNursingSession.value as CompletedNursingSession | null)
@@ -147,6 +182,16 @@ function closeNursingEditModal() {
   editingNursingSession.value = null
 }
 
+function openSolidFoodEditModal(solidFood: any) {
+  editingSolidFood.value = solidFood
+  showSolidFoodEditModal.value = true
+}
+
+function closeSolidFoodEditModal() {
+  showSolidFoodEditModal.value = false
+  editingSolidFood.value = null
+}
+
 async function handleNursingSessionSave(updatedSession: CompletedNursingSession) {
   try {
     // Update the nursing session using the store's updateNursingSession method
@@ -214,44 +259,56 @@ function getRelativeDate(dateString: string): string {
           {{ feedingsTotalSince8AM }}ml since 8am
         </span>
       </div>
-      <div v-if="feedings.length === 0" class="empty-state">
+      <div v-if="combinedFeedings.length === 0" class="empty-state">
         No feedings recorded yet
       </div>
       <ul v-else class="history-list">
-        <li v-for="feeding in feedings.slice(0, 8)" :key="feeding.id" class="history-item"
-          @click="openEditModal(feeding, 'feeding')">
+        <li v-for="item in combinedFeedings.slice(0, 8)" :key="`${item.event_type}-${item.id}`" class="history-item"
+          @click="item.event_type === 'feeding' ? openEditModal(item, 'feeding') : item.event_type === 'solid' ? openSolidFoodEditModal(item) : null">
           <div class="time">
-            <span v-if="feeding.type === 'nursing' && (feeding as any).start_time && (feeding as any).end_time && isSameDay((feeding as any).start_time, (feeding as any).end_time)">
-              {{ getRelativeDate((feeding as any).start_time) }}, {{ format(new Date((feeding as any).start_time), 'h:mm a') }} - {{ format(new Date((feeding as any).end_time), 'h:mm a') }}
+            <span v-if="item.event_type === 'feeding' && item.type === 'nursing' && (item as any).start_time && (item as any).end_time && isSameDay((item as any).start_time, (item as any).end_time)">
+              {{ getRelativeDate((item as any).start_time) }}, {{ format(new Date((item as any).start_time), 'h:mm a') }} - {{ format(new Date((item as any).end_time), 'h:mm a') }}
             </span>
-            <span v-else-if="feeding.type === 'nursing' && (feeding as any).start_time">
-              {{ formatDateTime((feeding as any).start_time) }}
-              <span v-if="(feeding as any).end_time"> - {{ formatDateTime((feeding as any).end_time) }}</span>
+            <span v-else-if="item.event_type === 'feeding' && item.type === 'nursing' && (item as any).start_time">
+              {{ formatDateTime((item as any).start_time) }}
+              <span v-if="(item as any).end_time"> - {{ formatDateTime((item as any).end_time) }}</span>
               <span v-else class="sleeping-indicator"> - Nursing</span>
             </span>
-            <span v-else>{{ formatDateTime(feeding.timestamp) }}</span>
+            <span v-else>{{ formatDateTime(item.timestamp) }}</span>
           </div>
           <div class="details">
-            <img :src="getIcon(feeding, 'feeding') || ''" class="item-icon" alt="Feeding" />
-            <span v-if="feeding.type === 'nursing' && ((feeding as any).left_duration || (feeding as any).right_duration)" class="nursing-durations">
-              <span v-if="(feeding as any).left_duration && (feeding as any).right_duration" class="dual-breast">
-                L: {{ Math.floor((feeding as any).left_duration / 60) }}m {{ (feeding as any).left_duration % 60 }}s
-                R: {{ Math.floor((feeding as any).right_duration / 60) }}m {{ (feeding as any).right_duration % 60 }}s
+            <img :src="getIcon(item, item.event_type === 'feeding' ? 'feeding' : 'solid') || ''" class="item-icon" alt="Feeding" />
+            
+            <!-- Regular feeding display -->
+            <span v-if="item.event_type === 'feeding' && item.type === 'nursing' && ((item as any).left_duration || (item as any).right_duration)" class="nursing-durations">
+              <span v-if="(item as any).left_duration && (item as any).right_duration" class="dual-breast">
+                L: {{ Math.floor((item as any).left_duration / 60) }}m {{ (item as any).left_duration % 60 }}s
+                R: {{ Math.floor((item as any).right_duration / 60) }}m {{ (item as any).right_duration % 60 }}s
               </span>
-              <span v-else-if="(feeding as any).left_duration" class="single-breast">
-                <span class="breast-indicator">L</span> {{ Math.floor((feeding as any).left_duration / 60) }}m {{ (feeding as any).left_duration % 60 }}s
+              <span v-else-if="(item as any).left_duration" class="single-breast">
+                <span class="breast-indicator">L</span> {{ Math.floor((item as any).left_duration / 60) }}m {{ (item as any).left_duration % 60 }}s
               </span>
-              <span v-else-if="(feeding as any).right_duration" class="single-breast">
-                <span class="breast-indicator">R</span> {{ Math.floor((feeding as any).right_duration / 60) }}m {{ (feeding as any).right_duration % 60 }}s
+              <span v-else-if="(item as any).right_duration" class="single-breast">
+                <span class="breast-indicator">R</span> {{ Math.floor((item as any).right_duration / 60) }}m {{ (item as any).right_duration % 60 }}s
               </span>
             </span>
-            <span v-else-if="feeding.type === 'nursing' && (feeding as any).start_time && (feeding as any).end_time" class="amount">{{ ((new Date((feeding as any).end_time).getTime() - new Date((feeding as any).start_time).getTime()) / 60000).toFixed(0) }} min</span>
-            <span v-else-if="feeding.type === 'nursing' && (feeding as any).start_time" class="sleeping-duration">Ongoing</span>
-            <span v-else-if="feeding.amount" class="amount">{{ feeding.amount }}ml</span>
-            <span v-if="(feeding as any).topup_amount && (feeding as any).topup_amount > 0" class="topup-amount">+{{
-              (feeding as any).topup_amount }}</span>
+            <span v-else-if="item.event_type === 'feeding' && item.type === 'nursing' && (item as any).start_time && (item as any).end_time" class="amount">{{ ((new Date((item as any).end_time).getTime() - new Date((item as any).start_time).getTime()) / 60000).toFixed(0) }} min</span>
+            <span v-else-if="item.event_type === 'feeding' && item.type === 'nursing' && (item as any).start_time" class="sleeping-duration">Ongoing</span>
+            <span v-else-if="item.event_type === 'feeding' && (item as any).amount" class="amount">{{ (item as any).amount }}ml</span>
+            
+            <!-- Solid food display -->
+            <span v-else-if="item.event_type === 'solid'" class="type">{{ (item as any).food_name }}</span>
+            
+            <span v-if="item.event_type === 'feeding' && (item as any).topup_amount && (item as any).topup_amount > 0" class="topup-amount">+{{ (item as any).topup_amount }}</span>
+            <span v-if="item.event_type === 'solid' && (item as any).times_tried > 1" class="amount">{{ (item as any).times_tried }}x</span>
           </div>
-          <div v-if="feeding.notes" class="notes">{{ feeding.notes }}</div>
+          
+          <!-- Solid food additional info -->
+          <div v-if="item.event_type === 'solid'" class="solid-food-info">
+            <span v-if="(item as any).reaction" class="food-reaction" :class="(item as any).reaction">{{ (item as any).reaction }}</span>
+          </div>
+          
+          <div v-if="item.notes" class="notes">{{ item.notes }}</div>
         </li>
       </ul>
     </div>
@@ -306,6 +363,8 @@ function getRelativeDate(dateString: string): string {
       </ul>
     </div>
 
+
+
     <!-- Edit Modal -->
     <EditRecord v-if="showEditModal && editingRecord" :record="editingRecord" :type="editingType" :babyName="babyName"
       @close="closeEditModal" @saved="closeEditModal" />
@@ -319,6 +378,16 @@ function getRelativeDate(dateString: string): string {
       @cancel="closeNursingEditModal"
       @save="handleNursingSessionSave"
       @delete="handleNursingSessionDelete"
+    />
+
+    <!-- Solid Food Edit Modal -->
+    <SolidFoodEditModal 
+      v-if="showSolidFoodEditModal && editingSolidFood"
+      :solid-food="editingSolidFood"
+      :baby-name="babyName"
+      @close="closeSolidFoodEditModal"
+      @saved="closeSolidFoodEditModal"
+      @deleted="closeSolidFoodEditModal"
     />
   </div>
 </template>
@@ -489,5 +558,42 @@ function getRelativeDate(dateString: string): string {
   font-weight: 700;
   min-width: 1rem;
   text-align: center;
+}
+
+.solid-food-info {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+
+
+.food-reaction {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+.food-reaction.liked {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.food-reaction.disliked {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.food-reaction.neutral {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
+}
+
+.food-reaction.allergic_reaction {
+  background: rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+  font-weight: 700;
 }
 </style>

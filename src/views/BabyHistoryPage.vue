@@ -9,6 +9,8 @@ import BabySettingsModal from '../components/BabySettingsModal.vue'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
 import NursingTimerModal from '../components/NursingTimerModal.vue'
+import SolidFoodModal from '../components/SolidFoodModal.vue'
+import SolidFoodEditModal from '../components/SolidFoodEditModal.vue'
 import settingsIcon from '../assets/icons/settings-2.svg'
 import IconButton from '../components/IconButton.vue'
 import pencilIcon from '../assets/icons/lucide_pencil.svg'
@@ -19,12 +21,13 @@ import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import poopIcon from '../assets/icons/hugeicons_poop.svg'
 import dropletsIcon from '../assets/icons/droplets.svg'
+import spoonIcon from '../assets/icons/spoon.svg'
 import sleepIcon from '../assets/icons/droplets.svg' // Placeholder
 
 // Define a unified type for all history events
 type HistoryEvent = {
   id: string;
-  event_type: 'feeding' | 'diaper' | 'sleep';
+  event_type: 'feeding' | 'diaper' | 'sleep' | 'solid';
   event_time: string;
   notes: string | null;
   // Feeding specific
@@ -36,6 +39,13 @@ type HistoryEvent = {
   start_time?: string;
   end_time?: string | null;
   topup_amount?: number;
+  // Solid food specific
+  food_name?: string;
+  food_category?: string;
+  times_tried?: number;
+  reaction?: string | null;
+  first_tried_date?: string;
+  last_tried_date?: string;
 }
 
 const store = useBabyStore()
@@ -52,13 +62,18 @@ const showEditModal = ref(false)
 const editingRecord = ref<any>(null)
 const editingType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 
+// Solid food edit modal state
+const showSolidFoodEditModal = ref(false)
+const editingSolidFood = ref<any>(null)
+
 const showSettingsModal = ref(false)
 
 // Modal state for feeding and diaper actions
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
 const showNursingModal = ref(false)
-const feedingType = ref<'breast' | 'formula' | 'solid'>('breast')
+const showSolidFoodModal = ref(false)
+const feedingType = ref<'breast' | 'formula'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
 // When the component mounts, get the baby ID from the route.
@@ -107,7 +122,20 @@ const combinedHistory = computed((): HistoryEvent[] => {
     end_time: s.end_time,
   }))
 
-  const allEvents = [...feedings, ...diapers, ...sleeps]
+  const solidFoods: HistoryEvent[] = store.getBabySolidFoods(selectedBaby.value.id).map(sf => ({
+    id: sf.id,
+    event_type: 'solid',
+    event_time: sf.last_tried_date,
+    notes: sf.notes,
+    food_name: sf.food_name,
+    food_category: sf.food_category,
+    times_tried: sf.times_tried,
+    reaction: sf.reaction,
+    first_tried_date: sf.first_tried_date,
+    last_tried_date: sf.last_tried_date,
+  }))
+
+  const allEvents = [...feedings, ...diapers, ...sleeps, ...solidFoods]
 
   return allEvents.sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime())
 })
@@ -246,6 +274,8 @@ function getIcon(item: HistoryEvent) {
       return item.diaper_type === 'pee' ? dropletsIcon : poopIcon
     case 'sleep':
       return sleepIcon
+    case 'solid':
+      return spoonIcon
     default:
       return ''
   }
@@ -285,7 +315,12 @@ function onModalSaved() {
   editingBaby.value = null
 }
 
-function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep') {
+function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep' | 'solid') {
+  if (type === 'solid') {
+    openSolidFoodEditModal(record)
+    return
+  }
+
   // Create a copy of the record to avoid modifying the original
   const recordCopy = { ...record }
 
@@ -315,6 +350,28 @@ function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep') {
   showEditModal.value = true
 }
 
+function openSolidFoodEditModal(solidFood: any) {
+  // Convert the history event back to solid food format
+  const solidFoodRecord = {
+    id: solidFood.id,
+    food_name: solidFood.food_name,
+    food_category: solidFood.food_category,
+    reaction: solidFood.reaction,
+    notes: solidFood.notes,
+    times_tried: solidFood.times_tried,
+    first_tried_date: solidFood.first_tried_date,
+    last_tried_date: solidFood.last_tried_date
+  }
+  
+  editingSolidFood.value = solidFoodRecord
+  showSolidFoodEditModal.value = true
+}
+
+function closeSolidFoodEditModal() {
+  showSolidFoodEditModal.value = false
+  editingSolidFood.value = null
+}
+
 function closeEditModal() {
   showEditModal.value = false
   editingRecord.value = null
@@ -322,9 +379,13 @@ function closeEditModal() {
   store.initializeStore()
 }
 
-function openFeedingModal(type: 'breast' | 'formula' | 'solid') {
+function openFeedingModal(type: 'breast' | 'formula') {
   feedingType.value = type
   showFeedingModal.value = true
+}
+
+function openSolidFoodModal() {
+  showSolidFoodModal.value = true
 }
 
 function openNursingModal() {
@@ -400,6 +461,31 @@ function getDiapersForTimelineDate(date: Date) {
   }).map(d => ({ id: d.id, timestamp: d.timestamp, type: d.type }));
 }
 
+function getSolidFoodsForTimelineDate(date: Date) {
+  if (!selectedBaby.value) return [];
+  const solidFoods = store.getBabySolidFoods(selectedBaby.value.id);
+
+  // Use the same logic as dailyFeedings to calculate the window
+  let dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+
+  if (use8amWindow.value) {
+    // 8 AM to 8 AM window logic - same as dailyFeedings
+    dayStart.setHours(8, 0, 0, 0);
+  } else {
+    // 12 AM to 12 AM window logic - same as dailyFeedings
+    // No adjustment needed, dayStart is already at midnight
+  }
+
+  const end = new Date(dayStart);
+  end.setDate(dayStart.getDate() + 1);
+
+  return solidFoods.filter(sf => {
+    const t = new Date(sf.last_tried_date);
+    return t >= dayStart && t < end;
+  }).map(sf => ({ id: sf.id, timestamp: sf.last_tried_date, food_name: sf.food_name, reaction: sf.reaction }));
+}
+
 // Helper functions to get windowStart and windowEnd for a given day string
 function getTimelineWindowStart(windowStart: string) {
   return windowStart
@@ -413,15 +499,18 @@ function getTimelineWindowEnd(windowEnd: string) {
 function getDayBreakdown(day: any) {
   const feedings = getFeedingsForTimelineDate(new Date(day.windowStart))
   const diapers = getDiapersForTimelineDate(new Date(day.windowStart))
+  const solidFoods = getSolidFoodsForTimelineDate(new Date(day.windowStart))
   
   const breastCount = feedings.filter(f => f.type === 'breast' || f.type === 'nursing').length
   const formulaCount = feedings.filter(f => f.type === 'formula').length
+  const solidCount = solidFoods.length
   const poopCount = diapers.filter(d => d.type === 'poop' || d.type === 'both').length
   const peeCount = diapers.filter(d => d.type === 'pee' || d.type === 'both').length
   
   const breakdown = []
   if (breastCount > 0) breakdown.push(`${breastCount} breast`)
   if (formulaCount > 0) breakdown.push(`${formulaCount} formula`)
+  if (solidCount > 0) breakdown.push(`${solidCount} solid`)
   if (poopCount > 0) breakdown.push(`${poopCount} poop`)
   if (peeCount > 0) breakdown.push(`${peeCount} pee`)
   
@@ -476,6 +565,10 @@ function getDayBreakdown(day: any) {
             <button class="action-btn formula" @click="openFeedingModal('formula')" title="Record Formula Feeding">
               <img :src="formulaIcon" alt="Formula" class="icon" />
               <span>Formula</span>
+            </button>
+            <button class="action-btn solid" @click="openSolidFoodModal()" title="Record Solid Food">
+              <img :src="spoonIcon" alt="Solid Food" class="icon" />
+              <span>Solid</span>
             </button>
             <button class="action-btn poop" @click="openDiaperModal('poop')" title="Record Poop Diaper">
               <img :src="poopIcon" alt="Poop" class="icon" />
@@ -542,7 +635,9 @@ function getDayBreakdown(day: any) {
           :title="formatDate(day.date)"
           :breakdown="getDayBreakdown(day)"
           :events="getFeedingsForTimelineDate(new Date(day.windowStart))"
-          :diaperEvents="getDiapersForTimelineDate(new Date(day.windowStart))" :hourLabelInterval="2"
+          :diaperEvents="getDiapersForTimelineDate(new Date(day.windowStart))"
+          :solidFoodEvents="getSolidFoodsForTimelineDate(new Date(day.windowStart))"
+          :hourLabelInterval="2"
           :use8amWindow="use8amWindow" :showCurrentTimeIndicator="false"
           :totalLabel="`${Math.round(day.total)}ml total`" :windowStart="getTimelineWindowStart(day.windowStart)"
           :windowEnd="getTimelineWindowEnd(day.windowEnd)" />
@@ -587,6 +682,16 @@ function getDayBreakdown(day: any) {
                 Slept for <span class="font-bold">{{ ((new Date(item.end_time).getTime() - new
                   Date(item.start_time!).getTime()) / 60000).toFixed(0) }} minutes</span>
               </span>
+              <!-- Solid Food Info -->
+              <span v-if="item.event_type === 'solid'">
+                <span class="font-bold">{{ item.food_name }}</span>
+                <span v-if="item.times_tried && item.times_tried > 1" class="times-tried">
+                  ({{ item.times_tried }}x)
+                </span>
+                <div class="solid-food-details">
+                  <span v-if="item.reaction" class="food-reaction" :class="item.reaction">{{ item.reaction }}</span>
+                </div>
+              </span>
             </div>
             <div v-if="item.notes" class="item-notes">
               {{ item.notes }}
@@ -618,6 +723,19 @@ function getDayBreakdown(day: any) {
 
     <NursingTimerModal v-if="showNursingModal && selectedBaby" :isOpen="showNursingModal" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
       @close="showNursingModal = false" @save="showNursingModal = false" />
+
+    <SolidFoodModal v-if="showSolidFoodModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
+      @close="showSolidFoodModal = false" @saved="showSolidFoodModal = false" />
+
+    <!-- Solid Food Edit Modal -->
+    <SolidFoodEditModal 
+      v-if="showSolidFoodEditModal && editingSolidFood && selectedBaby"
+      :solid-food="editingSolidFood"
+      :baby-name="selectedBaby.name"
+      @close="closeSolidFoodEditModal"
+      @saved="closeSolidFoodEditModal"
+      @deleted="closeSolidFoodEditModal"
+    />
   </div>
 </template>
 
@@ -1316,6 +1434,11 @@ function getDayBreakdown(day: any) {
   /* aquamarine */
 }
 
+.action-btn.solid {
+  background-color: #ffa500;
+  /* orange */
+}
+
 .action-btn.poop {
   background-color: saddlebrown;
   color: white;
@@ -1354,5 +1477,48 @@ function getDayBreakdown(day: any) {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+}
+
+.solid-food-details {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+
+
+.food-reaction {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+.food-reaction.liked {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.food-reaction.disliked {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.food-reaction.neutral {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
+}
+
+.food-reaction.allergic_reaction {
+  background: rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.times-tried {
+  font-size: 0.9rem;
+  color: var(--color-periwinkle);
+  margin-left: 0.25rem;
 }
 </style>

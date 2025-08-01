@@ -27,7 +27,7 @@
           :key="event.id"
           class="feeding-marker"
           :class="`feeding-marker-${event.type}`"
-          :style="{ left: `calc(${getEventPosition(event)}% - 11px)` }"
+          :style="{ left: `calc(${getEventPosition(event)}% - 8px)` }"
           :title="formatFeedingTooltip(event)"
           @click="showFeedingDetails(event)"
         ></div>
@@ -36,9 +36,17 @@
           :key="diaper.id"
           class="diaper-marker"
           :class="`diaper-marker-${diaper.type}`"
-          :style="{ left: `calc(${getEventPosition(diaper)}% - 11px)` }"
+          :style="{ left: `calc(${getEventPosition(diaper)}% - 8px)` }"
           :title="`${diaper.type.charAt(0).toUpperCase() + diaper.type.slice(1)} diaper at ${formatEventTooltip(diaper)}`"
           @click="showDiaperDetails(diaper)"
+        ></div>
+        <div
+          v-for="solidFood in solidFoodEvents"
+          :key="solidFood.id"
+          class="solid-food-marker"
+          :style="{ left: `calc(${getEventPosition(solidFood)}% - 8px)` }"
+          :title="`${solidFood.food_name} at ${formatEventTooltip(solidFood)}`"
+          @click="showSolidFoodDetails(solidFood)"
         ></div>
       </div>
     </div>
@@ -68,6 +76,7 @@ import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import poopIcon from '../assets/icons/hugeicons_poop.svg'
 import dropletsIcon from '../assets/icons/droplets.svg'
+import spoonIcon from '../assets/icons/spoon.svg'
 
 interface Event {
   id: string | number
@@ -83,10 +92,18 @@ interface DiaperEvent {
   type: 'pee' | 'poop' | 'both'
 }
 
+interface SolidFoodEvent {
+  id: string | number
+  timestamp: string
+  food_name: string
+  reaction?: string | null
+}
+
 interface Props {
   title: string
   events: Event[]
   diaperEvents?: DiaperEvent[]
+  solidFoodEvents?: SolidFoodEvent[]
   hourLabelInterval?: number
   use8amWindow?: boolean
   showCurrentTimeIndicator?: boolean
@@ -102,6 +119,7 @@ const props = withDefaults(defineProps<Props>(), {
   showCurrentTimeIndicator: false,
   totalLabel: '',
   diaperEvents: () => [],
+  solidFoodEvents: () => [],
   breakdown: ''
 })
 
@@ -263,6 +281,24 @@ function showDiaperDetails(diaper: DiaperEvent) {
   snackbar.icon = getDiaperIcon(diaper)
 }
 
+function showSolidFoodDetails(solidFood: SolidFoodEvent) {
+  const eventTime = new Date(solidFood.timestamp)
+  const timeString = eventTime.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  
+  snackbar.show = true
+  snackbar.type = 'solid'
+  snackbar.title = `Solid Food: ${solidFood.food_name}`
+  snackbar.time = timeString
+  snackbar.details = solidFood.reaction ? `Reaction: ${solidFood.reaction}` : 'No reaction recorded'
+  snackbar.icon = spoonIcon
+}
+
 function hideSnackbar() {
   snackbar.show = false
 }
@@ -274,6 +310,7 @@ function hideSnackbar() {
   --formula-color: #7fffd4;
   --pee-color: #ffd700;
   --poop-color: saddlebrown;
+  --solid-food-color: #ff6b6b;
 }
 </style>
 
@@ -358,15 +395,16 @@ function hideSnackbar() {
   height: 100%;
 }
 .feeding-marker,
-.diaper-marker {
+.diaper-marker,
+.solid-food-marker {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   z-index: 10;
   cursor: pointer;
   border-radius: 50%;
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 16px;
   border: 1px solid rgba(255,255,255,0.2);
   transition: transform 0.2s ease;
 }
@@ -388,6 +426,9 @@ function hideSnackbar() {
 }
 .diaper-marker-both {
   background: linear-gradient(90deg, var(--pee-color) 50%, var(--poop-color) 50%);
+}
+.solid-food-marker {
+  background: var(--solid-food-color);
 }
 .current-time-indicator {
   position: absolute;
@@ -495,6 +536,10 @@ function hideSnackbar() {
 
 .snackbar.diaper {
   border-left: 4px solid var(--pee-color);
+}
+
+.snackbar.solid {
+  border-left: 4px solid var(--solid-food-color);
 }
 
 @keyframes slideUp {

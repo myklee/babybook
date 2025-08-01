@@ -7,7 +7,7 @@ import BreastSelector from "./BreastSelector.vue";
 import type { BreastType } from "../types/nursing";
 
 const props = defineProps<{
-    feedingType?: "breast" | "formula" | "solid" | "nursing";
+    feedingType?: "breast" | "formula" | "nursing";
     babyId: string;
     babyName: string;
 }>();
@@ -21,7 +21,7 @@ const store = useBabyStore();
 
 // Form data
 const amount = ref(0);
-const feedingTypeRef = ref<"breast" | "formula" | "solid" | "nursing">("breast");
+const feedingTypeRef = ref<"breast" | "formula" | "nursing">("breast");
 const notes = ref("");
 const customDate = ref("");
 const time = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
@@ -46,56 +46,10 @@ const nursingEndTime = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>(
 });
 const nursingDuration = ref(20); // Default 20 minutes
 const breastUsed = ref<BreastType>("left");
-// Solid food specific data
-const selectedFood = ref("");
-const selectedFoodCategory = ref<
-    "western_traditional" | "chinese" | "japanese" | "indian" | "korean"
->("western_traditional");
-const showFoodSearch = ref(false);
 
 // UI state
 const showAdvanced = ref(false);
 
-// Food suggestions by category
-const foodSuggestions = {
-    western_traditional: [
-        "Rice cereal",
-        "Oatmeal",
-        "Pureed apple",
-        "Pureed pear",
-        "Avocado",
-        "Sweet potato",
-        "Banana",
-        "Carrots",
-    ],
-    chinese: [
-        "Rice porridge (congee)",
-        "Millet porridge",
-        "Steamed egg custard",
-        "Bone broth",
-        "Soft rice",
-    ],
-    japanese: [
-        "Rice porridge (okayu)",
-        "Mashed tofu",
-        "Fish paste",
-        "Seaweed broth",
-        "Soft vegetables",
-    ],
-    indian: [
-        "Rice water",
-        "Dal with rice",
-        "Ragi porridge",
-        "Khichdi",
-        "Mashed banana",
-    ],
-    korean: [
-        "Rice porridge (juk)",
-        "Miyeok-guk (seaweed soup)",
-        "Soft tofu",
-        "Pumpkin porridge",
-    ],
-};
 
 onMounted(() => {
     // Lock body scroll when modal opens
@@ -191,11 +145,6 @@ function selectAmountText() {
     }
 }
 
-// Handle food selection
-function selectFood(food: string) {
-    selectedFood.value = food;
-    showFoodSearch.value = false;
-}
 
 function getSelectedDateTime() {
     if (!customDate.value) return new Date();
@@ -253,20 +202,7 @@ function getNursingEndDateTime() {
 async function handleSubmit() {
     isSaving.value = true;
     try {
-        if (feedingTypeRef.value === "solid") {
-            // For solid foods, add to solid foods table
-            if (!selectedFood.value.trim()) {
-                alert("Please select or enter a food name.");
-                return;
-            }
-
-            await store.addSolidFood(
-                props.babyId,
-                selectedFood.value.trim(),
-                selectedFoodCategory.value,
-                notes.value || undefined,
-            );
-        } else if (feedingTypeRef.value === "nursing") {
+        if (feedingTypeRef.value === "nursing") {
             // Log a completed nursing session
             const startTime = getNursingStartDateTime();
             const endTime = getNursingEndDateTime();
@@ -350,7 +286,7 @@ async function handleSubmit() {
                     <TimePicker v-model="time" />
                 </div>
 
-                <div v-if="feedingTypeRef !== 'solid' && feedingTypeRef !== 'nursing'" class="form-group">
+                <div v-if="feedingTypeRef !== 'nursing'" class="form-group">
                     <label>Amount (ml)</label>
                     <div class="amount-form">
                         <input
@@ -428,58 +364,6 @@ async function handleSubmit() {
                     </div>
                 </div>
 
-                <div v-if="feedingTypeRef === 'solid'" class="form-group">
-                    <label>Food Category</label>
-                    <select v-model="selectedFoodCategory">
-                        <option value="western_traditional">
-                            Western Traditional
-                        </option>
-                        <option value="chinese">Chinese</option>
-                        <option value="japanese">Japanese</option>
-                        <option value="indian">Indian</option>
-                        <option value="korean">Korean</option>
-                    </select>
-                </div>
-
-                <div v-if="feedingTypeRef === 'solid'" class="form-group">
-                    <label>Food Name</label>
-                    <input
-                        v-model="selectedFood"
-                        type="text"
-                        placeholder="Enter food name or select from suggestions"
-                        @focus="showFoodSearch = true"
-                        required
-                    />
-                    <div v-if="showFoodSearch" class="food-suggestions">
-                        <div class="suggestions-header">
-                            <span
-                                >Common
-                                {{ selectedFoodCategory.replace("_", " ") }}
-                                foods:</span
-                            >
-                            <button
-                                type="button"
-                                @click="showFoodSearch = false"
-                                class="close-suggestions"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div class="suggestions-grid">
-                            <button
-                                v-for="food in foodSuggestions[
-                                    selectedFoodCategory
-                                ]"
-                                :key="food"
-                                type="button"
-                                @click="selectFood(food)"
-                                class="suggestion-item"
-                            >
-                                {{ food }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Advanced Options Toggle -->
                 <div class="advanced-toggle">
@@ -505,7 +389,6 @@ async function handleSubmit() {
                             <option value="breast">Breast</option>
                             <option value="nursing">Nursing</option>
                             <option value="formula">Formula</option>
-                            <option value="solid">Solid</option>
                         </select>
                     </div>
 
@@ -543,64 +426,6 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.food-suggestions {
-    position: relative;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: white;
-    margin-top: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    z-index: 10;
-}
-
-.suggestions-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #ddd;
-    border-radius: 8px 8px 0 0;
-    font-weight: 500;
-}
-
-.close-suggestions {
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 0;
-    color: #666;
-}
-
-.close-suggestions:hover {
-    color: #333;
-}
-
-.suggestions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 8px;
-    padding: 12px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.suggestion-item {
-    background: #f8f9fa;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 14px;
-    text-align: center;
-}
-
-.suggestion-item:hover {
-    background: #e9ecef;
-    border-color: #007bff;
-}
 .amount-form {
     display: flex;
     align-items: center;
