@@ -36,7 +36,7 @@ const store = useBabyStore()
 // Form data
 const selectedFood = ref<SuggestedFood | null>(null)
 const customFoodName = ref(props.solidFood.food_name)
-const selectedFoodCategory = ref<FoodCategory>(props.solidFood.food_category)
+
 const reaction = ref<'liked' | 'disliked' | 'neutral' | 'allergic_reaction' | ''>((props.solidFood.reaction as 'liked' | 'disliked' | 'neutral' | 'allergic_reaction') || '')
 const notes = ref(props.solidFood.notes || '')
 const timesTried = ref(props.solidFood.times_tried)
