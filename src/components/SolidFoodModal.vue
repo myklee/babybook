@@ -142,14 +142,7 @@ function getFoodTryCount(foodName: string): number {
   return store.getFoodTryCount(props.babyId, foodName)
 }
 
-function getSelectedDateTime() {
-  if (!customDate.value) return new Date()
-  const [year, month, day] = customDate.value.split('-').map(Number)
-  let hour = Number(time.value.hour)
-  if (time.value.ampm === 'PM' && hour < 12) hour += 12
-  if (time.value.ampm === 'AM' && hour === 12) hour = 0
-  return new Date(year, month - 1, day, hour, Number(time.value.minute), 0, 0)
-}
+
 
 async function handleSave() {
   if (!canSave.value) return

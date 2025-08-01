@@ -78,9 +78,7 @@ const finalFoodName = computed(() => {
   return searchQuery.value.trim()
 })
 
-const finalCategory = computed(() => {
-  return selectedFood.value?.category || selectedFoodCategory.value
-})
+
 
 // Lifecycle
 onMounted(() => {
