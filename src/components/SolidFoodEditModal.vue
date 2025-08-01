@@ -37,7 +37,7 @@ const store = useBabyStore()
 const selectedFood = ref<SuggestedFood | null>(null)
 const customFoodName = ref(props.solidFood.food_name)
 const selectedFoodCategory = ref<FoodCategory>(props.solidFood.food_category)
-const reaction = ref<'liked' | 'disliked' | 'neutral' | 'allergic_reaction' | ''>(props.solidFood.reaction || '')
+const reaction = ref<'liked' | 'disliked' | 'neutral' | 'allergic_reaction' | ''>((props.solidFood.reaction as 'liked' | 'disliked' | 'neutral' | 'allergic_reaction') || '')
 const notes = ref(props.solidFood.notes || '')
 const timesTried = ref(props.solidFood.times_tried)
 const customDate = ref('')
@@ -165,8 +165,6 @@ async function handleSave() {
     const timestamp = getSelectedDateTime()
     
     await store.updateSolidFood(props.solidFood.id, {
-      food_name: finalFoodName.value,
-      food_category: finalCategory.value,
       notes: notes.value || null,
       reaction: reaction.value || null,
       times_tried: timesTried.value,

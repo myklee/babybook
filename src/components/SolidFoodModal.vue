@@ -157,8 +157,6 @@ async function handleSave() {
   isSaving.value = true
   
   try {
-    const timestamp = getSelectedDateTime()
-    
     await store.addSolidFood(
       props.babyId,
       finalFoodName.value,
