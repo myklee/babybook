@@ -9,6 +9,8 @@ import BabySettingsModal from '../components/BabySettingsModal.vue'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
 import NursingTimerModal from '../components/NursingTimerModal.vue'
+import PumpingTimerModal from '../components/PumpingTimerModal.vue'
+import PumpingEditModal from '../components/PumpingEditModal.vue'
 import SolidFoodModal from '../components/SolidFoodModal.vue'
 import SolidFoodEditModal from '../components/SolidFoodEditModal.vue'
 import settingsIcon from '../assets/icons/settings-2.svg'
@@ -27,7 +29,7 @@ import sleepIcon from '../assets/icons/droplets.svg' // Placeholder
 // Define a unified type for all history events
 type HistoryEvent = {
   id: string;
-  event_type: 'feeding' | 'diaper' | 'sleep' | 'solid';
+  event_type: 'feeding' | 'diaper' | 'sleep' | 'solid' | 'pumping';
   event_time: string;
   notes: string | null;
   // Feeding specific
@@ -46,6 +48,13 @@ type HistoryEvent = {
   reaction?: string | null;
   first_tried_date?: string;
   last_tried_date?: string;
+  // Pumping specific
+  total_duration?: number;
+  total_amount?: number;
+  left_duration?: number;
+  right_duration?: number;
+  left_amount?: number | null;
+  right_amount?: number | null;
 }
 
 const store = useBabyStore()
@@ -66,12 +75,17 @@ const editingType = ref<'feeding' | 'diaper' | 'sleep'>('feeding')
 const showSolidFoodEditModal = ref(false)
 const editingSolidFood = ref<any>(null)
 
+// Pumping edit modal state
+const showPumpingEditModal = ref(false)
+const editingPumpingSession = ref<any>(null)
+
 const showSettingsModal = ref(false)
 
 // Modal state for feeding and diaper actions
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
 const showNursingModal = ref(false)
+const showPumpingModal = ref(false)
 const showSolidFoodModal = ref(false)
 const feedingType = ref<'breast' | 'formula'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
@@ -135,7 +149,22 @@ const combinedHistory = computed((): HistoryEvent[] => {
     last_tried_date: sf.last_tried_date,
   }))
 
-  const allEvents = [...feedings, ...diapers, ...sleeps, ...solidFoods]
+  const pumpingSessions: HistoryEvent[] = store.getAllPumpingSessions().map(ps => ({
+    id: ps.id,
+    event_type: 'pumping' as const,
+    event_time: ps.start_time,
+    notes: ps.notes,
+    start_time: ps.start_time,
+    end_time: ps.end_time,
+    total_duration: ps.total_duration,
+    total_amount: ps.total_amount,
+    left_duration: ps.left_duration,
+    right_duration: ps.right_duration,
+    left_amount: ps.left_amount,
+    right_amount: ps.right_amount,
+  }))
+
+  const allEvents = [...feedings, ...diapers, ...sleeps, ...solidFoods, ...pumpingSessions]
 
   return allEvents.sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime())
 })
@@ -276,6 +305,8 @@ function getIcon(item: HistoryEvent) {
       return sleepIcon
     case 'solid':
       return spoonIcon
+    case 'pumping':
+      return dropletsIcon
     default:
       return ''
   }
@@ -315,9 +346,14 @@ function onModalSaved() {
   editingBaby.value = null
 }
 
-function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep' | 'solid') {
+function openEditModal(record: any, type: 'feeding' | 'diaper' | 'sleep' | 'solid' | 'pumping') {
   if (type === 'solid') {
     openSolidFoodEditModal(record)
+    return
+  }
+
+  if (type === 'pumping') {
+    openPumpingEditModal(record)
     return
   }
 
@@ -372,6 +408,57 @@ function closeSolidFoodEditModal() {
   editingSolidFood.value = null
 }
 
+function openPumpingEditModal(pumpingSession: any) {
+  // Convert the history event back to pumping session format
+  const pumpingSessionRecord = {
+    id: pumpingSession.id,
+    baby_id: pumpingSession.baby_id || null, // Use the actual baby_id from the session
+    user_id: store.currentUser?.id,
+    start_time: pumpingSession.start_time,
+    end_time: pumpingSession.end_time,
+    left_duration: pumpingSession.left_duration || 0,
+    right_duration: pumpingSession.right_duration || 0,
+    total_duration: pumpingSession.total_duration || 0,
+    left_amount: pumpingSession.left_amount,
+    right_amount: pumpingSession.right_amount,
+    total_amount: pumpingSession.total_amount || 0,
+    notes: pumpingSession.notes,
+    created_at: pumpingSession.created_at,
+    updated_at: pumpingSession.updated_at
+  }
+  
+  editingPumpingSession.value = pumpingSessionRecord
+  showPumpingEditModal.value = true
+}
+
+function closePumpingEditModal() {
+  showPumpingEditModal.value = false
+  editingPumpingSession.value = null
+}
+
+function handleTimelinePumpingEdit(pumpingEvent: any) {
+  // Convert the timeline pumping event to a full pumping session format
+  const pumpingSessionRecord = {
+    id: pumpingEvent.id,
+    baby_id: pumpingEvent.baby_id || null, // Use the baby_id from the event, which may be null
+    user_id: store.currentUser?.id,
+    start_time: pumpingEvent.timestamp,
+    end_time: new Date(new Date(pumpingEvent.timestamp).getTime() + (pumpingEvent.total_duration * 1000)).toISOString(),
+    left_duration: pumpingEvent.left_duration || 0,
+    right_duration: pumpingEvent.right_duration || 0,
+    total_duration: pumpingEvent.total_duration || 0,
+    left_amount: pumpingEvent.left_amount,
+    right_amount: pumpingEvent.right_amount,
+    total_amount: pumpingEvent.total_amount || 0,
+    notes: pumpingEvent.notes,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+  
+  editingPumpingSession.value = pumpingSessionRecord
+  showPumpingEditModal.value = true
+}
+
 function closeEditModal() {
   showEditModal.value = false
   editingRecord.value = null
@@ -390,6 +477,15 @@ function openSolidFoodModal() {
 
 function openNursingModal() {
   showNursingModal.value = true
+}
+
+function openPumpingModal() {
+  showPumpingModal.value = true
+}
+
+function handlePumpingSave(session: any) {
+  console.log('Pumping session saved:', session)
+  showPumpingModal.value = false
 }
 
 function openDiaperModal(type: 'pee' | 'poop' | 'both') {
@@ -486,6 +582,41 @@ function getSolidFoodsForTimelineDate(date: Date) {
   }).map(sf => ({ id: sf.id, timestamp: sf.last_tried_date, food_name: sf.food_name, reaction: sf.reaction }));
 }
 
+function getPumpingSessionsForTimelineDate(date: Date) {
+  // Get all pumping sessions since they're account-level
+  const pumpingSessions = store.getAllPumpingSessions();
+
+  // Use the same logic as dailyFeedings to calculate the window
+  let dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+
+  if (use8amWindow.value) {
+    // 8 AM to 8 AM window logic - same as dailyFeedings
+    dayStart.setHours(8, 0, 0, 0);
+  } else {
+    // 12 AM to 12 AM window logic - same as dailyFeedings
+    // No adjustment needed, dayStart is already at midnight
+  }
+
+  const end = new Date(dayStart);
+  end.setDate(dayStart.getDate() + 1);
+
+  return pumpingSessions.filter(ps => {
+    const t = new Date(ps.start_time);
+    return t >= dayStart && t < end;
+  }).map(ps => ({ 
+    id: ps.id, 
+    timestamp: ps.start_time,
+    total_duration: ps.total_duration,
+    total_amount: ps.total_amount,
+    left_duration: ps.left_duration,
+    right_duration: ps.right_duration,
+    left_amount: ps.left_amount,
+    right_amount: ps.right_amount,
+    notes: ps.notes
+  }));
+}
+
 // Helper functions to get windowStart and windowEnd for a given day string
 function getTimelineWindowStart(windowStart: string) {
   return windowStart
@@ -500,10 +631,12 @@ function getDayBreakdown(day: any) {
   const feedings = getFeedingsForTimelineDate(new Date(day.windowStart))
   const diapers = getDiapersForTimelineDate(new Date(day.windowStart))
   const solidFoods = getSolidFoodsForTimelineDate(new Date(day.windowStart))
+  const pumpingSessions = getPumpingSessionsForTimelineDate(new Date(day.windowStart))
   
   const breastCount = feedings.filter(f => f.type === 'breast' || f.type === 'nursing').length
   const formulaCount = feedings.filter(f => f.type === 'formula').length
   const solidCount = solidFoods.length
+  const pumpingCount = pumpingSessions.length
   const poopCount = diapers.filter(d => d.type === 'poop' || d.type === 'both').length
   const peeCount = diapers.filter(d => d.type === 'pee' || d.type === 'both').length
   
@@ -511,6 +644,7 @@ function getDayBreakdown(day: any) {
   if (breastCount > 0) breakdown.push(`${breastCount} breast`)
   if (formulaCount > 0) breakdown.push(`${formulaCount} formula`)
   if (solidCount > 0) breakdown.push(`${solidCount} solid`)
+  if (pumpingCount > 0) breakdown.push(`${pumpingCount} pumping`)
   if (poopCount > 0) breakdown.push(`${poopCount} poop`)
   if (peeCount > 0) breakdown.push(`${peeCount} pee`)
   
@@ -561,6 +695,10 @@ function getDayBreakdown(day: any) {
             <button class="action-btn nursing" @click="openNursingModal()" title="Record Nursing">
               <img :src="breastIcon" alt="Nursing" class="icon" />
               <span>Nursing</span>
+            </button>
+            <button class="action-btn pump" @click="openPumpingModal()" title="Record Pumping">
+              <img :src="dropletsIcon" alt="Pump" class="icon" />
+              <span>Pump</span>
             </button>
             <button class="action-btn formula" @click="openFeedingModal('formula')" title="Record Formula Feeding">
               <img :src="formulaIcon" alt="Formula" class="icon" />
@@ -637,10 +775,12 @@ function getDayBreakdown(day: any) {
           :events="getFeedingsForTimelineDate(new Date(day.windowStart))"
           :diaperEvents="getDiapersForTimelineDate(new Date(day.windowStart))"
           :solidFoodEvents="getSolidFoodsForTimelineDate(new Date(day.windowStart))"
+          :pumpingEvents="getPumpingSessionsForTimelineDate(new Date(day.windowStart))"
           :hourLabelInterval="2"
           :use8amWindow="use8amWindow" :showCurrentTimeIndicator="false"
           :totalLabel="`${Math.round(day.total)}ml total`" :windowStart="getTimelineWindowStart(day.windowStart)"
-          :windowEnd="getTimelineWindowEnd(day.windowEnd)" />
+          :windowEnd="getTimelineWindowEnd(day.windowEnd)"
+          @edit-pumping="handleTimelinePumpingEdit" />
 
       </div>
 
@@ -692,6 +832,22 @@ function getDayBreakdown(day: any) {
                   <span v-if="item.reaction" class="food-reaction" :class="item.reaction">{{ item.reaction }}</span>
                 </div>
               </span>
+              <!-- Pumping Info -->
+              <span v-if="item.event_type === 'pumping'">
+                Pumping: 
+                <span class="font-bold">{{ Math.floor((item.total_duration || 0) / 60) }} min</span>
+                <span v-if="item.total_amount && item.total_amount > 0" class="pumping-amount">
+                  - <span class="font-bold">{{ item.total_amount }}ml</span>
+                </span>
+                <div v-if="(item.left_amount && item.left_amount > 0) || (item.right_amount && item.right_amount > 0)" class="pumping-breakdown">
+                  <span v-if="item.left_amount && item.left_amount > 0" class="breast-amount">
+                    L: {{ item.left_amount }}ml
+                  </span>
+                  <span v-if="item.right_amount && item.right_amount > 0" class="breast-amount">
+                    R: {{ item.right_amount }}ml
+                  </span>
+                </div>
+              </span>
             </div>
             <div v-if="item.notes" class="item-notes">
               {{ item.notes }}
@@ -724,6 +880,9 @@ function getDayBreakdown(day: any) {
     <NursingTimerModal v-if="showNursingModal && selectedBaby" :isOpen="showNursingModal" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
       @close="showNursingModal = false" @save="showNursingModal = false" />
 
+    <PumpingTimerModal :is-open="showPumpingModal" :baby-id="selectedBaby?.id || null"
+      @close="showPumpingModal = false" @save="handlePumpingSave" />
+
     <SolidFoodModal v-if="showSolidFoodModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
       @close="showSolidFoodModal = false" @saved="showSolidFoodModal = false" />
 
@@ -736,6 +895,15 @@ function getDayBreakdown(day: any) {
       @saved="closeSolidFoodEditModal"
       @deleted="closeSolidFoodEditModal"
     />
+
+    <!-- Pumping Edit Modal -->
+    <PumpingEditModal 
+      :is-open="showPumpingEditModal"
+      :session="editingPumpingSession"
+      @close="closePumpingEditModal"
+      @save="closePumpingEditModal"
+      @delete="closePumpingEditModal"
+    />
   </div>
 </template>
 
@@ -744,6 +912,26 @@ function getDayBreakdown(day: any) {
   background-color: #1a1a2e;
   min-height: 100vh;
   color: white;
+}
+
+.pumping-amount {
+  color: #8b5cf6;
+  margin-left: 0.5rem;
+}
+
+.pumping-breakdown {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.breast-amount {
+  color: var(--color-periwinkle);
+  background: rgba(139, 92, 246, 0.1);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
 }
 
 .container {
@@ -1427,6 +1615,11 @@ function getDayBreakdown(day: any) {
 .action-btn.nursing {
   background-color: #dda0dd;
   /* plum */
+}
+
+.action-btn.pump {
+  background-color: #9370db;
+  /* medium purple */
 }
 
 .action-btn.formula {

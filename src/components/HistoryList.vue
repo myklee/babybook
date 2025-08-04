@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import EditRecord from './EditRecord.vue'
 import NursingEditModal from './NursingEditModal.vue'
 import SolidFoodEditModal from './SolidFoodEditModal.vue'
+import PumpingEditModal from './PumpingEditModal.vue'
 import type { CompletedNursingSession, BreastType } from '../types/nursing'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
@@ -12,6 +13,7 @@ import formulaIcon from '../assets/icons/flask-conical.svg'
 import poopIcon from '../assets/icons/hugeicons_poop.svg'
 import dropletsIcon from '../assets/icons/droplets.svg'
 import spoonIcon from '../assets/icons/spoon.svg'
+import pumpIcon from '../assets/icons/droplets.svg'
 
 const props = defineProps<{
   babyId: string
@@ -29,6 +31,11 @@ const feedings = computed(() => {
 
 const solidFoods = computed(() => {
   return store.getBabySolidFoods(props.babyId)
+})
+
+const pumpingSessions = computed(() => {
+  // Show all pumping sessions since they're account-level
+  return store.getAllPumpingSessions()
 })
 
 // Combined feedings that includes both regular feedings and solid foods
@@ -66,7 +73,7 @@ const babyName = computed(() => {
   return baby?.name || ''
 })
 
-function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep' | 'solid') {
+function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep' | 'solid' | 'pumping') {
   if (category === 'feeding') {
     if (item.type === 'breast' || item.type === 'nursing') return breastIcon;
     if (item.type === 'formula') return formulaIcon;
@@ -78,6 +85,9 @@ function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep' | 'solid') 
   }
   if (category === 'solid') {
     return spoonIcon
+  }
+  if (category === 'pumping') {
+    return pumpIcon
   }
   return null // No icon for sleep yet
 }
@@ -94,6 +104,10 @@ const editingNursingSession = ref<CompletedNursingSession | null>(null)
 // Solid food edit modal state
 const showSolidFoodEditModal = ref(false)
 const editingSolidFood = ref<any>(null)
+
+// Pumping edit modal state
+const showPumpingEditModal = ref(false)
+const editingPumpingSession = ref<any>(null)
 
 // Computed property to ensure proper typing
 const nursingSessionForEdit = computed(() => editingNursingSession.value as CompletedNursingSession | null)
@@ -190,6 +204,16 @@ function openSolidFoodEditModal(solidFood: any) {
 function closeSolidFoodEditModal() {
   showSolidFoodEditModal.value = false
   editingSolidFood.value = null
+}
+
+function openPumpingEditModal(pumpingSession: any) {
+  editingPumpingSession.value = pumpingSession
+  showPumpingEditModal.value = true
+}
+
+function closePumpingEditModal() {
+  showPumpingEditModal.value = false
+  editingPumpingSession.value = null
 }
 
 async function handleNursingSessionSave(updatedSession: CompletedNursingSession) {
@@ -314,6 +338,60 @@ function getRelativeDate(dateString: string): string {
     </div>
 
     <div class="history-section">
+      <h3>Recent Pumping Sessions</h3>
+      <div v-if="pumpingSessions.length === 0" class="empty-state">
+        No pumping sessions recorded yet
+      </div>
+      <ul v-else class="history-list">
+        <li v-for="session in pumpingSessions.slice(0, 8)" :key="session.id" class="history-item pumping-item"
+          @click="openPumpingEditModal(session)">
+          <div class="time">
+            <span v-if="session.start_time && session.end_time && isSameDay(session.start_time, session.end_time)">
+              {{ getRelativeDate(session.start_time) }}, {{ format(new Date(session.start_time), 'h:mm a') }} - {{ format(new Date(session.end_time), 'h:mm a') }}
+            </span>
+            <span v-else>
+              {{ formatDateTime(session.start_time) }}
+              <span v-if="session.end_time"> - {{ formatDateTime(session.end_time) }}</span>
+            </span>
+          </div>
+          <div class="details">
+            <img :src="getIcon(session, 'pumping') || ''" class="item-icon" alt="Pumping" />
+            
+            <!-- Duration display -->
+            <span v-if="session.left_duration || session.right_duration" class="pumping-durations">
+              <span v-if="session.left_duration && session.right_duration" class="dual-breast">
+                L: {{ Math.floor(session.left_duration / 60) }}m {{ session.left_duration % 60 }}s
+                R: {{ Math.floor(session.right_duration / 60) }}m {{ session.right_duration % 60 }}s
+              </span>
+              <span v-else-if="session.left_duration" class="single-breast">
+                <span class="breast-indicator">L</span> {{ Math.floor(session.left_duration / 60) }}m {{ session.left_duration % 60 }}s
+              </span>
+              <span v-else-if="session.right_duration" class="single-breast">
+                <span class="breast-indicator">R</span> {{ Math.floor(session.right_duration / 60) }}m {{ session.right_duration % 60 }}s
+              </span>
+            </span>
+            <span v-else class="amount">{{ Math.floor(session.total_duration / 60) }} min</span>
+            
+            <!-- Amount display -->
+            <span v-if="session.total_amount > 0" class="pumping-amount">{{ session.total_amount }}ml</span>
+          </div>
+          
+          <!-- Amount breakdown -->
+          <div v-if="(session.left_amount && session.left_amount > 0) || (session.right_amount && session.right_amount > 0)" class="pumping-amounts">
+            <span v-if="session.left_amount && session.left_amount > 0" class="breast-amount">
+              <span class="breast-indicator">L</span> {{ session.left_amount }}ml
+            </span>
+            <span v-if="session.right_amount && session.right_amount > 0" class="breast-amount">
+              <span class="breast-indicator">R</span> {{ session.right_amount }}ml
+            </span>
+          </div>
+          
+          <div v-if="session.notes" class="notes">{{ session.notes }}</div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="history-section">
       <h3>Recent Diaper Changes</h3>
       <div v-if="diaperChanges.length === 0" class="empty-state">
         No diaper changes recorded yet
@@ -388,6 +466,15 @@ function getRelativeDate(dateString: string): string {
       @close="closeSolidFoodEditModal"
       @saved="closeSolidFoodEditModal"
       @deleted="closeSolidFoodEditModal"
+    />
+
+    <!-- Pumping Edit Modal -->
+    <PumpingEditModal 
+      :is-open="showPumpingEditModal"
+      :session="editingPumpingSession"
+      @close="closePumpingEditModal"
+      @save="closePumpingEditModal"
+      @delete="closePumpingEditModal"
     />
   </div>
 </template>
@@ -595,5 +682,39 @@ function getRelativeDate(dateString: string): string {
   background: rgba(239, 68, 68, 0.3);
   color: #dc2626;
   font-weight: 700;
+}
+
+.pumping-item {
+  border-left: 3px solid #8b5cf6;
+}
+
+.pumping-durations {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.pumping-amount {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #8b5cf6;
+  margin-left: 0.5rem;
+}
+
+.pumping-amounts {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.breast-amount {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--color-periwinkle);
 }
 </style>

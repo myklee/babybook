@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import BreastTimer from './BreastTimer.vue'
 import type { BreastTimerState } from '../types/nursing'
-import { computeBreastUsed } from '../types/nursing'
+
 import { useHapticFeedback } from '../composables/useHapticFeedback'
 import { useBabyStore } from '../stores/babyStore'
 
@@ -12,6 +12,7 @@ interface Props {
   hasActiveSession?: boolean
   sessionStartTime?: Date | null
   sessionNotes?: string
+  sessionType?: 'nursing' | 'pumping' // Type of session for context-aware messaging
 }
 
 interface Emits {
@@ -59,23 +60,8 @@ const rightTimerState = ref<BreastTimerState>({
 })
 
 // Computed properties
-const totalDuration = computed(() => leftDuration.value + rightDuration.value)
-
-const breastUsed = computed(() => {
-  if (leftDuration.value === 0 && rightDuration.value === 0) {
-    return null
-  }
-  return computeBreastUsed(leftDuration.value, rightDuration.value)
-})
 
 
-
-
-const formattedTotalDuration = computed(() => {
-  const minutes = Math.floor(totalDuration.value / 60)
-  const seconds = totalDuration.value % 60
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-})
 
 // Event handlers
 function handleLeftDurationChange(duration: number) {
@@ -177,7 +163,8 @@ function calculateActualStartTime(): Date {
 function handleCancel() {
   // Show simple confirmation if there's any timer activity or notes
   if (hasStartedAnyTimer.value || notes.value.trim()) {
-    const shouldCancel = confirm('Cancel this nursing session?')
+    const sessionTypeText = props.sessionType === 'pumping' ? 'pumping session' : 'nursing session'
+    const shouldCancel = confirm(`Cancel this ${sessionTypeText}?`)
     
     if (shouldCancel) {
       // User chose "OK" (Cancel) - reset timers and close
@@ -185,7 +172,7 @@ function handleCancel() {
       haptic.lightTap()
       emit('cancel')
     }
-    // If user chose "Cancel" (Continue nursing session), do nothing - timers keep running
+    // If user chose "Cancel" (Continue session), do nothing - timers keep running
     return
   }
   
@@ -320,14 +307,6 @@ defineExpose({
 
 <template>
   <div class="dual-breast-timer">
-    <!-- Duration Display -->
-    <div v-if="totalDuration > 0" class="duration-display">
-      <span class="duration-time">{{ formattedTotalDuration }}</span>
-      <span v-if="breastUsed" class="breast-used">
-        {{ breastUsed === 'both' ? 'Both Breasts' : breastUsed === 'left' ? 'Left Breast' : 'Right Breast' }}
-      </span>
-    </div>
-
     <!-- Timer Controls -->
     <div class="timer-controls">
       <div class="breast-timers">
@@ -341,11 +320,7 @@ defineExpose({
           />
         </div>
         
-        <div class="timer-separator">
-          <div class="separator-line"></div>
-          <div class="separator-text">and</div>
-          <div class="separator-line"></div>
-        </div>
+
         
         <div class="timer-container">
           <BreastTimer
@@ -416,28 +391,6 @@ defineExpose({
   padding: 0;
 }
 
-/* Duration Display */
-.duration-display {
-  text-align: center;
-  padding: 1rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.duration-time {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--color-periwinkle);
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  display: block;
-}
-
-.breast-used {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 0.25rem;
-  display: block;
-}
-
 /* Timer Controls */
 .timer-controls {
   padding: 0 1rem;
@@ -455,28 +408,7 @@ defineExpose({
   max-width: 150px;
 }
 
-.timer-separator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  flex-shrink: 0;
-  opacity: 0.6;
-}
 
-.separator-line {
-  width: 1px;
-  height: 1.5rem;
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.separator-text {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
 
 /* Advanced Toggle */
 .advanced-toggle {

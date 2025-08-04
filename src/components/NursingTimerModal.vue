@@ -310,6 +310,7 @@ watch(() => props.isOpen, (newValue, oldValue) => {
             :has-active-session="hasActiveSession"
             :session-start-time="sessionStartTime"
             :session-notes="sessionNotes"
+            :session-type="'nursing'"
             @save="handleSave"
             @cancel="handleCancel"
           />

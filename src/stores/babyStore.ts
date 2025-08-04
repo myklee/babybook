@@ -12,6 +12,12 @@ import type {
   NursingAnalytics,
   DateRange
 } from "../types/nursing";
+import type {
+  PumpingSession,
+  UpdatePumpingSessionData,
+  PumpingEvent
+} from "../types/pumping";
+import { validatePumpingSession } from "../types/pumping";
 import { 
   validateDualTimerNursingSession,
   computeBreastUsed
@@ -38,6 +44,7 @@ export const useBabyStore = defineStore("baby", () => {
   const sleepSessions = ref<SleepSession[]>([]);
   const babySettings = ref<BabySettings[]>([]);
   const solidFoods = ref<SolidFood[]>([]);
+  const pumpingSessions = ref<PumpingSession[]>([]);
   const isLoading = ref(false);
   const currentUser = ref<any>(null);
   const isDataLoading = ref(false); // Guard to prevent multiple simultaneous loads
@@ -104,6 +111,7 @@ export const useBabyStore = defineStore("baby", () => {
         diaperChanges.value = [];
         sleepSessions.value = [];
         solidFoods.value = [];
+        pumpingSessions.value = [];
         
         // Clear active sessions if no user
         sessionPersistence.clearAllData();
@@ -122,6 +130,7 @@ export const useBabyStore = defineStore("baby", () => {
         diaperChanges.value = [];
         sleepSessions.value = [];
         solidFoods.value = [];
+        pumpingSessions.value = [];
         sessionPersistence.clearAllData();
         return;
       }
@@ -195,6 +204,7 @@ export const useBabyStore = defineStore("baby", () => {
             diaperChanges.value = [];
             sleepSessions.value = [];
             solidFoods.value = [];
+            pumpingSessions.value = [];
             // Clear active sessions on sign out
             sessionPersistence.clearAllData();
           }
@@ -436,6 +446,46 @@ export const useBabyStore = defineStore("baby", () => {
         solidFoods.value = [];
       }
 
+      // Load pumping sessions (non-blocking)
+      console.log("Loading pumping sessions...");
+      try {
+        const pumpingPromise = supabase
+          .from("pumping_sessions")
+          .select("*")
+          .eq("user_id", currentUser.value.id)
+          .order("start_time", { ascending: false });
+
+        const pumpingResult = (await Promise.race([
+          pumpingPromise,
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Pumping sessions loading timeout")),
+              10000,
+            ),
+          ),
+        ])) as any;
+
+        if (pumpingResult.error) {
+          console.error("Error loading pumping sessions:", pumpingResult.error);
+          if (
+            pumpingResult.error.message.includes(
+              'relation "pumping_sessions" does not exist',
+            )
+          ) {
+            console.log("Pumping sessions table does not exist, skipping...");
+            pumpingSessions.value = [];
+          } else {
+            throw pumpingResult.error;
+          }
+        } else {
+          pumpingSessions.value = pumpingResult.data || [];
+          console.log("Loaded pumping sessions:", pumpingSessions.value.length);
+        }
+      } catch (pumpingTableError) {
+        console.error("Pumping sessions table error:", pumpingTableError);
+        pumpingSessions.value = [];
+      }
+
       console.log("Data loading complete");
     } catch (error: any) {
       if (error?.message?.includes('timeout')) {
@@ -460,6 +510,7 @@ export const useBabyStore = defineStore("baby", () => {
             diaperChanges.value = [];
             sleepSessions.value = [];
             solidFoods.value = [];
+            pumpingSessions.value = [];
             babySettings.value = [];
           } else if (data.session) {
             console.log("Session refreshed successfully");
@@ -654,6 +705,9 @@ export const useBabyStore = defineStore("baby", () => {
 
       // Delete all solid foods for this baby
       await supabase.from("solid_foods").delete().eq("baby_id", id);
+
+      // Delete all pumping sessions for this baby
+      await supabase.from("pumping_sessions").delete().eq("baby_id", id);
 
       // Delete the baby image if it exists
       const baby = babies.value.find((b) => b.id === id);
@@ -1848,6 +1902,7 @@ export const useBabyStore = defineStore("baby", () => {
       diaperChanges.value = [];
       sleepSessions.value = [];
       solidFoods.value = [];
+      pumpingSessions.value = [];
       babySettings.value = [];
       stopPolling();
       return;
@@ -1871,6 +1926,7 @@ export const useBabyStore = defineStore("baby", () => {
       diaperChanges.value = [];
       sleepSessions.value = [];
       solidFoods.value = [];
+      pumpingSessions.value = [];
       babySettings.value = [];
       stopPolling();
 
@@ -2221,6 +2277,205 @@ export const useBabyStore = defineStore("baby", () => {
     return food ? food.times_tried : 0;
   }
 
+  // ===== PUMPING SESSION METHODS =====
+
+  // Add a new pumping session
+  async function addPumpingSession(
+    leftDuration: number,
+    rightDuration: number,
+    leftAmount: number | null = null,
+    rightAmount: number | null = null,
+    notes?: string,
+    startTime?: Date,
+    babyId?: string | null
+  ): Promise<PumpingSession> {
+    try {
+      await ensureValidSession();
+
+      // Validate pumping session data
+      const validation = validatePumpingSession(leftDuration, rightDuration, leftAmount, rightAmount, startTime);
+      if (!validation.is_valid) {
+        throw new Error(validation.errors.map(e => e.message).join(', '));
+      }
+
+      // Calculate timing
+      const totalDuration = leftDuration + rightDuration;
+      const endTime = new Date();
+      const sessionStartTime = startTime || new Date(endTime.getTime() - (totalDuration * 1000));
+      const totalAmount = (leftAmount || 0) + (rightAmount || 0);
+
+      const sessionData = {
+        baby_id: babyId || null, // Optional baby association
+        user_id: currentUser.value!.id,
+        start_time: sessionStartTime.toISOString(),
+        end_time: endTime.toISOString(),
+        left_duration: leftDuration,
+        right_duration: rightDuration,
+        total_duration: totalDuration,
+        left_amount: leftAmount,
+        right_amount: rightAmount,
+        total_amount: totalAmount,
+        notes: notes || null,
+      };
+
+      const { data, error } = await supabase
+        .from("pumping_sessions")
+        .insert(sessionData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error adding pumping session:", error);
+        throw error;
+      }
+
+      pumpingSessions.value.unshift(data);
+      return data as PumpingSession;
+    } catch (error) {
+      console.error("Error in addPumpingSession:", error);
+      throw error;
+    }
+  }
+
+  // Get all pumping sessions for the user (account-level)
+  function getAllPumpingSessions(): PumpingSession[] {
+    return pumpingSessions.value
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+  }
+
+  // Get pumping sessions for a baby (for backward compatibility and filtering)
+  function getBabyPumpingSessions(babyId: string): PumpingSession[] {
+    return pumpingSessions.value
+      .filter((p) => p.baby_id === babyId)
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+  }
+
+  // Get pumping sessions not associated with any baby
+  function getUnassignedPumpingSessions(): PumpingSession[] {
+    return pumpingSessions.value
+      .filter((p) => p.baby_id === null)
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+  }
+
+  // Update an existing pumping session
+  async function updatePumpingSession(
+    id: string,
+    updates: UpdatePumpingSessionData
+  ): Promise<PumpingSession> {
+    try {
+      await ensureValidSession();
+
+      // If durations are being updated, validate them
+      if (updates.left_duration !== undefined || updates.right_duration !== undefined) {
+        const currentSession = pumpingSessions.value.find(p => p.id === id);
+        if (!currentSession) {
+          throw new Error("Pumping session not found");
+        }
+
+        const leftDuration = updates.left_duration ?? currentSession.left_duration;
+        const rightDuration = updates.right_duration ?? currentSession.right_duration;
+        const leftAmount = updates.left_amount !== undefined ? updates.left_amount : currentSession.left_amount;
+        const rightAmount = updates.right_amount !== undefined ? updates.right_amount : currentSession.right_amount;
+
+        const validation = validatePumpingSession(leftDuration, rightDuration, leftAmount, rightAmount);
+        if (!validation.is_valid) {
+          throw new Error(validation.errors.map(e => e.message).join(', '));
+        }
+
+        // Recalculate totals if durations or amounts changed
+        if (updates.left_duration !== undefined || updates.right_duration !== undefined) {
+          updates.total_duration = leftDuration + rightDuration;
+        }
+        if (updates.left_amount !== undefined || updates.right_amount !== undefined) {
+          updates.total_amount = (leftAmount || 0) + (rightAmount || 0);
+        }
+      }
+
+      const { data, error } = await supabase
+        .from("pumping_sessions")
+        .update(updates)
+        .eq("id", id)
+        .eq("user_id", currentUser.value!.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating pumping session:", error);
+        throw error;
+      }
+
+      // Update local state
+      const index = pumpingSessions.value.findIndex((p) => p.id === id);
+      if (index !== -1) {
+        pumpingSessions.value[index] = data;
+      }
+
+      return data as PumpingSession;
+    } catch (error) {
+      console.error("Error in updatePumpingSession:", error);
+      throw error;
+    }
+  }
+
+  // Delete a pumping session
+  async function deletePumpingSession(id: string): Promise<boolean> {
+    try {
+      await ensureValidSession();
+
+      const { error } = await supabase
+        .from("pumping_sessions")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", currentUser.value!.id);
+
+      if (error) {
+        console.error("Error deleting pumping session:", error);
+        throw error;
+      }
+
+      // Remove from local state
+      const index = pumpingSessions.value.findIndex((p) => p.id === id);
+      if (index !== -1) {
+        pumpingSessions.value.splice(index, 1);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in deletePumpingSession:", error);
+      throw error;
+    }
+  }
+
+  // Get pumping sessions for a specific date (for timeline)
+  function getPumpingSessionsForDate(babyId: string, date: Date): PumpingEvent[] {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return pumpingSessions.value
+      .filter((session) => {
+        if (session.baby_id !== babyId) return false;
+        const sessionDate = new Date(session.start_time);
+        return sessionDate >= startOfDay && sessionDate <= endOfDay;
+      })
+      .map((session) => ({
+        id: session.id,
+        baby_id: session.baby_id,
+        start_time: session.start_time,
+        end_time: session.end_time,
+        total_duration: session.total_duration,
+        total_amount: session.total_amount,
+        left_duration: session.left_duration,
+        right_duration: session.right_duration,
+        left_amount: session.left_amount,
+        right_amount: session.right_amount,
+        notes: session.notes,
+        type: "pumping" as const,
+      }))
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+  }
+
   // Start polling when the store is initialized and user is signed in
   onMounted(() => {
     if (currentUser.value) startPolling();
@@ -2251,6 +2506,7 @@ export const useBabyStore = defineStore("baby", () => {
     sleepSessions,
     babySettings,
     solidFoods,
+    pumpingSessions,
     isLoading,
     currentUser,
 
@@ -2309,6 +2565,15 @@ export const useBabyStore = defineStore("baby", () => {
     getSolidFoodsByCategory,
     hasFoodBeenTried,
     getFoodTryCount,
+
+    // Pumping Sessions
+    addPumpingSession,
+    getAllPumpingSessions,
+    getBabyPumpingSessions,
+    getUnassignedPumpingSessions,
+    updatePumpingSession,
+    deletePumpingSession,
+    getPumpingSessionsForDate,
 
     // Auth
     signIn,

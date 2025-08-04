@@ -254,6 +254,56 @@ export interface Database {
           updated_at?: string;
         };
       };
+      pumping_sessions: {
+        Row: {
+          id: string;
+          baby_id: string;
+          user_id: string;
+          start_time: string;
+          end_time: string;
+          left_duration: number;
+          right_duration: number;
+          total_duration: number;
+          left_amount: number | null;
+          right_amount: number | null;
+          total_amount: number;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          baby_id: string;
+          user_id: string;
+          start_time: string;
+          end_time: string;
+          left_duration?: number;
+          right_duration?: number;
+          total_duration?: number;
+          left_amount?: number | null;
+          right_amount?: number | null;
+          total_amount?: number;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          baby_id?: string;
+          user_id?: string;
+          start_time?: string;
+          end_time?: string;
+          left_duration?: number;
+          right_duration?: number;
+          total_duration?: number;
+          left_amount?: number | null;
+          right_amount?: number | null;
+          total_amount?: number;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 }

@@ -48,6 +48,14 @@
           :title="`${solidFood.food_name} at ${formatEventTooltip(solidFood)}`"
           @click="showSolidFoodDetails(solidFood)"
         ></div>
+        <div
+          v-for="pumping in pumpingEvents"
+          :key="pumping.id"
+          class="pumping-marker"
+          :style="{ left: `calc(${getEventPosition(pumping)}% - 8px)` }"
+          :title="formatPumpingTooltip(pumping)"
+          @click="showPumpingDetails(pumping)"
+        ></div>
       </div>
     </div>
     
@@ -99,11 +107,24 @@ interface SolidFoodEvent {
   reaction?: string | null
 }
 
+interface PumpingEvent {
+  id: string | number
+  timestamp: string
+  total_duration: number
+  total_amount: number
+  left_duration: number
+  right_duration: number
+  left_amount: number | null
+  right_amount: number | null
+  notes: string | null
+}
+
 interface Props {
   title: string
   events: Event[]
   diaperEvents?: DiaperEvent[]
   solidFoodEvents?: SolidFoodEvent[]
+  pumpingEvents?: PumpingEvent[]
   hourLabelInterval?: number
   use8amWindow?: boolean
   showCurrentTimeIndicator?: boolean
@@ -113,6 +134,10 @@ interface Props {
   breakdown?: string
 }
 
+interface Emits {
+  (e: 'edit-pumping', pumpingSession: PumpingEvent): void
+}
+
 const props = withDefaults(defineProps<Props>(), {
   hourLabelInterval: 2,
   use8amWindow: false,
@@ -120,8 +145,11 @@ const props = withDefaults(defineProps<Props>(), {
   totalLabel: '',
   diaperEvents: () => [],
   solidFoodEvents: () => [],
+  pumpingEvents: () => [],
   breakdown: ''
 })
+
+const emit = defineEmits<Emits>()
 
 function getTimelineWindow() {
   if (props.windowStart && props.windowEnd) {
@@ -195,6 +223,19 @@ function formatFeedingTooltip(event: Event) {
   const typeString = event.type ? event.type.charAt(0).toUpperCase() + event.type.slice(1) : 'Unknown'
   
   return `${typeString} feeding: ${amountString} at ${timeString}`
+}
+
+function formatPumpingTooltip(pumping: PumpingEvent) {
+  const date = new Date(pumping.timestamp)
+  const timeString = date.toLocaleString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  
+  const durationMinutes = Math.round(pumping.total_duration / 60)
+  const amountString = pumping.total_amount > 0 ? `${pumping.total_amount}ml` : 'No amount'
+  
+  return `Pumping: ${durationMinutes}min, ${amountString} at ${timeString}`
 }
 
 function getHourForIndex(i: number) {
@@ -299,6 +340,11 @@ function showSolidFoodDetails(solidFood: SolidFoodEvent) {
   snackbar.icon = spoonIcon
 }
 
+function showPumpingDetails(pumping: PumpingEvent) {
+  // Emit edit event for pumping session
+  emit('edit-pumping', pumping)
+}
+
 function hideSnackbar() {
   snackbar.show = false
 }
@@ -311,6 +357,7 @@ function hideSnackbar() {
   --pee-color: #ffd700;
   --poop-color: saddlebrown;
   --solid-food-color: #ff6b6b;
+  --pumping-color: #9370db;
 }
 </style>
 
@@ -396,7 +443,8 @@ function hideSnackbar() {
 }
 .feeding-marker,
 .diaper-marker,
-.solid-food-marker {
+.solid-food-marker,
+.pumping-marker {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -429,6 +477,10 @@ function hideSnackbar() {
 }
 .solid-food-marker {
   background: var(--solid-food-color);
+}
+.pumping-marker {
+  background: var(--pumping-color);
+  border: 2px solid #dda0dd;
 }
 .current-time-indicator {
   position: absolute;
@@ -540,6 +592,10 @@ function hideSnackbar() {
 
 .snackbar.solid {
   border-left: 4px solid var(--solid-food-color);
+}
+
+.snackbar.pumping {
+  border-left: 4px solid var(--pumping-color);
 }
 
 @keyframes slideUp {

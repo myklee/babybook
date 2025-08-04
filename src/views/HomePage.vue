@@ -9,6 +9,7 @@ import HistoryList from '../components/HistoryList.vue'
 import IconButton from '../components/IconButton.vue'
 import SleepingAnimation from '../components/SleepingAnimation.vue'
 import NursingTimerModal from '../components/NursingTimerModal.vue'
+import PumpingTimerModal from '../components/PumpingTimerModal.vue'
 import PersistentNursingIndicator from '../components/PersistentNursingIndicator.vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
@@ -26,6 +27,7 @@ const selectedBaby = ref<any>(null)
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
 const showNursingTimerModal = ref(false)
+const showPumpingTimerModal = ref(false)
 const showSolidFoodModal = ref(false)
 const feedingType = ref<'breast' | 'formula'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
@@ -91,6 +93,23 @@ function openNursingTimerModal() {
 // Close nursing timer modal
 function closeNursingTimerModal() {
   showNursingTimerModal.value = false
+}
+
+// Open pumping timer modal
+function openPumpingTimerModal() {
+  // No baby selection required for pumping - it's account-level
+  showPumpingTimerModal.value = true
+}
+
+// Close pumping timer modal
+function closePumpingTimerModal() {
+  showPumpingTimerModal.value = false
+}
+
+// Handle pumping session save
+function handlePumpingSave(session: any) {
+  console.log('Pumping session saved:', session)
+  closePumpingTimerModal()
 }
 
 // Handle nursing session save (with automatic time handling)
@@ -378,6 +397,10 @@ function handleSleepClick() {
           <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Nursing" />
           <span>Nursing</span>
         </button>
+        <button class="action-btn pump" @click="openPumpingTimerModal()">
+          <img src="../assets/icons/droplets.svg" class="icon" alt="Pump" />
+          <span>Pump</span>
+        </button>
         <button class="action-btn formula" @click="openFeedingModal('formula')">
           <img src="../assets/icons/flask-conical.svg" class="icon" alt="Formula" />
           <span>Formula</span>
@@ -421,6 +444,14 @@ function handleSleepClick() {
       @close="closeNursingTimerModal"
       @save="handleNursingSave"
     />
+
+    <PumpingTimerModal 
+      :is-open="showPumpingTimerModal" 
+      :baby-id="selectedBaby?.id || null"
+      @close="closePumpingTimerModal"
+      @save="handlePumpingSave"
+    />
+
     <SolidFoodModal v-if="showSolidFoodModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
       @close="showSolidFoodModal = false" @saved="showSolidFoodModal = false" />
   </div>
@@ -609,6 +640,11 @@ function handleSleepClick() {
 .action-btn.nursing {
   background-color: #dda0dd;
   /* plum */
+}
+
+.action-btn.pump {
+  background-color: #9370db;
+  /* medium purple */
 }
 
 .action-btn.formula {
