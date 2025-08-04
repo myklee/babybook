@@ -9,7 +9,8 @@ import {
   getDisplayValue, 
   getStorageValue, 
   getInputStep, 
-  getUnitLabel
+  getUnitLabel,
+  formatAmount
 } from '../lib/measurements'
 
 interface Props {
@@ -915,7 +916,7 @@ onMounted(() => {
                 <strong>Duration:</strong> {{ durationDisplay }}
               </p>
               <p class="session-detail">
-                <strong>Total Amount:</strong> {{ formatAmount(editSession.total_amount, store.measurementUnit) }}
+                <strong>Total Amount:</strong> {{ formatAmount(editSession.total_amount, babyStore.measurementUnit) }}
               </p>
             </div>
           </div>
