@@ -18,7 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Router**: Vue Router with hash history for GitHub Pages compatibility
 - **Backend**: Supabase (PostgreSQL database + authentication + storage)
 - **Mobile**: Capacitor for iOS/Android builds
-- **Styling**: CSS (no framework like Tailwind or Bootstrap)
+- **Styling**: Tailwind CSS + custom CSS
+- **Utilities**: @vueuse/core, date-fns for date handling
 
 ### Key Application Structure
 
@@ -26,10 +27,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is the central state management that handles:
 - User authentication (sign in/up/out)
 - Baby management (add/update/delete babies)
-- Activity tracking (feedings, diaper changes, sleep sessions)
+- Activity tracking (feedings, diaper changes, sleep sessions, nursing, pumping)
 - **Solid food tracking** (food introduction, try counts, cultural suggestions) ✅ COMPLETED
+- **Pumping session tracking** (dual-breast timing, amount tracking, account-level sessions) ✅ COMPLETED
 - Data synchronization with Supabase
 - Real-time polling for data updates (15-second intervals)
+- Background timer persistence for nursing and pumping sessions
 
 #### Main Views
 - **HomePage**: Main dashboard with baby selection and quick actions
@@ -44,6 +47,7 @@ This is the central state management that handles:
 - **sleep_sessions**: Sleep tracking with start/end times
 - **baby_settings**: Per-baby configuration (feeding intervals, default amounts)
 - **solid_foods**: Solid food introduction tracking with cultural categories and try counts ✅ COMPLETED
+- **pumping_sessions**: Account-level pumping sessions with dual-breast timing and amounts ✅ COMPLETED
 
 #### Authentication Flow
 - Uses Supabase Auth with email/password
@@ -77,6 +81,8 @@ For GitHub Pages deployment, use `.env.github` file that gets copied during buil
 - Pinia composables for reactive state management
 - Date handling with date-fns library
 - File uploads for baby images through Supabase Storage
+- Background timer composables for persistent timing sessions
+- No linting/testing configured - relies on TypeScript checking
 
 #### Solid Food Tracking System ✅ COMPLETED
 **Database Structure (solid_foods table):**
@@ -106,4 +112,36 @@ For GitHub Pages deployment, use `.env.github` file that gets copied during buil
 - Database migration for solid_foods table ✅ COMPLETED
 - Integration with FeedingsPage tabbed interface ✅ COMPLETED
 
+#### Pumping Session System ✅ COMPLETED
+**Database Structure (pumping_sessions table):**
+- Timing: start_time, end_time, left_duration, right_duration, total_duration (auto-calculated)
+- Amounts: left_amount, right_amount, total_amount (auto-calculated)
+- Metadata: user_id, baby_id (nullable - account-level sessions), notes
+- Constraints: At least one breast must have duration > 0, amounts non-negative, end_time > start_time
+
+**Key Features:**
+- Account-level sessions (not tied to specific baby) for maximum flexibility
+- Dual-breast timer with independent left/right tracking
+- Background timer persistence across app navigation/closure
+- Amount tracking optional but encouraged via validation warnings
+- Comprehensive validation with helpful error messages and warnings
+- Auto-calculation of totals via database triggers
+
+**Components:**
+- `PumpingTimerModal.vue` - Main timer interface with dual-breast controls ✅ COMPLETED
+- `PumpingEditModal.vue` - Edit existing pumping sessions ✅ COMPLETED
+- Background timer composables for persistent timing ✅ COMPLETED
+- Store methods: `addPumpingSession()`, `updatePumpingSession()`, `getPumpingSessions()` ✅ COMPLETED
+- Database migration with triggers and constraints ✅ COMPLETED
+- Integration with timeline and activity tracking ✅ COMPLETED
+
 ### Design Notes
+
+## Important Instructions
+- ALWAYS prefer editing existing files over creating new ones
+- NEVER create files unless absolutely necessary for the goal
+- NEVER proactively create documentation files (*.md) or README files unless explicitly requested
+- Follow existing code patterns and conventions found in the codebase
+- Check for existing libraries/frameworks before assuming availability
+- Use TypeScript strictly - all code must pass vue-tsc type checking
+- Run `npm run build` to verify changes before considering tasks complete

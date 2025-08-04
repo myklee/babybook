@@ -696,8 +696,12 @@ function getDayBreakdown(day: any) {
               <img :src="breastIcon" alt="Nursing" class="icon" />
               <span>Nursing</span>
             </button>
-            <button class="action-btn pump" @click="openPumpingModal()" title="Record Pumping">
-              <img :src="dropletsIcon" alt="Pump" class="icon" />
+            <button 
+              class="action-btn pump" 
+              @click="openPumpingModal()" 
+              aria-label="Start pumping timer to track breast milk pumping session"
+            >
+              <img :src="dropletsIcon" alt="" aria-hidden="true" class="icon" />
               <span>Pump</span>
             </button>
             <button class="action-btn formula" @click="openFeedingModal('formula')" title="Record Formula Feeding">

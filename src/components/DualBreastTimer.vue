@@ -340,23 +340,33 @@ defineExpose({
         type="button"
         @click="showAdvanced = !showAdvanced"
         class="toggle-btn"
+        :aria-expanded="showAdvanced"
+        aria-controls="advanced-options"
+        :aria-label="`${showAdvanced ? 'Hide' : 'Show'} additional options for notes`"
       >
         <span>{{ showAdvanced ? "Hide" : "More" }} Options</span>
-        <span class="arrow" :class="{ rotated: showAdvanced }">▼</span>
+        <span class="arrow" :class="{ rotated: showAdvanced }" aria-hidden="true">▼</span>
       </button>
     </div>
 
     <!-- Advanced Options -->
-    <div v-if="showAdvanced" class="advanced-options">
+    <div v-if="showAdvanced" id="advanced-options" class="advanced-options">
       <div class="form-group">
-        <label>Notes</label>
+        <label for="dual-timer-notes">Notes</label>
         <textarea
+          id="dual-timer-notes"
           v-model="notes"
           rows="2"
           placeholder="Optional notes..."
           maxlength="500"
+          aria-describedby="dual-timer-notes-help dual-timer-notes-counter"
         ></textarea>
-        <div class="notes-counter">{{ notes.length }}/500</div>
+        <div id="dual-timer-notes-help" class="sr-only">
+          Add any additional notes about this session
+        </div>
+        <div id="dual-timer-notes-counter" class="notes-counter" aria-live="polite">
+          {{ notes.length }} of 500 characters used
+        </div>
       </div>
     </div>
 
@@ -367,6 +377,7 @@ defineExpose({
         class="btn btn-save"
         @click="handleSave"
         :disabled="isSaving"
+        :aria-label="isSaving ? 'Saving session...' : 'Save session'"
       >
         {{ isSaving ? 'Saving...' : 'Save' }}
       </button>
@@ -375,6 +386,7 @@ defineExpose({
         class="btn btn-cancel"
         @click="handleCancel"
         :disabled="isSaving"
+        aria-label="Cancel and close without saving"
       >
         Cancel
       </button>
@@ -383,6 +395,19 @@ defineExpose({
 </template>
 
 <style scoped>
+/* Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Main Container */
 .dual-breast-timer {
   display: flex;
@@ -435,6 +460,12 @@ defineExpose({
   text-decoration: underline;
 }
 
+.toggle-btn:focus {
+  outline: 3px solid var(--color-periwinkle);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .arrow {
   transition: transform 0.2s;
 }
@@ -454,5 +485,46 @@ defineExpose({
   color: rgba(255, 255, 255, 0.5);
   text-align: right;
   margin-top: 0.25rem;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .dual-breast-timer {
+    background: #000000;
+    color: white;
+  }
+
+  .toggle-btn {
+    color: white;
+  }
+
+  .toggle-btn:focus {
+    outline: 3px solid #ffff00;
+    background: #000000;
+  }
+
+  .advanced-options {
+    border: 2px solid white;
+    background: #000000;
+  }
+
+  .advanced-options textarea {
+    border: 2px solid white;
+    background: #000000;
+    color: white;
+  }
+
+  .advanced-options textarea:focus {
+    border: 3px solid #ffff00;
+    outline: 3px solid #ffff00;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .toggle-btn,
+  .arrow {
+    transition: none;
+  }
 }
 </style>

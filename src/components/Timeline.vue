@@ -55,6 +55,11 @@
           :style="{ left: `calc(${getEventPosition(pumping)}% - 8px)` }"
           :title="formatPumpingTooltip(pumping)"
           @click="showPumpingDetails(pumping)"
+          @keydown.enter="showPumpingDetails(pumping)"
+          @keydown.space.prevent="showPumpingDetails(pumping)"
+          role="button"
+          tabindex="0"
+          :aria-label="`Pumping session at ${formatPumpingTooltip(pumping)}. Click to edit.`"
         ></div>
       </div>
     </div>

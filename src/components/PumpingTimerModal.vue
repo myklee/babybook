@@ -288,8 +288,12 @@ watch(() => props.isOpen, (isOpen) => {
                     step="5"
                     placeholder="0"
                     class="amount-input"
+                    aria-describedby="left-amount-help"
                     @input="handleAmountChange"
                   />
+                  <div id="left-amount-help" class="sr-only">
+                    Enter the amount of milk pumped from the left breast in milliliters
+                  </div>
                 </div>
                 <div class="amount-input-group">
                   <label for="right-amount">Right Breast (ml)</label>
@@ -301,11 +305,15 @@ watch(() => props.isOpen, (isOpen) => {
                     step="5"
                     placeholder="0"
                     class="amount-input"
+                    aria-describedby="right-amount-help"
                     @input="handleAmountChange"
                   />
+                  <div id="right-amount-help" class="sr-only">
+                    Enter the amount of milk pumped from the right breast in milliliters
+                  </div>
                 </div>
               </div>
-              <div v-if="totalAmount > 0" class="total-amount">
+              <div v-if="totalAmount > 0" class="total-amount" role="status" aria-live="polite">
                 Total: {{ totalAmount }}ml
               </div>
             </div>
@@ -316,14 +324,17 @@ watch(() => props.isOpen, (isOpen) => {
                 type="button"
                 @click="showAdvanced = !showAdvanced"
                 class="toggle-btn"
+                :aria-expanded="showAdvanced"
+                aria-controls="advanced-options"
+                :aria-label="`${showAdvanced ? 'Hide' : 'Show'} additional options for notes`"
               >
                 <span>{{ showAdvanced ? "Hide" : "More" }} Options</span>
-                <span class="arrow" :class="{ rotated: showAdvanced }">▼</span>
+                <span class="arrow" :class="{ rotated: showAdvanced }" aria-hidden="true">▼</span>
               </button>
             </div>
 
             <!-- More Options -->
-            <div v-if="showAdvanced" class="advanced-options">
+            <div v-if="showAdvanced" id="advanced-options" class="advanced-options">
               <div class="form-group">
                 <label for="notes">Notes</label>
                 <textarea
@@ -333,19 +344,27 @@ watch(() => props.isOpen, (isOpen) => {
                   placeholder="Optional notes..."
                   maxlength="500"
                   class="notes-textarea"
+                  aria-describedby="notes-help notes-counter"
                 ></textarea>
-                <div class="notes-counter">{{ notes.length }}/500</div>
+                <div id="notes-help" class="sr-only">
+                  Add any additional notes about this pumping session
+                </div>
+                <div id="notes-counter" class="notes-counter" aria-live="polite">
+                  {{ notes.length }} of 500 characters used
+                </div>
               </div>
             </div>
 
             <!-- Validation Messages -->
-            <div v-if="validationErrors.length > 0" class="validation-errors">
+            <div v-if="validationErrors.length > 0" class="validation-errors" role="alert" aria-live="assertive">
+              <h5 class="sr-only">Validation Errors</h5>
               <div v-for="error in validationErrors" :key="error" class="error-message">
                 {{ error }}
               </div>
             </div>
 
-            <div v-if="validationWarnings.length > 0" class="validation-warnings">
+            <div v-if="validationWarnings.length > 0" class="validation-warnings" role="alert" aria-live="polite">
+              <h5 class="sr-only">Validation Warnings</h5>
               <div v-for="warning in validationWarnings" :key="warning" class="warning-message">
                 {{ warning }}
               </div>
@@ -358,6 +377,19 @@ watch(() => props.isOpen, (isOpen) => {
 </template>
 
 <style scoped>
+/* Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Modal Base */
 .modal-overlay {
   position: fixed;
@@ -387,6 +419,13 @@ watch(() => props.isOpen, (isOpen) => {
   outline: none;
   color: white;
   padding: 2rem;
+  /* Ensure sufficient color contrast */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.modal:focus {
+  outline: 3px solid var(--color-periwinkle);
+  outline-offset: 2px;
 }
 
 .modal-title {
@@ -466,7 +505,8 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .amount-input:focus {
-  outline: none;
+  outline: 3px solid var(--color-periwinkle);
+  outline-offset: 2px;
   border-color: var(--color-periwinkle);
   background: rgba(255, 255, 255, 0.15);
 }
@@ -504,6 +544,12 @@ watch(() => props.isOpen, (isOpen) => {
 .toggle-btn:hover {
   color: var(--color-periwinkle);
   text-decoration: underline;
+}
+
+.toggle-btn:focus {
+  outline: 3px solid var(--color-periwinkle);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .arrow {
@@ -552,7 +598,8 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .notes-textarea:focus {
-  outline: none;
+  outline: 3px solid var(--color-periwinkle);
+  outline-offset: 2px;
   border-color: var(--color-periwinkle);
   background: rgba(255, 255, 255, 0.15);
 }
@@ -653,6 +700,48 @@ watch(() => props.isOpen, (isOpen) => {
   .amount-inputs,
   .advanced-options {
     padding: 1rem;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .modal {
+    border: 3px solid white;
+    background: #000000;
+  }
+
+  .amount-input,
+  .notes-textarea {
+    border: 2px solid white;
+    background: #000000;
+    color: white;
+  }
+
+  .amount-input:focus,
+  .notes-textarea:focus {
+    border: 3px solid #ffff00;
+    outline: 3px solid #ffff00;
+  }
+
+  .toggle-btn {
+    color: white;
+  }
+
+  .toggle-btn:focus {
+    outline: 3px solid #ffff00;
+    background: #000000;
+  }
+
+  .validation-errors {
+    background: #ff0000;
+    color: white;
+    border: 2px solid white;
+  }
+
+  .validation-warnings {
+    background: #ffff00;
+    color: black;
+    border: 2px solid black;
   }
 }
 

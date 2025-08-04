@@ -344,7 +344,12 @@ function getRelativeDate(dateString: string): string {
       </div>
       <ul v-else class="history-list">
         <li v-for="session in pumpingSessions.slice(0, 8)" :key="session.id" class="history-item pumping-item"
-          @click="openPumpingEditModal(session)">
+          @click="openPumpingEditModal(session)"
+          @keydown.enter="openPumpingEditModal(session)"
+          @keydown.space.prevent="openPumpingEditModal(session)"
+          role="button"
+          tabindex="0"
+          :aria-label="`Pumping session from ${formatDateTime(session.start_time)} to ${formatDateTime(session.end_time)}, ${session.total_amount}ml total. Click to edit.`">
           <div class="time">
             <span v-if="session.start_time && session.end_time && isSameDay(session.start_time, session.end_time)">
               {{ getRelativeDate(session.start_time) }}, {{ format(new Date(session.start_time), 'h:mm a') }} - {{ format(new Date(session.end_time), 'h:mm a') }}

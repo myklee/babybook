@@ -749,7 +749,12 @@ onMounted(() => {
                       class="amount-input"
                       data-field="left_amount"
                       :class="{ 'error': hasFieldError('left_amount') }"
+                      aria-describedby="left-amount-help"
+                      :aria-invalid="hasFieldError('left_amount')"
                     />
+                    <div id="left-amount-help" class="sr-only">
+                      Enter the amount of milk pumped from the left breast in milliliters
+                    </div>
                     <div v-if="leftAmountErrors.length > 0" class="field-errors">
                       <div v-for="error in leftAmountErrors" :key="error.message" class="field-error">
                         {{ error.message }}
@@ -768,7 +773,12 @@ onMounted(() => {
                       class="amount-input"
                       data-field="right_amount"
                       :class="{ 'error': hasFieldError('right_amount') }"
+                      aria-describedby="right-amount-help"
+                      :aria-invalid="hasFieldError('right_amount')"
                     />
+                    <div id="right-amount-help" class="sr-only">
+                      Enter the amount of milk pumped from the right breast in milliliters
+                    </div>
                     <div v-if="rightAmountErrors.length > 0" class="field-errors">
                       <div v-for="error in rightAmountErrors" :key="error.message" class="field-error">
                         {{ error.message }}
@@ -776,7 +786,7 @@ onMounted(() => {
                     </div>
                   </div>
                 </div>
-                <div v-if="totalAmount > 0" class="total-amount">
+                <div v-if="totalAmount > 0" class="total-amount" role="status" aria-live="polite">
                   Total: {{ totalAmount }}ml
                 </div>
               </div>
@@ -796,7 +806,12 @@ onMounted(() => {
                     placeholder="Add any notes about this pumping session..."
                     rows="3"
                     maxlength="500"
+                    aria-describedby="notes-help"
+                    :aria-invalid="hasFieldError('notes')"
                   ></textarea>
+                  <div id="notes-help" class="sr-only">
+                    Add any additional notes about this pumping session
+                  </div>
                   <div v-if="notesErrors.length > 0" class="field-errors">
                     <div v-for="error in notesErrors" :key="error.message" class="field-error">
                       {{ error.message }}
@@ -806,7 +821,7 @@ onMounted(() => {
               </div>
 
               <!-- General Validation Errors -->
-              <div v-if="generalErrors.length > 0" class="validation-errors">
+              <div v-if="generalErrors.length > 0" class="validation-errors" role="alert" aria-live="assertive">
                 <h4 class="errors-title">Please fix the following errors:</h4>
                 <ul class="errors-list">
                   <li v-for="error in generalErrors" :key="error.field" class="error-item">
@@ -916,6 +931,19 @@ onMounted(() => {
 </template>
 <style 
 scoped>
+/* Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Modal Overlay */
 .pumping-edit-modal-overlay {
   position: fixed;

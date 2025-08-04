@@ -397,8 +397,12 @@ function handleSleepClick() {
           <img src="../assets/icons/lucide-lab_bottle-baby.svg" class="icon" alt="Nursing" />
           <span>Nursing</span>
         </button>
-        <button class="action-btn pump" @click="openPumpingTimerModal()">
-          <img src="../assets/icons/droplets.svg" class="icon" alt="Pump" />
+        <button 
+          class="action-btn pump" 
+          @click="openPumpingTimerModal()"
+          aria-label="Start pumping timer to track breast milk pumping session"
+        >
+          <img src="../assets/icons/droplets.svg" class="icon" alt="" aria-hidden="true" />
           <span>Pump</span>
         </button>
         <button class="action-btn formula" @click="openFeedingModal('formula')">
