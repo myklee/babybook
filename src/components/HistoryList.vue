@@ -7,6 +7,7 @@ import NursingEditModal from './NursingEditModal.vue'
 import SolidFoodEditModal from './SolidFoodEditModal.vue'
 import PumpingEditModal from './PumpingEditModal.vue'
 import type { CompletedNursingSession, BreastType } from '../types/nursing'
+import { formatAmount } from '../lib/measurements'
 
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
@@ -280,7 +281,7 @@ function getRelativeDate(dateString: string): string {
       <div class="section-header">
         <h3>Recent Feedings</h3>
         <span v-if="feedingsTotalSince8AM > 0" class="header-stat">
-          {{ feedingsTotalSince8AM }}ml since 8am
+          {{ formatAmount(feedingsTotalSince8AM, store.measurementUnit) }} since 8am
         </span>
       </div>
       <div v-if="combinedFeedings.length === 0" class="empty-state">
@@ -318,12 +319,12 @@ function getRelativeDate(dateString: string): string {
             </span>
             <span v-else-if="item.event_type === 'feeding' && item.type === 'nursing' && (item as any).start_time && (item as any).end_time" class="amount">{{ ((new Date((item as any).end_time).getTime() - new Date((item as any).start_time).getTime()) / 60000).toFixed(0) }} min</span>
             <span v-else-if="item.event_type === 'feeding' && item.type === 'nursing' && (item as any).start_time" class="sleeping-duration">Ongoing</span>
-            <span v-else-if="item.event_type === 'feeding' && (item as any).amount" class="amount">{{ (item as any).amount }}ml</span>
+            <span v-else-if="item.event_type === 'feeding' && (item as any).amount" class="amount">{{ formatAmount((item as any).amount, store.measurementUnit) }}</span>
             
             <!-- Solid food display -->
             <span v-else-if="item.event_type === 'solid'" class="type">{{ (item as any).food_name }}</span>
             
-            <span v-if="item.event_type === 'feeding' && (item as any).topup_amount && (item as any).topup_amount > 0" class="topup-amount">+{{ (item as any).topup_amount }}</span>
+            <span v-if="item.event_type === 'feeding' && (item as any).topup_amount && (item as any).topup_amount > 0" class="topup-amount">+{{ formatAmount((item as any).topup_amount, store.measurementUnit) }}</span>
             <span v-if="item.event_type === 'solid' && (item as any).times_tried > 1" class="amount">{{ (item as any).times_tried }}x</span>
           </div>
           
@@ -349,7 +350,7 @@ function getRelativeDate(dateString: string): string {
           @keydown.space.prevent="openPumpingEditModal(session)"
           role="button"
           tabindex="0"
-          :aria-label="`Pumping session from ${formatDateTime(session.start_time)} to ${formatDateTime(session.end_time)}, ${session.total_amount}ml total. Click to edit.`">
+          :aria-label="`Pumping session from ${formatDateTime(session.start_time)} to ${formatDateTime(session.end_time)}, ${formatAmount(session.total_amount, store.measurementUnit)} total. Click to edit.`">
           <div class="time">
             <span v-if="session.start_time && session.end_time && isSameDay(session.start_time, session.end_time)">
               {{ getRelativeDate(session.start_time) }}, {{ format(new Date(session.start_time), 'h:mm a') }} - {{ format(new Date(session.end_time), 'h:mm a') }}
@@ -378,16 +379,16 @@ function getRelativeDate(dateString: string): string {
             <span v-else class="amount">{{ Math.floor(session.total_duration / 60) }} min</span>
             
             <!-- Amount display -->
-            <span v-if="session.total_amount > 0" class="pumping-amount">{{ session.total_amount }}ml</span>
+            <span v-if="session.total_amount > 0" class="pumping-amount">{{ formatAmount(session.total_amount, store.measurementUnit) }}</span>
           </div>
           
           <!-- Amount breakdown -->
           <div v-if="(session.left_amount && session.left_amount > 0) || (session.right_amount && session.right_amount > 0)" class="pumping-amounts">
             <span v-if="session.left_amount && session.left_amount > 0" class="breast-amount">
-              <span class="breast-indicator">L</span> {{ session.left_amount }}ml
+              <span class="breast-indicator">L</span> {{ formatAmount(session.left_amount, store.measurementUnit) }}
             </span>
             <span v-if="session.right_amount && session.right_amount > 0" class="breast-amount">
-              <span class="breast-indicator">R</span> {{ session.right_amount }}ml
+              <span class="breast-indicator">R</span> {{ formatAmount(session.right_amount, store.measurementUnit) }}
             </span>
           </div>
           

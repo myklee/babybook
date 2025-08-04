@@ -304,6 +304,29 @@ export interface Database {
           updated_at?: string;
         };
       };
+      user_preferences: {
+        Row: {
+          id: string;
+          user_id: string;
+          measurement_unit: "metric" | "imperial";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          measurement_unit?: "metric" | "imperial";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          measurement_unit?: "metric" | "imperial";
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 }

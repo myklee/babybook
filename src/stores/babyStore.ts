@@ -27,6 +27,7 @@ import {
   type PersistedNursingSession,
   type SessionRecoveryData
 } from "../composables/useNursingSessionPersistence";
+import type { MeasurementUnit } from "../lib/measurements";
 
 type Baby = Database["public"]["Tables"]["babies"]["Row"] & {
   image_url?: string | null;
@@ -49,6 +50,7 @@ export const useBabyStore = defineStore("baby", () => {
   const currentUser = ref<any>(null);
   const isDataLoading = ref(false); // Guard to prevent multiple simultaneous loads
   const authListenerSet = ref(false);
+  const measurementUnit = ref<MeasurementUnit>('metric'); // Default to metric
 
   // Initialize session persistence system
   const sessionPersistence = useNursingSessionPersistence();
@@ -205,6 +207,7 @@ export const useBabyStore = defineStore("baby", () => {
             sleepSessions.value = [];
             solidFoods.value = [];
             pumpingSessions.value = [];
+            measurementUnit.value = 'metric'; // Reset to default
             // Clear active sessions on sign out
             sessionPersistence.clearAllData();
           }
@@ -317,6 +320,62 @@ export const useBabyStore = defineStore("baby", () => {
           console.error("Baby settings table error:", settingsTableError);
         }
         babySettings.value = [];
+      }
+
+      // Load user preferences (non-blocking)
+      console.log("Loading user preferences...");
+      try {
+        const preferencesPromise = supabase
+          .from("user_preferences")
+          .select("*")
+          .eq("user_id", currentUser.value.id)
+          .single();
+
+        const preferencesResult = (await Promise.race([
+          preferencesPromise,
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Preferences loading timeout")),
+              10000,
+            ),
+          ),
+        ])) as any;
+
+        if (preferencesResult.error) {
+          // If no preferences found, create default preferences
+          if (preferencesResult.error.code === 'PGRST116') {
+            console.log("No user preferences found, creating default...");
+            const { data: newPrefs, error: createError } = await supabase
+              .from("user_preferences")
+              .insert({
+                user_id: currentUser.value.id,
+                measurement_unit: 'metric'
+              })
+              .select()
+              .single();
+            
+            if (createError) {
+              console.error("Error creating default preferences:", createError);
+              measurementUnit.value = 'metric'; // fallback
+            } else {
+              measurementUnit.value = newPrefs.measurement_unit;
+              console.log("Created default preferences");
+            }
+          } else {
+            console.error("Error loading user preferences:", preferencesResult.error);
+            measurementUnit.value = 'metric'; // fallback
+          }
+        } else {
+          measurementUnit.value = preferencesResult.data.measurement_unit;
+          console.log("Loaded user preferences:", preferencesResult.data.measurement_unit);
+        }
+      } catch (preferencesError: any) {
+        if (preferencesError?.message?.includes('timeout')) {
+          console.warn("User preferences loading timed out, using default");
+        } else {
+          console.error("User preferences error:", preferencesError);
+        }
+        measurementUnit.value = 'metric'; // fallback
       }
 
       // Load feedings with individual timeout
@@ -2496,7 +2555,34 @@ export const useBabyStore = defineStore("baby", () => {
     }
   });
 
+  // Update measurement unit preference
+  async function updateMeasurementUnit(unit: MeasurementUnit) {
+    if (!currentUser.value) {
+      throw new Error("No authenticated user");
+    }
 
+    try {
+      const { error } = await supabase
+        .from("user_preferences")
+        .upsert({
+          user_id: currentUser.value.id,
+          measurement_unit: unit
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error("Error updating measurement unit:", error);
+        throw error;
+      }
+
+      measurementUnit.value = unit;
+      console.log("Measurement unit updated to:", unit);
+    } catch (error) {
+      console.error("Error updating measurement unit:", error);
+      throw error;
+    }
+  }
 
   return {
     // State
@@ -2509,6 +2595,7 @@ export const useBabyStore = defineStore("baby", () => {
     pumpingSessions,
     isLoading,
     currentUser,
+    measurementUnit,
 
     // Actions
     initializeStore,
@@ -2587,5 +2674,8 @@ export const useBabyStore = defineStore("baby", () => {
     startSleepSession,
     endSleepSession,
     isBabySleeping,
+    
+    // Measurement Unit
+    updateMeasurementUnit,
   };
 });

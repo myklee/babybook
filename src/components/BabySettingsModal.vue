@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
+import { 
+  getDisplayValue, 
+  getStorageValue, 
+  getInputStep, 
+  getUnitLabel
+} from '../lib/measurements'
 
 const props = defineProps<{
   babyId: string
@@ -16,9 +22,13 @@ const store = useBabyStore()
 
 // Form data
 const feedingIntervalHours = ref(3)
-const defaultBreastAmount = ref(0)
-const defaultFormulaAmount = ref(0)
+const defaultBreastDisplayAmount = ref(0)
+const defaultFormulaDisplayAmount = ref(0)
 const isSaving = ref(false)
+
+// Computed properties for unit handling
+const unitLabel = computed(() => getUnitLabel(store.measurementUnit))
+const inputStep = computed(() => getInputStep(store.measurementUnit))
 
 // Refs for input fields
 const breastAmountInput = ref<HTMLInputElement | null>(null)
@@ -45,8 +55,8 @@ onMounted(() => {
   const settings = store.getBabySettings(props.babyId)
   if (settings) {
     feedingIntervalHours.value = settings.feeding_interval_hours
-    defaultBreastAmount.value = settings.default_breast_amount
-    defaultFormulaAmount.value = settings.default_formula_amount
+    defaultBreastDisplayAmount.value = getDisplayValue(settings.default_breast_amount, store.measurementUnit)
+    defaultFormulaDisplayAmount.value = getDisplayValue(settings.default_formula_amount, store.measurementUnit)
   }
 })
 
@@ -60,8 +70,8 @@ async function handleSubmit() {
   try {
     await store.updateBabySettings(props.babyId, {
       feeding_interval_hours: feedingIntervalHours.value,
-      default_breast_amount: defaultBreastAmount.value,
-      default_formula_amount: defaultFormulaAmount.value
+      default_breast_amount: getStorageValue(defaultBreastDisplayAmount.value, store.measurementUnit),
+      default_formula_amount: getStorageValue(defaultFormulaDisplayAmount.value, store.measurementUnit)
     })
 
     emit('saved')
@@ -94,12 +104,12 @@ async function handleSubmit() {
         </div>
 
         <div class="form-group">
-          <label>Default Breast Amount (ml)</label>
+          <label>Default Breast Amount ({{ unitLabel }})</label>
           <input 
             type="number" 
-            v-model="defaultBreastAmount" 
+            v-model="defaultBreastDisplayAmount" 
             min="0" 
-            step="5"
+            :step="inputStep"
             ref="breastAmountInput"
             inputmode="numeric"
             pattern="[0-9]*"
@@ -109,12 +119,12 @@ async function handleSubmit() {
         </div>
 
         <div class="form-group">
-          <label>Default Formula Amount (ml)</label>
+          <label>Default Formula Amount ({{ unitLabel }})</label>
           <input 
             type="number" 
-            v-model="defaultFormulaAmount" 
+            v-model="defaultFormulaDisplayAmount" 
             min="0" 
-            step="5"
+            :step="inputStep"
             ref="formulaAmountInput"
             inputmode="numeric"
             pattern="[0-9]*"

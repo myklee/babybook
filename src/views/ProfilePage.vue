@@ -21,6 +21,7 @@ const isUpdatingEmail = ref(false)
 const isUpdatingPassword = ref(false)
 const showEditBabyModal = ref(false)
 const editingBaby = ref<any>(null)
+const isUpdatingMeasurementUnit = ref(false)
 
 onMounted(() => {
   if (store.currentUser) {
@@ -101,6 +102,20 @@ async function updatePassword() {
     alert('Failed to update password. Please try again.')
   } finally {
     isUpdatingPassword.value = false
+  }
+}
+
+async function updateMeasurementUnit(unit: 'metric' | 'imperial') {
+  if (store.measurementUnit === unit) return
+  
+  isUpdatingMeasurementUnit.value = true
+  try {
+    await store.updateMeasurementUnit(unit)
+  } catch (error) {
+    console.error('Error updating measurement unit:', error)
+    alert('Failed to update measurement unit. Please try again.')
+  } finally {
+    isUpdatingMeasurementUnit.value = false
   }
 }
 
@@ -197,6 +212,42 @@ async function signOut() {
           >
             {{ isUpdatingPassword ? 'Updating...' : 'Update Password' }}
           </button>
+        </section>
+
+        <!-- Measurement Unit Preference -->
+        <section class="profile-section">
+          <h2>Measurement Units</h2>
+          <div class="measurement-options">
+            <div class="radio-group">
+              <label class="radio-option">
+                <input
+                  type="radio"
+                  name="measurement-unit"
+                  value="metric"
+                  :checked="store.measurementUnit === 'metric'"
+                  :disabled="isUpdatingMeasurementUnit"
+                  @change="updateMeasurementUnit('metric')"
+                />
+                <span class="radio-label">Metric (ml)</span>
+                <span class="radio-description">Milliliters for liquid measurements</span>
+              </label>
+              <label class="radio-option">
+                <input
+                  type="radio"
+                  name="measurement-unit"
+                  value="imperial"
+                  :checked="store.measurementUnit === 'imperial'"
+                  :disabled="isUpdatingMeasurementUnit"
+                  @change="updateMeasurementUnit('imperial')"
+                />
+                <span class="radio-label">Imperial (oz)</span>
+                <span class="radio-description">Fluid ounces for liquid measurements</span>
+              </label>
+            </div>
+            <div v-if="isUpdatingMeasurementUnit" class="updating-indicator">
+              Updating...
+            </div>
+          </div>
         </section>
 
         <!-- Babies Management -->
@@ -475,6 +526,66 @@ async function signOut() {
 .baby-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.measurement-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.radio-option:hover {
+  border-color: #9c27b0;
+  background: rgba(156, 39, 176, 0.1);
+}
+
+.radio-option input[type="radio"] {
+  margin: 0;
+  margin-top: 0.125rem;
+}
+
+.radio-option input[type="radio"]:checked + .radio-label {
+  color: #9c27b0;
+  font-weight: 600;
+}
+
+.radio-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #e0e0ff;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.radio-description {
+  font-size: 0.875rem;
+  color: var(--color-periwinkle);
+  display: block;
+}
+
+.updating-indicator {
+  text-align: center;
+  padding: 0.5rem;
+  color: var(--color-periwinkle);
+  font-style: italic;
 }
 
 /* Mobile responsiveness */

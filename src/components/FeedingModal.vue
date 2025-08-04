@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, watch, computed } from "vue";
 import { useBabyStore } from "../stores/babyStore";
 import TimePicker from "./TimePicker.vue";
 import DatePicker from "./DatePicker.vue";
 import BreastSelector from "./BreastSelector.vue";
 import type { BreastType } from "../types/nursing";
+import { 
+  getDisplayValue, 
+  getStorageValue, 
+  getInputStep, 
+  getUnitLabel, 
+  getFeedingPresets,
+  getDefaultAmount
+} from "../lib/measurements";
 
 const props = defineProps<{
     feedingType?: "breast" | "formula" | "nursing";
@@ -20,8 +28,17 @@ const emit = defineEmits<{
 const store = useBabyStore();
 
 // Form data
-const amount = ref(0);
+const displayAmount = ref(0); // Display value (in current unit)
 const feedingTypeRef = ref<"breast" | "formula" | "nursing">("breast");
+
+// Computed properties for unit handling
+const unitLabel = computed(() => getUnitLabel(store.measurementUnit));
+const inputStep = computed(() => getInputStep(store.measurementUnit));
+const presetButtons = computed(() => {
+    // Only show presets for breast and formula types
+    if (feedingTypeRef.value === 'nursing') return [];
+    return getFeedingPresets(store.measurementUnit, feedingTypeRef.value);
+});
 const notes = ref("");
 const customDate = ref("");
 const time = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
@@ -93,17 +110,17 @@ onMounted(() => {
             feedingTypeRef.value === "breast" &&
             settings.default_breast_amount > 0
         ) {
-            amount.value = settings.default_breast_amount;
+            displayAmount.value = getDisplayValue(settings.default_breast_amount, store.measurementUnit);
         } else if (feedingTypeRef.value === "formula") {
-            // Use custom setting if available, otherwise default to 200ml
-            amount.value =
-                settings.default_formula_amount > 0
-                    ? settings.default_formula_amount
-                    : 200;
+            // Use custom setting if available, otherwise use unit-appropriate default
+            const mlAmount = settings.default_formula_amount > 0
+                ? settings.default_formula_amount
+                : getStorageValue(getDefaultAmount(store.measurementUnit, 'formula'), store.measurementUnit);
+            displayAmount.value = getDisplayValue(mlAmount, store.measurementUnit);
         }
     } else if (feedingTypeRef.value === "formula") {
-        // No settings found, use default of 200ml for formula
-        amount.value = 200;
+        // No settings found, use unit-appropriate default
+        displayAmount.value = getDefaultAmount(store.measurementUnit, 'formula');
     }
 
     nextTick();
@@ -120,21 +137,21 @@ watch(feedingTypeRef, (newType) => {
     const settings = store.getBabySettings(props.babyId);
     if (settings) {
         if (newType === "breast" && settings.default_breast_amount > 0) {
-            amount.value = settings.default_breast_amount;
+            displayAmount.value = getDisplayValue(settings.default_breast_amount, store.measurementUnit);
         } else if (newType === "formula") {
-            // Use custom setting if available, otherwise default to 200ml
-            amount.value =
-                settings.default_formula_amount > 0
-                    ? settings.default_formula_amount
-                    : 200;
+            // Use custom setting if available, otherwise use unit-appropriate default
+            const mlAmount = settings.default_formula_amount > 0
+                ? settings.default_formula_amount
+                : getStorageValue(getDefaultAmount(store.measurementUnit, 'formula'), store.measurementUnit);
+            displayAmount.value = getDisplayValue(mlAmount, store.measurementUnit);
         } else {
-            amount.value = 0;
+            displayAmount.value = 0;
         }
     } else if (newType === "formula") {
-        // No settings found, use default of 200ml for formula
-        amount.value = 200;
+        // No settings found, use unit-appropriate default
+        displayAmount.value = getDefaultAmount(store.measurementUnit, 'formula');
     } else {
-        amount.value = 0;
+        displayAmount.value = 0;
     }
 });
 
@@ -229,9 +246,10 @@ async function handleSubmit() {
                 timestamp = new Date();
             }
 
+            const storageAmount = getStorageValue(displayAmount.value, store.measurementUnit);
             await store.addFeeding(
                 props.babyId,
-                amount.value,
+                storageAmount,
                 feedingTypeRef.value,
                 notes.value,
                 timestamp,
@@ -287,15 +305,15 @@ async function handleSubmit() {
                 </div>
 
                 <div v-if="feedingTypeRef !== 'nursing'" class="form-group">
-                    <label>Amount (ml)</label>
+                    <label>Amount ({{ unitLabel }})</label>
                     <div class="amount-form">
                         <input
                             ref="amountInput"
                             type="number"
-                            v-model="amount"
+                            v-model="displayAmount"
                             required
                             min="0"
-                            step="5"
+                            :step="inputStep"
                             inputmode="decimal"
                             pattern="[0-9]*"
                             @focus="selectAmountText"
@@ -303,62 +321,16 @@ async function handleSubmit() {
                             placeholder="Enter amount"
                             autocomplete="off"
                         />
-                        <div
-                            v-if="feedingTypeRef === 'formula'"
-                            class="preset-buttons"
-                        >
+                        <div class="preset-buttons">
                             <button
+                                v-for="preset in presetButtons"
+                                :key="preset.label"
                                 type="button"
                                 class="preset-btn"
-                                @click="amount = 160"
-                                :class="{ active: amount === 160 }"
+                                @click="displayAmount = preset.display"
+                                :class="{ active: displayAmount === preset.display }"
                             >
-                                160ml
-                            </button>
-                            <button
-                                type="button"
-                                class="preset-btn"
-                                @click="amount = 200"
-                                :class="{ active: amount === 200 }"
-                            >
-                                200ml
-                            </button>
-                            <button
-                                type="button"
-                                class="preset-btn"
-                                @click="amount = 240"
-                                :class="{ active: amount === 240 }"
-                            >
-                                240ml
-                            </button>
-                        </div>
-                        <div
-                            v-if="feedingTypeRef === 'breast'"
-                            class="preset-buttons"
-                        >
-                            <button
-                                type="button"
-                                class="preset-btn"
-                                @click="amount = 100"
-                                :class="{ active: amount === 100 }"
-                            >
-                                100ml
-                            </button>
-                            <button
-                                type="button"
-                                class="preset-btn"
-                                @click="amount = 120"
-                                :class="{ active: amount === 120 }"
-                            >
-                                120ml
-                            </button>
-                            <button
-                                type="button"
-                                class="preset-btn"
-                                @click="amount = 140"
-                                :class="{ active: amount === 140 }"
-                            >
-                                140ml
+                                {{ preset.label }}
                             </button>
                         </div>
                     </div>

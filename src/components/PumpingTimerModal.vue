@@ -3,6 +3,11 @@ import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 import DualBreastTimer from './DualBreastTimer.vue'
 import { useBabyStore } from '../stores/babyStore'
 import { validatePumpingSession } from '../types/pumping'
+import { 
+  getStorageValue, 
+  getInputStep, 
+  getUnitLabel
+} from '../lib/measurements'
 
 interface Props {
   isOpen: boolean
@@ -22,9 +27,9 @@ const modalRef = ref<HTMLElement>()
 const dualTimerRef = ref<InstanceType<typeof DualBreastTimer>>()
 const isSaving = ref(false)
 
-// Form state
-const leftAmount = ref<number | null>(null)
-const rightAmount = ref<number | null>(null)
+// Form state (display values in current unit)
+const leftDisplayAmount = ref<number | null>(null)
+const rightDisplayAmount = ref<number | null>(null)
 const notes = ref('')
 const showAdvanced = ref(false)
 
@@ -35,8 +40,10 @@ const validationWarnings = ref<string[]>([])
 // Focus management
 let previousActiveElement: HTMLElement | null = null
 
-// Computed properties
-const totalAmount = computed(() => (leftAmount.value || 0) + (rightAmount.value || 0))
+// Computed properties for unit handling
+const unitLabel = computed(() => getUnitLabel(babyStore.measurementUnit))
+const inputStep = computed(() => getInputStep(babyStore.measurementUnit))
+const totalDisplayAmount = computed(() => (leftDisplayAmount.value || 0) + (rightDisplayAmount.value || 0))
 
 // Handle duration changes from DualBreastTimer
 // Note: DualBreastTimer handles duration internally, we'll get the values in handleSave
@@ -58,12 +65,20 @@ function validateForm() {
 async function handleSave(leftDur: number, rightDur: number, _sessionNotes?: string, startTime?: Date) {
   if (isSaving.value) return
   
+  // Convert display amounts to storage amounts (ml)
+  const leftStorageAmount = leftDisplayAmount.value !== null 
+    ? getStorageValue(leftDisplayAmount.value, babyStore.measurementUnit) 
+    : null
+  const rightStorageAmount = rightDisplayAmount.value !== null 
+    ? getStorageValue(rightDisplayAmount.value, babyStore.measurementUnit) 
+    : null
+  
   // Validate before saving
   const validation = validatePumpingSession(
     leftDur,
     rightDur,
-    leftAmount.value,
-    rightAmount.value,
+    leftStorageAmount,
+    rightStorageAmount,
     startTime
   )
   
@@ -79,8 +94,8 @@ async function handleSave(leftDur: number, rightDur: number, _sessionNotes?: str
     const session = await babyStore.addPumpingSession(
       leftDur,
       rightDur,
-      leftAmount.value,
-      rightAmount.value,
+      leftStorageAmount,
+      rightStorageAmount,
       notes.value || undefined,
       startTime,
       props.babyId || null
@@ -111,8 +126,8 @@ function handleClose() {
 
 // Reset form state
 function resetForm() {
-  leftAmount.value = null
-  rightAmount.value = null
+  leftDisplayAmount.value = null
+  rightDisplayAmount.value = null
   notes.value = ''
   showAdvanced.value = false
   validationErrors.value = []
@@ -256,9 +271,9 @@ watch(() => props.isOpen, (isOpen) => {
           </h3>
 
           <!-- Amount Display (only show if amounts are entered) -->
-          <div v-if="totalAmount > 0" class="amount-summary">
+          <div v-if="totalDisplayAmount > 0" class="amount-summary">
             <span class="amount-display">
-              {{ totalAmount }}ml total pumped
+              {{ totalDisplayAmount }}{{ unitLabel }} total pumped
             </span>
           </div>
 
@@ -279,42 +294,42 @@ watch(() => props.isOpen, (isOpen) => {
               <h4 class="section-title">Amount Pumped</h4>
               <div class="amount-row">
                 <div class="amount-input-group">
-                  <label for="left-amount">Left Breast (ml)</label>
+                  <label for="left-amount">Left Breast ({{ unitLabel }})</label>
                   <input
                     id="left-amount"
-                    v-model.number="leftAmount"
+                    v-model.number="leftDisplayAmount"
                     type="number"
                     min="0"
-                    step="5"
+                    :step="inputStep"
                     placeholder="0"
                     class="amount-input"
                     aria-describedby="left-amount-help"
                     @input="handleAmountChange"
                   />
                   <div id="left-amount-help" class="sr-only">
-                    Enter the amount of milk pumped from the left breast in milliliters
+                    Enter the amount of milk pumped from the left breast in {{ unitLabel }}
                   </div>
                 </div>
                 <div class="amount-input-group">
-                  <label for="right-amount">Right Breast (ml)</label>
+                  <label for="right-amount">Right Breast ({{ unitLabel }})</label>
                   <input
                     id="right-amount"
-                    v-model.number="rightAmount"
+                    v-model.number="rightDisplayAmount"
                     type="number"
                     min="0"
-                    step="5"
+                    :step="inputStep"
                     placeholder="0"
                     class="amount-input"
                     aria-describedby="right-amount-help"
                     @input="handleAmountChange"
                   />
                   <div id="right-amount-help" class="sr-only">
-                    Enter the amount of milk pumped from the right breast in milliliters
+                    Enter the amount of milk pumped from the right breast in {{ unitLabel }}
                   </div>
                 </div>
               </div>
-              <div v-if="totalAmount > 0" class="total-amount" role="status" aria-live="polite">
-                Total: {{ totalAmount }}ml
+              <div v-if="totalDisplayAmount > 0" class="total-amount" role="status" aria-live="polite">
+                Total: {{ totalDisplayAmount }}{{ unitLabel }}
               </div>
             </div>
 

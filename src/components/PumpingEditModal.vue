@@ -5,6 +5,12 @@ import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
 import { useBabyStore } from '../stores/babyStore'
 import type { PumpingSession } from '../types/pumping'
+import { 
+  getDisplayValue, 
+  getStorageValue, 
+  getInputStep, 
+  getUnitLabel
+} from '../lib/measurements'
 
 interface Props {
   isOpen: boolean
@@ -47,9 +53,13 @@ const endTime = ref<{ hour: string; minute: string; ampm: 'AM' | 'PM' }>({
   minute: '00', 
   ampm: 'AM' 
 })
-const leftAmount = ref<number | null>(null)
-const rightAmount = ref<number | null>(null)
+const leftDisplayAmount = ref<number | null>(null)
+const rightDisplayAmount = ref<number | null>(null)
 const notes = ref('')
+
+// Computed properties for unit handling
+const unitLabel = computed(() => getUnitLabel(babyStore.measurementUnit))
+const inputStep = computed(() => getInputStep(babyStore.measurementUnit))
 
 // Focus management
 let previousActiveElement: HTMLElement | null = null
@@ -112,7 +122,7 @@ const durationDisplay = computed(() => {
   }
 })
 
-const totalAmount = computed(() => (leftAmount.value || 0) + (rightAmount.value || 0))
+const totalDisplayAmount = computed(() => (leftDisplayAmount.value || 0) + (rightDisplayAmount.value || 0))
 
 // Utility functions
 function getDateTimeFromInputs(dateStr: string, timeObj: { hour: string; minute: string; ampm: 'AM' | 'PM' }): Date | null {
@@ -253,20 +263,24 @@ function validateSession(): Array<{ field: string; message: string }> {
   }
   
   // Validate amounts
-  if (leftAmount.value !== null && leftAmount.value < 0) {
+  if (leftDisplayAmount.value !== null && leftDisplayAmount.value < 0) {
     errors.push({ field: 'left_amount', message: 'Left breast amount cannot be negative' })
   }
   
-  if (rightAmount.value !== null && rightAmount.value < 0) {
+  if (rightDisplayAmount.value !== null && rightDisplayAmount.value < 0) {
     errors.push({ field: 'right_amount', message: 'Right breast amount cannot be negative' })
   }
   
-  if (leftAmount.value !== null && leftAmount.value > 1000) {
-    errors.push({ field: 'left_amount', message: 'Left breast amount seems unusually high (>1000ml)' })
+  // Convert to ml for high amount validation
+  const leftMl = leftDisplayAmount.value !== null ? getStorageValue(leftDisplayAmount.value, babyStore.measurementUnit) : null
+  const rightMl = rightDisplayAmount.value !== null ? getStorageValue(rightDisplayAmount.value, babyStore.measurementUnit) : null
+  
+  if (leftMl !== null && leftMl > 1000) {
+    errors.push({ field: 'left_amount', message: 'Left breast amount seems unusually high' })
   }
   
-  if (rightAmount.value !== null && rightAmount.value > 1000) {
-    errors.push({ field: 'right_amount', message: 'Right breast amount seems unusually high (>1000ml)' })
+  if (rightMl !== null && rightMl > 1000) {
+    errors.push({ field: 'right_amount', message: 'Right breast amount seems unusually high' })
   }
   
   // Validate notes length
@@ -315,8 +329,8 @@ async function handleSave() {
     let leftDuration = 0
     let rightDuration = 0
     
-    const hasLeftAmount = leftAmount.value !== null && leftAmount.value > 0
-    const hasRightAmount = rightAmount.value !== null && rightAmount.value > 0
+    const hasLeftAmount = leftDisplayAmount.value !== null && leftDisplayAmount.value > 0
+    const hasRightAmount = rightDisplayAmount.value !== null && rightDisplayAmount.value > 0
     
     if (hasLeftAmount && hasRightAmount) {
       // Both breasts used, split duration evenly
@@ -347,9 +361,9 @@ async function handleSave() {
       left_duration: leftDuration,
       right_duration: rightDuration,
       total_duration: totalDurationSeconds,
-      left_amount: leftAmount.value,
-      right_amount: rightAmount.value,
-      total_amount: totalAmount.value,
+      left_amount: leftDisplayAmount.value !== null ? getStorageValue(leftDisplayAmount.value, babyStore.measurementUnit) : null,
+      right_amount: rightDisplayAmount.value !== null ? getStorageValue(rightDisplayAmount.value, babyStore.measurementUnit) : null,
+      total_amount: totalDisplayAmount.value > 0 ? getStorageValue(totalDisplayAmount.value, babyStore.measurementUnit) : 0,
       notes: notes.value.trim() || undefined
     })
     
@@ -528,8 +542,8 @@ function initializeFormData() {
   // Set form fields from session data
   setDateTimeInputs(props.session.start_time, false)
   setDateTimeInputs(props.session.end_time, true)
-  leftAmount.value = props.session.left_amount
-  rightAmount.value = props.session.right_amount
+  leftDisplayAmount.value = props.session.left_amount !== null ? getDisplayValue(props.session.left_amount, babyStore.measurementUnit) : null
+  rightDisplayAmount.value = props.session.right_amount !== null ? getDisplayValue(props.session.right_amount, babyStore.measurementUnit) : null
   notes.value = props.session.notes || ''
   
   // Clear validation errors
@@ -573,7 +587,7 @@ watch([startDate, startTime, endDate, endTime], () => {
 }, { deep: true })
 
 // Real-time validation for amounts and notes
-watch([leftAmount, rightAmount, notes], () => {
+watch([leftDisplayAmount, rightDisplayAmount, notes], () => {
   debounceValidation()
 })
 
@@ -738,13 +752,13 @@ onMounted(() => {
                 <h3 class="section-title">Amount Pumped</h3>
                 <div class="amount-inputs">
                   <div class="form-group">
-                    <label for="left-amount" class="form-label">Left Breast (ml)</label>
+                    <label for="left-amount" class="form-label">Left Breast ({{ unitLabel }})</label>
                     <input
                       id="left-amount"
-                      v-model.number="leftAmount"
+                      v-model.number="leftDisplayAmount"
                       type="number"
                       min="0"
-                      step="5"
+                      :step="inputStep"
                       placeholder="0"
                       class="amount-input"
                       data-field="left_amount"
@@ -762,13 +776,13 @@ onMounted(() => {
                     </div>
                   </div>
                   <div class="form-group">
-                    <label for="right-amount" class="form-label">Right Breast (ml)</label>
+                    <label for="right-amount" class="form-label">Right Breast ({{ unitLabel }})</label>
                     <input
                       id="right-amount"
-                      v-model.number="rightAmount"
+                      v-model.number="rightDisplayAmount"
                       type="number"
                       min="0"
-                      step="5"
+                      :step="inputStep"
                       placeholder="0"
                       class="amount-input"
                       data-field="right_amount"
@@ -786,8 +800,8 @@ onMounted(() => {
                     </div>
                   </div>
                 </div>
-                <div v-if="totalAmount > 0" class="total-amount" role="status" aria-live="polite">
-                  Total: {{ totalAmount }}ml
+                <div v-if="totalDisplayAmount > 0" class="total-amount" role="status" aria-live="polite">
+                  Total: {{ totalDisplayAmount }}{{ unitLabel }}
                 </div>
               </div>
 
