@@ -30,6 +30,7 @@ This is the central state management that handles:
 - Activity tracking (feedings, diaper changes, sleep sessions, nursing, pumping)
 - **Solid food tracking** (food introduction, try counts, cultural suggestions) ✅ COMPLETED
 - **Pumping session tracking** (dual-breast timing, amount tracking, account-level sessions) ✅ COMPLETED
+- **Imperial/Metric measurement system** (ml ↔ oz conversion, user preference persistence) ✅ COMPLETED
 - Data synchronization with Supabase
 - Real-time polling for data updates (15-second intervals)
 - Background timer persistence for nursing and pumping sessions
@@ -38,7 +39,7 @@ This is the central state management that handles:
 - **HomePage**: Main dashboard with baby selection and quick actions
 - **BabyHistoryPage**: Individual baby's history and timeline
 - **FeedingsPage**: Feeding-focused interface (includes solid food tracking) ✅ COMPLETED
-- **ProfilePage**: User profile and settings
+- **ProfilePage**: User profile and settings (includes measurement unit preference)
 
 #### Database Schema (Supabase)
 - **babies**: Baby profiles with names, birthdates, and images
@@ -48,6 +49,7 @@ This is the central state management that handles:
 - **baby_settings**: Per-baby configuration (feeding intervals, default amounts)
 - **solid_foods**: Solid food introduction tracking with cultural categories and try counts ✅ COMPLETED
 - **pumping_sessions**: Account-level pumping sessions with dual-breast timing and amounts ✅ COMPLETED
+- **user_preferences**: User-specific settings including measurement unit preference (metric/imperial) ✅ COMPLETED
 
 #### Authentication Flow
 - Uses Supabase Auth with email/password
@@ -134,6 +136,40 @@ For GitHub Pages deployment, use `.env.github` file that gets copied during buil
 - Store methods: `addPumpingSession()`, `updatePumpingSession()`, `getPumpingSessions()` ✅ COMPLETED
 - Database migration with triggers and constraints ✅ COMPLETED
 - Integration with timeline and activity tracking ✅ COMPLETED
+
+#### Imperial/Metric Measurement System ✅ COMPLETED
+**Architecture Overview:**
+- **Storage Layer**: All amounts stored in database as integers in milliliters (ml) for consistency
+- **UI Layer**: Dynamic conversion between ml and fluid ounces (oz) based on user preference
+- **Conversion**: 1 fl oz = 29.5735 ml with precision rounding (0.25oz increments, 5ml increments)
+
+**Database Structure (user_preferences table):**
+- Basic fields: id, user_id, measurement_unit ('metric'|'imperial'), created_at, updated_at
+- RLS policies: Users can only access their own preferences
+- Default: All new users start with 'metric' preference
+
+**Key Components:**
+- **`src/lib/measurements.ts`** - Core conversion utilities and formatting functions ✅ COMPLETED
+- **Store Integration** - `measurementUnit` state in babyStore with load/save methods ✅ COMPLETED
+- **UI Components Updated:**
+  - `FeedingModal.vue` - Dynamic units, imperial presets (3oz, 4oz, 5oz vs 100ml, 120ml, 140ml) ✅ COMPLETED
+  - `PumpingTimerModal.vue` - Dual-breast amount inputs with unit conversion ✅ COMPLETED
+  - `PumpingEditModal.vue` - Edit pumping sessions with imperial support ✅ COMPLETED
+  - `BabySettingsModal.vue` - Default amounts configurable in user's preferred unit ✅ COMPLETED
+  - `HistoryList.vue` - All amount displays show in user's preferred unit ✅ COMPLETED
+  - `ProfilePage.vue` - Measurement unit preference selector ✅ COMPLETED
+
+**Features:**
+- User-selectable measurement unit preference in Profile settings
+- Real-time UI updates when switching between metric/imperial
+- Smart preset buttons adapt to selected unit (ml vs oz values)
+- All historical data displays in user's preferred unit
+- Input validation adapted for imperial thresholds
+- Persistent preferences across user sessions
+
+**Migration Required:**
+- Run `supabase/migrations/015_add_user_preferences.sql` to create user_preferences table
+- Automatic default preference creation for existing users
 
 ### Design Notes
 
