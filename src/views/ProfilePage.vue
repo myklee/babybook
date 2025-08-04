@@ -215,11 +215,10 @@ async function signOut() {
         </section>
 
         <!-- Measurement Unit Preference -->
-        <section class="profile-section">
-          <h2>Measurement Units</h2>
+        <section class="profile-section">  
           <div class="measurement-options">
             <div class="measurement-toggle">
-              <span class="toggle-text-left">ml</span>
+              <span class="toggle-text-left">Metric (ml)</span>
               <div class="toggle-container">
                 <input 
                   type="checkbox" 
@@ -231,13 +230,7 @@ async function signOut() {
                 />
                 <label for="measurement-unit-toggle" class="toggle-slider"></label>
               </div>
-              <span class="toggle-text-right">oz</span>
-            </div>
-            <div class="measurement-description">
-              {{ store.measurementUnit === 'metric' ? 'Milliliters for liquid measurements' : 'Fluid ounces for liquid measurements' }}
-            </div>
-            <div v-if="isUpdatingMeasurementUnit" class="updating-indicator">
-              Updating...
+              <span class="toggle-text-right">Imperial (oz)</span>
             </div>
           </div>
         </section>
@@ -536,8 +529,7 @@ async function signOut() {
 
 .toggle-text-left,
 .toggle-text-right {
-  font-size: 0.7rem;
-  font-weight: bold;
+  font-size: 1rem;
   color: var(--color-periwinkle);
   white-space: nowrap;
 }

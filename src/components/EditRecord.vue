@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import { format } from 'date-fns'
 import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
+import { 
+  getDisplayValue, 
+  getStorageValue, 
+  getInputStep, 
+  getUnitLabel
+} from '../lib/measurements'
 
 const props = defineProps<{
   record: any
@@ -32,6 +38,10 @@ const isSaving = ref(false)
 const amountInput = ref<HTMLInputElement | null>(null)
 const topupAmountInput = ref<HTMLInputElement | null>(null)
 
+// Computed properties for unit handling
+const unitLabel = computed(() => getUnitLabel(store.measurementUnit))
+const inputStep = computed(() => getInputStep(store.measurementUnit))
+
 onMounted(() => {
   const setDateTime = (timestamp: string, isEnd = false) => {
     const date = new Date(timestamp)
@@ -59,10 +69,10 @@ onMounted(() => {
   if (props.type === 'feeding' || props.type === 'diaper') {
     if (props.type === 'feeding') {
       const feeding = props.record
-      amount.value = feeding.amount
+      amount.value = getDisplayValue(feeding.amount, store.measurementUnit)
       feedingType.value = feeding.type
       notes.value = feeding.notes || ''
-      topupAmount.value = feeding.topup_amount || 0
+      topupAmount.value = getDisplayValue(feeding.topup_amount || 0, store.measurementUnit)
     } else { // Diaper
       const diaperChange = props.record
       diaperType.value = diaperChange.type
@@ -109,11 +119,11 @@ async function handleSubmit() {
 
     if (props.type === 'feeding') {
       await store.updateFeeding(props.record.id, {
-        amount: amount.value,
+        amount: getStorageValue(amount.value, store.measurementUnit),
         type: feedingType.value,
         notes: notes.value,
         timestamp: startTimestamp.toISOString(),
-        topup_amount: topupAmount.value
+        topup_amount: getStorageValue(topupAmount.value, store.measurementUnit)
       } as any)
     } else if (props.type === 'diaper') {
       await store.updateDiaperChange(props.record.id, {
@@ -199,13 +209,13 @@ async function handleDelete() {
           <TimePicker v-model="endTime" />
         </div>
         <div v-if="type === 'feeding'" class="form-group">
-          <label>Amount (ml)</label>
+          <label>Amount ({{ unitLabel }})</label>
           <input 
             type="number" 
             v-model="amount" 
             required 
             min="0" 
-            step="5"
+            :step="inputStep"
             ref="amountInput"
             inputmode="decimal"
             pattern="[0-9]*"
@@ -216,12 +226,12 @@ async function handleDelete() {
           >
         </div>
         <div v-if="type === 'feeding' && feedingType === 'breast'" class="form-group">
-          <label>Formula Top-up (ml)</label>
+          <label>Formula Top-up ({{ unitLabel }})</label>
           <input 
             type="number" 
             v-model="topupAmount" 
             min="0" 
-            step="1"
+            :step="inputStep"
             placeholder="0"
             ref="topupAmountInput"
             inputmode="decimal"

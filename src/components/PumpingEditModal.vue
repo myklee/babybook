@@ -915,7 +915,7 @@ onMounted(() => {
                 <strong>Duration:</strong> {{ durationDisplay }}
               </p>
               <p class="session-detail">
-                <strong>Total Amount:</strong> {{ editSession.total_amount }}ml
+                <strong>Total Amount:</strong> {{ formatAmount(editSession.total_amount, store.measurementUnit) }}
               </p>
             </div>
           </div>
