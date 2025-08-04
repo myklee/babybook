@@ -218,31 +218,23 @@ async function signOut() {
         <section class="profile-section">
           <h2>Measurement Units</h2>
           <div class="measurement-options">
-            <div class="radio-group">
-              <label class="radio-option">
-                <input
-                  type="radio"
-                  name="measurement-unit"
-                  value="metric"
-                  :checked="store.measurementUnit === 'metric'"
+            <div class="measurement-toggle">
+              <span class="toggle-text-left">ml</span>
+              <div class="toggle-container">
+                <input 
+                  type="checkbox" 
+                  :checked="store.measurementUnit === 'imperial'" 
                   :disabled="isUpdatingMeasurementUnit"
-                  @change="updateMeasurementUnit('metric')"
+                  class="toggle-input" 
+                  id="measurement-unit-toggle"
+                  @change="updateMeasurementUnit(store.measurementUnit === 'metric' ? 'imperial' : 'metric')" 
                 />
-                <span class="radio-label">Metric (ml)</span>
-                <span class="radio-description">Milliliters for liquid measurements</span>
-              </label>
-              <label class="radio-option">
-                <input
-                  type="radio"
-                  name="measurement-unit"
-                  value="imperial"
-                  :checked="store.measurementUnit === 'imperial'"
-                  :disabled="isUpdatingMeasurementUnit"
-                  @change="updateMeasurementUnit('imperial')"
-                />
-                <span class="radio-label">Imperial (oz)</span>
-                <span class="radio-description">Fluid ounces for liquid measurements</span>
-              </label>
+                <label for="measurement-unit-toggle" class="toggle-slider"></label>
+              </div>
+              <span class="toggle-text-right">oz</span>
+            </div>
+            <div class="measurement-description">
+              {{ store.measurementUnit === 'metric' ? 'Milliliters for liquid measurements' : 'Fluid ounces for liquid measurements' }}
             </div>
             <div v-if="isUpdatingMeasurementUnit" class="updating-indicator">
               Updating...
@@ -532,53 +524,64 @@ async function signOut() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  align-items: center;
 }
 
-.radio-group {
+.measurement-toggle {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.radio-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.05);
+.toggle-text-left,
+.toggle-text-right {
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: var(--color-periwinkle);
+  white-space: nowrap;
 }
 
-.radio-option:hover {
-  border-color: #9c27b0;
-  background: rgba(156, 39, 176, 0.1);
+.toggle-container {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
-.radio-option input[type="radio"] {
-  margin: 0;
-  margin-top: 0.125rem;
+.toggle-input {
+  display: none;
 }
 
-.radio-option input[type="radio"]:checked + .radio-label {
-  color: #9c27b0;
-  font-weight: 600;
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.8);
+  transition: transform 0.2s;
 }
 
-.radio-label {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #e0e0ff;
-  display: block;
-  margin-bottom: 0.25rem;
+.toggle-input:checked + .toggle-slider {
+  transform: translateX(26px);
 }
 
-.radio-description {
+.toggle-input:disabled + .toggle-slider {
+  opacity: 0.5;
+}
+
+.toggle-input:disabled + .toggle-container {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.measurement-description {
   font-size: 0.875rem;
   color: var(--color-periwinkle);
-  display: block;
+  text-align: center;
 }
 
 .updating-indicator {
