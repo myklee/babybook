@@ -39,6 +39,17 @@ const isAuthenticated = computed(() => {
   return authenticated
 })
 
+// Login form state
+const isSigningIn = ref(false)
+const isSigningUp = ref(false)
+const showSignUp = ref(false)
+const loginForm = ref({
+  email: '',
+  password: '',
+  confirmPassword: ''
+})
+const loginError = ref('')
+
 // Watch for when data is loaded but loading state might be stuck
 watch(() => store.babies, (newBabies) => {
   if (newBabies.length > 0 && store.isLoading) {
@@ -155,40 +166,78 @@ function goToProfile() {
   router.push('/profile')
 }
 
+// Clear login error when switching between forms
+function clearError() {
+  loginError.value = ''
+}
+
+// Toggle between sign in and sign up
+function toggleSignUp() {
+  showSignUp.value = !showSignUp.value
+  clearError()
+  loginForm.value.confirmPassword = ''
+}
+
 // Sign in
 async function signIn() {
-  const email = prompt('Enter your email:')
-  const password = prompt('Enter your password:')
+  if (!loginForm.value.email || !loginForm.value.password) {
+    loginError.value = 'Please enter both email and password'
+    return
+  }
 
-  if (email && password) {
-    try {
-      await store.signIn(email, password)
-      
-      // Wait a moment for the authentication state to update
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      // Force a router navigation to refresh the page state
-      await router.push('/')
-    } catch (error) {
-      console.error('Sign in error:', error)
-      alert('Failed to sign in. Please check your credentials.')
-    }
+  isSigningIn.value = true
+  loginError.value = ''
+
+  try {
+    await store.signIn(loginForm.value.email, loginForm.value.password)
+    
+    // Wait a moment for the authentication state to update
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // Force a router navigation to refresh the page state
+    await router.push('/')
+  } catch (error) {
+    console.error('Sign in error:', error)
+    loginError.value = 'Failed to sign in. Please check your credentials.'
+  } finally {
+    isSigningIn.value = false
   }
 }
 
 // Sign up
 async function signUp() {
-  const email = prompt('Enter your email:')
-  const password = prompt('Enter your password:')
+  if (!loginForm.value.email || !loginForm.value.password) {
+    loginError.value = 'Please enter both email and password'
+    return
+  }
 
-  if (email && password) {
-    try {
-      await store.signUp(email, password)
-      alert('Account created! Please check your email to verify your account.')
-    } catch (error) {
-      console.error('Sign up error:', error)
-      alert('Failed to create account. Please try again.')
-    }
+  if (loginForm.value.password !== loginForm.value.confirmPassword) {
+    loginError.value = 'Passwords do not match'
+    return
+  }
+
+  if (loginForm.value.password.length < 6) {
+    loginError.value = 'Password must be at least 6 characters long'
+    return
+  }
+
+  isSigningUp.value = true
+  loginError.value = ''
+
+  try {
+    await store.signUp(loginForm.value.email, loginForm.value.password)
+    loginError.value = ''
+    // Show success message and switch to sign in
+    showSignUp.value = false
+    loginForm.value.password = ''
+    loginForm.value.confirmPassword = ''
+    // Use a positive message instead of alert
+    loginError.value = 'Account created! Please check your email to verify your account, then sign in.'
+  } catch (error) {
+    console.error('Sign up error:', error)
+    loginError.value = 'Failed to create account. Please try again.'
+  } finally {
+    isSigningUp.value = false
   }
 }
 
@@ -426,11 +475,79 @@ function handleSleepClick() {
       <HistoryList v-if="selectedBaby" :baby-id="selectedBaby.id" class="mt-8 w-full" />
     </div>
     <div v-else class="auth-section">
-      <h2>Welcome to BabyBook</h2>
-      <p>Please sign in to start tracking your baby's activities.</p>
-      <div class="auth-buttons">
-        <button @click="signIn" class="btn btn-primary">Sign In</button>
-        <button @click="signUp" class="btn btn-secondary">Sign Up</button>
+      <div class="auth-container">
+        <h2>Welcome to BabyBook</h2>
+        <p v-if="!showSignUp">Please sign in to start tracking your baby's activities.</p>
+        <p v-else>Create your account to get started with BabyBook.</p>
+        
+        <form @submit.prevent="showSignUp ? signUp() : signIn()" class="auth-form">
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input
+              id="email"
+              type="email"
+              v-model="loginForm.email"
+              placeholder="Enter your email"
+              required
+              :disabled="isSigningIn || isSigningUp"
+              @input="clearError"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              v-model="loginForm.password"
+              placeholder="Enter your password"
+              required
+              :disabled="isSigningIn || isSigningUp"
+              @input="clearError"
+            />
+          </div>
+          
+          <div v-if="showSignUp" class="form-group">
+            <label for="confirmPassword">Confirm Password</label>
+            <input
+              id="confirmPassword"
+              type="password"
+              v-model="loginForm.confirmPassword"
+              placeholder="Confirm your password"
+              required
+              :disabled="isSigningIn || isSigningUp"
+              @input="clearError"
+            />
+          </div>
+          
+          <div v-if="loginError" class="error-message" :class="{ 'success-message': loginError.includes('Account created') }">
+            {{ loginError }}
+          </div>
+          
+          <div class="auth-buttons">
+            <button 
+              type="submit" 
+              class="btn btn-primary" 
+              :disabled="isSigningIn || isSigningUp"
+            >
+              <span v-if="showSignUp">
+                {{ isSigningUp ? 'Creating Account...' : 'Create Account' }}
+              </span>
+              <span v-else>
+                {{ isSigningIn ? 'Signing In...' : 'Sign In' }}
+              </span>
+            </button>
+            
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              @click="toggleSignUp"
+              :disabled="isSigningIn || isSigningUp"
+            >
+              {{ showSignUp ? 'Back to Sign In' : 'Create Account' }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -718,48 +835,150 @@ function handleSleepClick() {
   border-color: #6a6aff;
 }
 
-/* Fallback for auth section if needed */
+/* Auth section styling */
 .auth-section {
-  text-align: center;
-  max-width: 400px;
-  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
   padding: 2rem 1rem;
 }
 
-.auth-buttons {
-  margin-top: 1rem;
+.auth-container {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.auth-container h2 {
+  margin: 0 0 1rem 0;
+  color: #e0e0ff;
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.auth-container p {
+  color: var(--color-periwinkle);
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.auth-form {
   display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--color-periwinkle);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #9c27b0;
+  background-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.form-group input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  padding: 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  text-align: center;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.success-message {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
+  margin-top: 1rem;
 }
 
 .btn {
   margin: 0;
-  padding: 0.75rem 1.5rem;
+  padding: 1rem 1.5rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 15px;
   cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-primary {
-  background-color: #9c27b0;
+  background: linear-gradient(135deg, #9c27b0, #7b1fa2);
   color: white;
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
 }
 
-.btn-primary:hover {
-  background-color: #7b1fa2;
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8e24aa, #6a1b9a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(156, 39, 176, 0.4);
 }
 
 .btn-secondary {
-  background-color: #9e9e9e;
-  color: white;
+  background: transparent;
+  color: var(--color-periwinkle);
+  border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
-.btn-secondary:hover {
-  background-color: #757575;
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Responsive adjustments */
