@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 import DualBreastTimer from './DualBreastTimer.vue'
+import ResponsiveModal from './ResponsiveModal.vue'
 import { useBabyStore } from '../stores/babyStore'
 
 interface Props {
@@ -18,9 +19,11 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const babyStore = useBabyStore()
-const modalRef = ref<HTMLElement>()
 const dualTimerRef = ref<InstanceType<typeof DualBreastTimer>>()
 const isSaving = ref(false)
+
+// Computed modal title
+const modalTitle = computed(() => `Nursing Timer for ${props.babyName}`)
 
 // Session persistence state
 const hasActiveSession = ref(false)
@@ -28,8 +31,7 @@ const sessionStartTime = ref<Date | null>(null)
 const sessionNotes = ref('')
 const isRecoveringSession = ref(false)
 
-// Focus management
-let previousActiveElement: HTMLElement | null = null
+// Focus management - ResponsiveModal handles this automatically
 
 const activeSession = computed(() => {
   return babyStore.getActiveNursingSession(props.babyId)
@@ -132,64 +134,7 @@ function recoverSession() {
   }
 }
 
-// Handle backdrop click
-function handleBackdropClick(event: MouseEvent | TouchEvent) {
-  if (event.target === event.currentTarget) {
-    handleCancel()
-  }
-}
-
-// Keyboard shortcuts
-function handleKeydown(event: KeyboardEvent) {
-  if (!props.isOpen) return
-
-  switch (event.key) {
-    case 'Escape':
-      event.preventDefault()
-      event.stopPropagation()
-      handleCancel()
-      break
-    
-    case ' ': // Spacebar
-      // Only handle spacebar if not focused on input elements
-      if (
-        event.target instanceof HTMLElement &&
-        !['INPUT', 'TEXTAREA', 'BUTTON'].includes(event.target.tagName)
-      ) {
-        event.preventDefault()
-        event.stopPropagation()
-        // This would toggle timers, but we'll let the DualBreastTimer handle it
-        // since it has the logic for which timer to toggle
-      }
-      break
-  }
-}
-
-// Focus management
-function trapFocus(event: KeyboardEvent) {
-  if (!props.isOpen || event.key !== 'Tab') return
-
-  const modal = modalRef.value
-  if (!modal) return
-
-  const focusableElements = modal.querySelectorAll(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  )
-  const firstElement = focusableElements[0] as HTMLElement
-  const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
-
-  if (event.shiftKey) {
-    if (document.activeElement === firstElement) {
-      event.preventDefault()
-      lastElement.focus()
-    }
-  } else {
-    if (document.activeElement === lastElement) {
-      event.preventDefault()
-      firstElement.focus()
-    }
-  }
-}
+// ResponsiveModal handles backdrop clicks, keyboard shortcuts, and focus management automatically
 
 // Handle app backgrounding and visibility changes
 function handleVisibilityChange() {
@@ -207,117 +152,60 @@ function handleVisibilityChange() {
 
 // Lifecycle management
 onMounted(() => {
-  if (props.isOpen) {
-    setupModal()
-  }
-  
   // Add visibility change listener for background handling
   document.addEventListener('visibilitychange', handleVisibilityChange)
+  
+  // Recover session when modal opens initially
+  if (props.isOpen) {
+    recoverSession()
+  }
 })
 
 onUnmounted(() => {
-  cleanupModal()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
-
-// Watch for isOpen changes
-function setupModal() {
-  // Store the previously focused element
-  previousActiveElement = document.activeElement as HTMLElement
-  
-  // Lock body scroll
-  document.body.style.overflow = 'hidden'
-  
-  // Add event listeners
-  document.addEventListener('keydown', handleKeydown, true)
-  document.addEventListener('keydown', trapFocus, true)
-  
-  // Recover session when modal opens
-  recoverSession()
-  
-  // Focus the modal after next tick to ensure it's rendered
-  nextTick(() => {
-    if (modalRef.value) {
-      modalRef.value.focus()
-    }
-  })
-}
-
-function cleanupModal() {
-  // Restore body scroll
-  document.body.style.overflow = ''
-  
-  // Remove event listeners
-  document.removeEventListener('keydown', handleKeydown, true)
-  document.removeEventListener('keydown', trapFocus, true)
-  
-  // Restore focus to previously active element
-  if (previousActiveElement) {
-    previousActiveElement.focus()
-    previousActiveElement = null
-  }
-}
 
 
 // Watch for prop changes
 watch(() => props.isOpen, (newValue, oldValue) => {
   if (newValue !== oldValue) {
     if (newValue) {
-      setupModal()
-    } else {
-      cleanupModal()
+      // Recover session when modal opens
+      nextTick(() => {
+        recoverSession()
+      })
     }
   }
 }, { immediate: false })
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition
-      name="modal"
-      appear
-    >
-      <div
-        v-if="isOpen"
-        class="modal-overlay"
-        @click="handleBackdropClick"
-        @touchstart.passive="handleBackdropClick"
-      >
-        <div
-          ref="modalRef"
-          class="modal"
-          role="dialog"
-          aria-modal="true"
-          :aria-label="`Nursing timer for ${babyName}`"
-          tabindex="-1"
-          @click.stop
-        >
-          <h3 class="modal-title">
-            Nursing Timer for {{ babyName }}
-          </h3>
+  <ResponsiveModal
+    :is-open="isOpen"
+    :title="modalTitle"
+    :close-on-backdrop="true"
+    max-width="600px"
+    @close="handleCancel"
+  >
+    <!-- Session recovery indicator -->
+    <div v-if="isRecoveringSession" class="session-recovery">
+      <div class="recovery-spinner"></div>
+      <span>Recovering session...</span>
+    </div>
 
-          <!-- Session recovery indicator -->
-          <div v-if="isRecoveringSession" class="session-recovery">
-            <div class="recovery-spinner"></div>
-            <span>Recovering session...</span>
-          </div>
-
-          <!-- Main content -->
-          <DualBreastTimer
-            ref="dualTimerRef"
-            :baby-id="babyId"
-            :baby-name="babyName"
-            :has-active-session="hasActiveSession"
-            :session-start-time="sessionStartTime"
-            :session-notes="sessionNotes"
-            :session-type="'nursing'"
-            @save="handleSave"
-            @cancel="handleCancel"
-          />
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
+    <!-- Main content -->
+    <DualBreastTimer
+      ref="dualTimerRef"
+      :baby-id="babyId"
+      :baby-name="babyName"
+      :has-active-session="hasActiveSession"
+      :session-start-time="sessionStartTime"
+      :session-notes="sessionNotes"
+      :session-type="'nursing'"
+      @save="handleSave"
+      @cancel="handleCancel"
+    />
+  </ResponsiveModal>
 </template>
 
 <style scoped>
