@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
+import ResponsiveModal from './ResponsiveModal.vue'
 
 const props = defineProps<{
   babyId: string
@@ -24,15 +25,20 @@ const customDate = ref('')
 const time = ref<{ hour: string; minute: string; ampm: 'AM' | 'PM' }>({ hour: '', minute: '', ampm: 'AM' })
 const isSaving = ref(false)
 
+// UI state
+const showAdvanced = ref(false)
+
 const options = [
   { value: 'pee', label: 'Pee' },
   { value: 'poop', label: 'Poop' },
   { value: 'both', label: 'Both' }
 ]
 
+// Dynamic modal title
+const modalTitle = computed(() => `Record Diaper Change for ${props.babyName}`)
+
 onMounted(() => {
-  // Lock body scroll when modal opens
-  document.body.style.overflow = 'hidden'
+  // ResponsiveModal handles body scroll locking
   
   console.log('DiaperModal mounted with babyName:', props.babyName)
   
@@ -54,8 +60,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // Restore body scroll when modal is destroyed
-  document.body.style.overflow = ''
+  // ResponsiveModal handles body scroll restoration
 })
 
 function getSelectedDateTime() {
@@ -90,11 +95,15 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="modal-overlay" @click="emit('close')">
-    <div class="modal" @click.stop>
-      <h3 class="modal-title">Record Diaper Change for {{ babyName }}</h3>
-      
-      <form @submit.prevent="handleSubmit">
+  <ResponsiveModal
+    :is-open="true"
+    :title="modalTitle"
+    :close-on-backdrop="true"
+    max-width="450px"
+    @close="emit('close')"
+  >
+    <!-- Form Content -->
+    <form @submit.prevent="handleSubmit">
         <div class="form-group">
           <label for="diaper-date">Date</label>
           <DatePicker v-model="customDate" id="diaper-date" />
@@ -111,23 +120,189 @@ async function handleSubmit() {
           </select>
         </div>
 
-        <div class="form-group">
-          <label>Notes</label>
-          <textarea v-model="notes" rows="2"></textarea>
+        <!-- Advanced Options Toggle -->
+        <div class="advanced-toggle">
+          <button
+            type="button"
+            @click="showAdvanced = !showAdvanced"
+            class="toggle-btn"
+          >
+            <span>{{ showAdvanced ? "Hide" : "More" }} Options</span>
+            <span class="arrow" :class="{ rotated: showAdvanced }">▼</span>
+          </button>
         </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn btn-save" :disabled="isSaving">
-            {{ isSaving ? 'Saving...' : 'Save' }}
-          </button>
-          <button type="button" class="btn btn-cancel" @click="emit('close')" :disabled="isSaving">
-            Cancel
-          </button>
+        <!-- Advanced Options -->
+        <div v-if="showAdvanced" class="advanced-options">
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea v-model="notes" rows="2" placeholder="Optional notes..."></textarea>
+          </div>
         </div>
-      </form>
-    </div>
-  </div>
+
+    </form>
+
+    <!-- Footer Actions -->
+    <template #footer>
+      <div class="form-actions">
+        <button
+          type="button"
+          class="btn btn-save"
+          @click="handleSubmit"
+          :disabled="isSaving"
+        >
+          {{ isSaving ? 'Saving...' : 'Save' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-cancel"
+          @click="emit('close')"
+          :disabled="isSaving"
+        >
+          Cancel
+        </button>
+      </div>
+    </template>
+  </ResponsiveModal>
 </template>
 
 <style scoped>
+/* Form Layout */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-periwinkle);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.form-group select::placeholder,
+.form-group textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Advanced Options Toggle */
+.advanced-toggle {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #666;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+  color: var(--color-lavendar);
+  background-color: var(--color-midnight);
+  text-decoration: underline;
+}
+
+.arrow {
+  transition: transform 0.2s;
+}
+
+.arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.advanced-options {
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+/* Footer Actions */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, var(--color-periwinkle) 0%, #8b5cf6 100%);
+  color: white;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 1rem;
+  }
+}
 </style> 
