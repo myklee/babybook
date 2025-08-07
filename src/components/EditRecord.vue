@@ -4,6 +4,7 @@ import { useBabyStore } from '../stores/babyStore'
 import { format } from 'date-fns'
 import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
+import ResponsiveModal from './ResponsiveModal.vue'
 import { 
   getDisplayValue, 
   getStorageValue, 
@@ -44,6 +45,17 @@ const showMoreOptions = ref(false)
 // Computed properties for unit handling
 const unitLabel = computed(() => getUnitLabel(store.measurementUnit))
 const inputStep = computed(() => getInputStep(store.measurementUnit))
+
+// Computed title for the modal
+const modalTitle = computed(() => {
+  let title = 'Edit '
+  if (props.type === 'feeding') title += 'Feeding'
+  else if (props.type === 'diaper') title += 'Diaper Change'
+  else if (props.type === 'sleep') title += 'Sleep Session'
+  
+  if (props.babyName) title += ` for ${props.babyName}`
+  return title
+})
 
 onMounted(() => {
   const setDateTime = (timestamp: string, isEnd = false) => {
@@ -176,16 +188,15 @@ async function handleDelete() {
 </script>
 
 <template>
-  <div class="modal-overlay" @click="emit('close')">
-    <div class="modal" @click.stop>
-      <h3>Edit
-        <span v-if="type === 'feeding'">Feeding</span>
-        <span v-else-if="type === 'diaper'">Diaper Change</span>
-        <span v-else-if="type === 'sleep'">Sleep Session</span>
-        <span v-if="babyName"> for {{ babyName }}</span>
-      </h3>
-      
-      <form @submit.prevent="handleSubmit">
+  <ResponsiveModal
+    :is-open="true"
+    :title="modalTitle"
+    :close-on-backdrop="true"
+    max-width="500px"
+    @close="emit('close')"
+  >
+    <!-- Form Content -->
+    <form @submit.prevent="handleSubmit">
         <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
           <label for="edit-date">Date</label>
           <DatePicker v-model="customDate" id="edit-date" />
@@ -282,21 +293,25 @@ async function handleDelete() {
             <textarea v-model="notes" rows="2"></textarea>
           </div>
         </div>
-        
-        <div class="form-actions">
-          <button type="submit" class="btn btn-save" :disabled="isSaving">
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
-          </button>
-          <button type="button" class="btn btn-delete" @click="handleDelete" :disabled="isSaving">
-            Delete
-          </button>
+    </form>
+
+    <!-- Footer Actions -->
+    <template #footer>
+      <div class="form-actions">
+        <button type="button" class="btn btn-delete" @click="handleDelete" :disabled="isSaving">
+          Delete
+        </button>
+        <div class="action-buttons">
           <button type="button" class="btn btn-cancel" @click="emit('close')" :disabled="isSaving">
             Cancel
           </button>
+          <button type="button" class="btn btn-save" @click="handleSubmit" :disabled="isSaving">
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
         </div>
-      </form>
-    </div>
-  </div>
+      </div>
+    </template>
+  </ResponsiveModal>
 </template>
 
 <style scoped>
@@ -336,5 +351,85 @@ async function handleDelete() {
 .more-options {
   padding-top: 1rem;
   margin-top: 1rem;
+}
+
+/* Footer Actions */
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, var(--color-periwinkle) 0%, #8b5cf6 100%);
+  color: white;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 1rem;
+  }
 }
 </style>  
