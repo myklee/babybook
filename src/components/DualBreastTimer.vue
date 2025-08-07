@@ -371,7 +371,7 @@ defineExpose({
     </div>
 
     <!-- Action Buttons -->
-    <div class="form-actions">
+    <div class="form-actions modal-footer">
       <button
         type="button"
         class="btn btn-save"

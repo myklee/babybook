@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
+import ResponsiveModal from './ResponsiveModal.vue'
 import { categoryNames, searchSuggestedFoods } from "../lib/suggestedFoods"
 import type { SuggestedFood, FoodCategory } from "../lib/suggestedFoods"
 
@@ -78,12 +79,14 @@ const finalFoodName = computed(() => {
   return searchQuery.value.trim()
 })
 
+// Dynamic modal title
+const modalTitle = computed(() => `Edit Solid Food for ${props.babyName}`)
+
 
 
 // Lifecycle
 onMounted(() => {
-  // Lock body scroll
-  document.body.style.overflow = 'hidden'
+  // ResponsiveModal handles body scroll locking
   
   // Set date and time from last_tried_date
   const lastTriedDate = new Date(props.solidFood.last_tried_date)
@@ -102,8 +105,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // Restore body scroll
-  document.body.style.overflow = ''
+  // ResponsiveModal handles body scroll restoration
 })
 
 // Functions
@@ -200,11 +202,15 @@ async function handleDelete() {
 </script>
 
 <template>
-  <div class="modal-overlay" @click="emit('close')">
-    <div class="modal" @click.stop>
-      <h3 class="modal-title">Edit Solid Food for {{ babyName }}</h3>
-      
-      <form @submit.prevent="handleSave">
+  <ResponsiveModal
+    :is-open="true"
+    :title="modalTitle"
+    :close-on-backdrop="true"
+    max-width="600px"
+    @close="emit('close')"
+  >
+    <!-- Form Content -->
+    <form @submit.prevent="handleSave">
         <!-- Date and Time -->
         <div class="form-group">
           <label for="food-date">Last Tried Date</label>
@@ -319,133 +325,116 @@ async function handleDelete() {
           </div>
         </div>
 
-        <!-- Actions -->
+      </form>
+
+      <!-- Footer Actions -->
+      <template #footer>
         <div class="form-actions">
-          <button type="submit" class="btn btn-save" :disabled="!canSave">
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
-          </button>
           <button type="button" class="btn btn-delete" @click="handleDelete" :disabled="isSaving || isDeleting">
             {{ isDeleting ? 'Deleting...' : 'Delete' }}
           </button>
-          <button type="button" class="btn btn-cancel" @click="emit('close')" :disabled="isSaving || isDeleting">
-            Cancel
-          </button>
+          <div class="action-buttons">
+            <button type="button" class="btn btn-cancel" @click="emit('close')" :disabled="isSaving || isDeleting">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-save" :disabled="!canSave" @click="handleSave">
+              {{ isSaving ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
         </div>
-      </form>
-    </div>
-  </div>
+      </template>
+  </ResponsiveModal>
 </template>
 
 <style scoped>
-/* Base modal styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 20px;
-  padding: 2rem;
-  width: 90vw;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.modal-title {
-  margin: 0 0 2rem 0;
-  color: var(--color-periwinkle);
-  font-size: 1.5rem;
-  font-weight: 600;
-  text-align: center;
-}
-
+/* Form Group Styles */
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  color: var(--color-periwinkle);
   font-weight: 500;
-  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 1rem 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--color-periwinkle);
+  padding: 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
   font-size: 1rem;
   transition: all 0.2s ease;
-  box-sizing: border-box;
-  font-family: inherit;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #9c27b0;
-  background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+  border-color: var(--color-periwinkle);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
 }
 
 .form-group textarea {
   resize: vertical;
   min-height: 80px;
+  font-family: inherit;
 }
 
+.form-group input::placeholder,
+.form-group select::placeholder,
+.form-group textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Form Actions */
 .form-actions {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 2rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
 }
 
 .btn {
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 15px;
-  font-size: 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-save {
-  background: linear-gradient(135deg, #9c27b0 0%, #673ab7 100%);
+  background: linear-gradient(135deg, var(--color-periwinkle) 0%, #8b5cf6 100%);
   color: white;
 }
 
 .btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7b1fa2 0%, #512da8 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(156, 39, 176, 0.3);
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 .btn-cancel {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--color-periwinkle);
+  color: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -454,11 +443,15 @@ async function handleDelete() {
   color: white;
 }
 
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+.btn-delete {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
 /* Search Input */
@@ -646,39 +639,23 @@ async function handleDelete() {
   box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
 }
 
-.btn-delete {
-  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+/* Times Tried Input */
+.times-tried-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
   color: white;
-  border: none;
-  padding: 1rem 2rem;
-  border-radius: 15px;
   font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
   transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.btn-delete:hover:not(:disabled) {
-  background: linear-gradient(135deg, #c53030 0%, #9c2626 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(229, 62, 62, 0.3);
-}
-
-.btn-delete:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* Adjust form actions layout for three buttons */
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+.times-tried-input:focus {
+  outline: none;
+  border-color: var(--color-periwinkle);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
 }
 
 /* Advanced Options */
@@ -721,13 +698,22 @@ async function handleDelete() {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
   .form-actions {
     flex-direction: column;
+    gap: 1rem;
   }
-  
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
   .btn {
     width: 100%;
+    padding: 1rem;
   }
 }
 </style>

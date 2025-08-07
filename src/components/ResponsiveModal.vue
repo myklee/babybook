@@ -1,80 +1,83 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import XIcon from '../assets/icons/x.svg';
 
 interface Props {
-  isOpen: boolean
-  title?: string
-  showCloseButton?: boolean
-  closeOnBackdrop?: boolean
-  maxWidth?: string
-  padding?: string
+  isOpen: boolean;
+  title?: string;
+  showCloseButton?: boolean;
+  closeOnBackdrop?: boolean;
+  maxWidth?: string;
+  padding?: string;
 }
 
 interface Emits {
-  (e: 'close'): void
-  (e: 'backdrop-click'): void
+  (e: "close"): void;
+  (e: "backdrop-click"): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   showCloseButton: true,
   closeOnBackdrop: true,
-  maxWidth: '600px',
-  padding: '1.5rem'
-})
+  maxWidth: "600px",
+  padding: "1.5rem",
+});
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>();
 
-const modalRef = ref<HTMLElement>()
-const contentRef = ref<HTMLElement>()
-let previousActiveElement: HTMLElement | null = null
+const modalRef = ref<HTMLElement>();
+const contentRef = ref<HTMLElement>();
+let previousActiveElement: HTMLElement | null = null;
 
 // Handle backdrop click
 function handleBackdropClick(event: MouseEvent | TouchEvent) {
   if (event.target === event.currentTarget && props.closeOnBackdrop) {
-    emit('backdrop-click')
-    emit('close')
+    emit("backdrop-click");
+    emit("close");
   }
 }
 
 // Handle keyboard events
 function handleKeydown(event: KeyboardEvent) {
-  if (!props.isOpen) return
+  if (!props.isOpen) return;
 
   switch (event.key) {
-    case 'Escape':
+    case "Escape":
       if (props.closeOnBackdrop) {
-        event.preventDefault()
-        event.stopPropagation()
-        emit('close')
+        event.preventDefault();
+        event.stopPropagation();
+        emit("close");
       }
-      break
+      break;
   }
 }
 
 // Focus trap functionality
 function trapFocus(event: KeyboardEvent) {
-  if (!props.isOpen || event.key !== 'Tab') return
+  if (!props.isOpen || event.key !== "Tab") return;
 
-  const modal = modalRef.value
-  if (!modal) return
+  const modal = modalRef.value;
+  if (!modal) return;
 
   const focusableElements = modal.querySelectorAll(
     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  )
-  const firstElement = focusableElements[0] as HTMLElement
-  const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+  );
+  const firstElement = focusableElements[0] as HTMLElement;
+  const lastElement = focusableElements[
+    focusableElements.length - 1
+  ] as HTMLElement;
 
-  if (focusableElements.length === 0) return
+  if (focusableElements.length === 0) return;
 
   if (event.shiftKey) {
     if (document.activeElement === firstElement) {
-      event.preventDefault()
-      lastElement.focus()
+      event.preventDefault();
+      lastElement.focus();
     }
   } else {
     if (document.activeElement === lastElement) {
-      event.preventDefault()
-      firstElement.focus()
+      event.preventDefault();
+      firstElement.focus();
     }
   }
 }
@@ -82,15 +85,15 @@ function trapFocus(event: KeyboardEvent) {
 // Setup modal when opened
 function setupModal() {
   // Store the previously focused element
-  previousActiveElement = document.activeElement as HTMLElement
-  
+  previousActiveElement = document.activeElement as HTMLElement;
+
   // Lock body scroll
-  document.body.style.overflow = 'hidden'
-  
+  document.body.style.overflow = "hidden";
+
   // Add event listeners
-  document.addEventListener('keydown', handleKeydown, true)
-  document.addEventListener('keydown', trapFocus, true)
-  
+  document.addEventListener("keydown", handleKeydown, true);
+  document.addEventListener("keydown", trapFocus, true);
+
   // Focus the modal or first focusable element after next tick
   nextTick(() => {
     try {
@@ -98,62 +101,62 @@ function setupModal() {
         // Try to find the first focusable element
         const firstFocusable = contentRef.value.querySelector(
           'input, select, textarea, button, [tabindex]:not([tabindex="-1"])'
-        ) as HTMLElement
-        
-        if (firstFocusable && typeof firstFocusable.focus === 'function') {
-          firstFocusable.focus()
+        ) as HTMLElement;
+
+        if (firstFocusable && typeof firstFocusable.focus === "function") {
+          firstFocusable.focus();
         } else if (modalRef.value) {
-          modalRef.value.focus()
+          modalRef.value.focus();
         }
       } else if (modalRef.value) {
-        modalRef.value.focus()
+        modalRef.value.focus();
       }
     } catch (error) {
-      console.warn('Could not focus modal element:', error)
+      console.warn("Could not focus modal element:", error);
       // Fallback to modal focus
       if (modalRef.value) {
-        modalRef.value.focus()
+        modalRef.value.focus();
       }
     }
-  })
+  });
 }
 
 // Cleanup modal when closed
 function cleanupModal() {
   // Restore body scroll
-  document.body.style.overflow = ''
-  
+  document.body.style.overflow = "";
+
   // Remove event listeners
-  document.removeEventListener('keydown', handleKeydown, true)
-  document.removeEventListener('keydown', trapFocus, true)
-  
+  document.removeEventListener("keydown", handleKeydown, true);
+  document.removeEventListener("keydown", trapFocus, true);
+
   // Restore focus to previously active element
   if (previousActiveElement) {
     try {
-      previousActiveElement.focus()
+      previousActiveElement.focus();
     } catch (error) {
-      console.warn('Could not restore focus:', error)
+      console.warn("Could not restore focus:", error);
     }
-    previousActiveElement = null
+    previousActiveElement = null;
   }
 }
 
 // Watch for isOpen changes
 onMounted(() => {
   if (props.isOpen) {
-    setupModal()
+    setupModal();
   }
-})
+});
 
 onUnmounted(() => {
-  cleanupModal()
-})
+  cleanupModal();
+});
 
 // Expose setup/cleanup for parent components that manage the prop reactively
 defineExpose({
   setupModal,
-  cleanupModal
-})
+  cleanupModal,
+});
 </script>
 
 <template>
@@ -172,14 +175,16 @@ defineExpose({
           aria-modal="true"
           :aria-label="title"
           tabindex="-1"
-          :style="{ 
+          :style="{
             maxWidth: maxWidth,
-            padding: padding
           }"
           @click.stop
         >
           <!-- Header -->
-          <header v-if="title || showCloseButton || $slots.header" class="modal-header">
+          <header
+            v-if="title || showCloseButton || $slots.header"
+            class="modal-header"
+          >
             <div class="modal-header-content">
               <slot name="header">
                 <h2 v-if="title" class="modal-title">{{ title }}</h2>
@@ -192,7 +197,7 @@ defineExpose({
               aria-label="Close modal"
               @click="emit('close')"
             >
-              <span class="close-icon" aria-hidden="true">&times;</span>
+              <img :src="XIcon" class="close-icon" aria-hidden="true" alt="" />
             </button>
           </header>
 
@@ -237,9 +242,7 @@ defineExpose({
   width: 100%;
   max-height: calc(100vh - 2rem);
   overflow: hidden;
-  box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.15),
-    0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 10px 20px rgba(0, 0, 0, 0.1);
   outline: none;
   display: flex;
   flex-direction: column;
@@ -249,11 +252,9 @@ defineExpose({
 
 /* Header */
 .modal-header {
-  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 2rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2rem 1rem;
   flex-shrink: 0;
 }
 
@@ -277,6 +278,9 @@ defineExpose({
   background: rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   cursor: pointer;
+  position: absolute;
+  top:1rem;
+  right:1rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -296,24 +300,33 @@ defineExpose({
 }
 
 .close-icon {
-  font-size: 1.5rem;
-  color: rgba(255, 255, 255, 0.8);
-  line-height: 1;
+  width: 1.5rem;
+  height: 1.5rem;
+  filter: brightness(0) invert(1) opacity(0.8);
+  transition: all 0.2s ease;
+}
+
+.modal-close-button:hover .close-icon {
+  filter: brightness(0) invert(1) opacity(1);
+  transform: scale(1.1);
 }
 
 /* Content */
 .modal-content {
   flex: 1;
   overflow-y: auto;
-  padding: 1.5rem 2rem;
-  min-height: 0;
+  padding: 0 2rem;
 }
 
 /* Footer */
 .modal-footer {
-  padding: 1rem 2rem 1.5rem;
+  padding: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 1rem;
 }
 
 /* Transitions */
@@ -355,7 +368,7 @@ defineExpose({
   }
 
   .modal-header {
-    padding: 1rem 1.5rem 0.75rem;
+    padding: 1rem;
   }
 
   .modal-title {
@@ -367,16 +380,17 @@ defineExpose({
   }
 
   .modal-footer {
-    padding: 0.75rem 1.5rem 1rem;
+    padding: 1rem;
   }
 
   .modal-close-button {
-    width: 2rem;
-    height: 2rem;
+    width: 2.5rem;
+    height: 2.5rem;
   }
 
   .close-icon {
-    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
   }
 }
 
@@ -418,18 +432,6 @@ defineExpose({
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
 }
 
-/* High Contrast Mode */
-@media (prefers-contrast: high) {
-  .modal-container {
-    border: 2px solid white;
-  }
-  
-  .modal-header,
-  .modal-footer {
-    border-color: rgba(255, 255, 255, 0.3);
-  }
-}
-
 /* Dark Theme Support */
 @media (prefers-color-scheme: dark) {
   .modal-container {
@@ -444,13 +446,13 @@ defineExpose({
     background: none;
     padding: 0;
   }
-  
+
   .modal-container {
     box-shadow: none;
     border: 1px solid #ccc;
     page-break-inside: avoid;
   }
-  
+
   .modal-close-button {
     display: none;
   }

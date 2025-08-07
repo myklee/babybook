@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
+import ResponsiveModal from './ResponsiveModal.vue'
 import { categoryNames, searchSuggestedFoods } from "../lib/suggestedFoods"
 import type { SuggestedFood, FoodCategory } from "../lib/suggestedFoods"
 
@@ -68,10 +69,12 @@ const finalCategory = computed(() => {
   return selectedFood.value?.category || selectedFoodCategory.value
 })
 
+// Dynamic modal title
+const modalTitle = computed(() => `Record Solid Food for ${props.babyName}`)
+
 // Lifecycle
 onMounted(() => {
-  // Lock body scroll
-  document.body.style.overflow = 'hidden'
+  // ResponsiveModal handles body scroll locking
   
   // Set default date and time
   const now = new Date()
@@ -90,8 +93,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // Restore body scroll
-  document.body.style.overflow = ''
+  // ResponsiveModal handles body scroll restoration
 })
 
 // Functions
@@ -170,11 +172,15 @@ async function handleSave() {
 </script>
 
 <template>
-  <div class="modal-overlay" @click="emit('close')">
-    <div class="modal" @click.stop>
-      <h3 class="modal-title">Record Solid Food for {{ babyName }}</h3>
-      
-      <form @submit.prevent="handleSave">
+  <ResponsiveModal
+    :is-open="true"
+    :title="modalTitle"
+    :close-on-backdrop="true"
+    max-width="600px"
+    @close="emit('close')"
+  >
+    <!-- Form Content -->
+    <form @submit.prevent="handleSave">
         <!-- Date and Time -->
         <div class="form-group">
           <label for="food-date">Date</label>
@@ -282,18 +288,20 @@ async function handleSave() {
           </div>
         </div>
 
-        <!-- Actions -->
+      </form>
+
+      <!-- Footer Actions -->
+      <template #footer>
         <div class="form-actions">
-          <button type="submit" class="btn btn-save" :disabled="!canSave">
+          <button type="submit" class="btn btn-save" :disabled="!canSave" @click="handleSave">
             {{ isSaving ? 'Saving...' : 'Save' }}
           </button>
           <button type="button" class="btn btn-cancel" @click="emit('close')" :disabled="isSaving">
             Cancel
           </button>
         </div>
-      </form>
-    </div>
-  </div>
+      </template>
+  </ResponsiveModal>
 </template>
 
 <style scoped>
@@ -511,6 +519,50 @@ async function handleSave() {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, var(--color-periwinkle) 0%, #8b5cf6 100%);
+  color: white;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .suggestions-grid {
@@ -525,6 +577,16 @@ async function handleSave() {
     flex-direction: column;
     gap: 0.5rem;
     align-items: flex-start;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 1rem;
   }
 }
 </style>
