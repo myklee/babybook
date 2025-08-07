@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { format } from 'date-fns'
 import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
@@ -300,14 +300,7 @@ async function handleSave() {
   validationErrors.value = errors
   
   if (errors.length > 0) {
-    // Focus the first field with an error
-    const firstErrorField = errors[0].field
-    nextTick(() => {
-      const errorElement = modalRef.value?.querySelector(`[data-field="${firstErrorField}"]`) as HTMLElement
-      if (errorElement) {
-        errorElement.focus()
-      }
-    })
+    // ResponsiveModal handles focus management
     return
   }
   
