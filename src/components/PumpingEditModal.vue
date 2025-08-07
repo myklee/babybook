@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { format } from 'date-fns'
 import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
+import ResponsiveModal from './ResponsiveModal.vue'
 import { useBabyStore } from '../stores/babyStore'
 import type { PumpingSession } from '../types/pumping'
 import { 
@@ -30,8 +31,7 @@ const emit = defineEmits<Emits>()
 
 const babyStore = useBabyStore()
 
-// Modal refs
-const modalRef = ref<HTMLElement>()
+// Form refs
 const firstInputRef = ref<HTMLElement>()
 
 // Form state
@@ -62,8 +62,7 @@ const notes = ref('')
 const unitLabel = computed(() => getUnitLabel(babyStore.measurementUnit))
 const inputStep = computed(() => getInputStep(babyStore.measurementUnit))
 
-// Focus management
-let previousActiveElement: HTMLElement | null = null
+// ResponsiveModal handles focus management
 
 // Computed properties
 const isValid = computed(() => {
@@ -411,101 +410,9 @@ async function handleDeleteConfirm() {
   }
 }
 
-// Handle backdrop click
-function handleBackdropClick(event: MouseEvent | TouchEvent) {
-  if (event.target === event.currentTarget) {
-    handleCancel()
-  }
-}
+// ResponsiveModal handles backdrop clicks, keyboard events, and focus management
 
-// Keyboard handling
-function handleKeydown(event: KeyboardEvent) {
-  if (!props.isOpen) return
-
-  switch (event.key) {
-    case 'Escape':
-      event.preventDefault()
-      event.stopPropagation()
-      handleCancel()
-      break
-    
-    case 'Enter':
-      // Only handle Enter if not in textarea
-      if (event.target instanceof HTMLElement && event.target.tagName !== 'TEXTAREA') {
-        event.preventDefault()
-        event.stopPropagation()
-        handleSave()
-      }
-      break
-  }
-}
-
-// Focus management
-function trapFocus(event: KeyboardEvent) {
-  if (!props.isOpen || event.key !== 'Tab') return
-
-  const modal = modalRef.value
-  if (!modal) return
-
-  const focusableElements = modal.querySelectorAll(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  )
-  const firstElement = focusableElements[0] as HTMLElement
-  const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
-
-  if (event.shiftKey) {
-    if (document.activeElement === firstElement) {
-      event.preventDefault()
-      lastElement.focus()
-    }
-  } else {
-    if (document.activeElement === lastElement) {
-      event.preventDefault()
-      firstElement.focus()
-    }
-  }
-}
-
-// Setup and cleanup
-function setupModal() {
-  // Store the previously focused element
-  previousActiveElement = document.activeElement as HTMLElement
-  
-  // Lock body scroll
-  document.body.style.overflow = 'hidden'
-  
-  // Add event listeners
-  document.addEventListener('keydown', handleKeydown, true)
-  document.addEventListener('keydown', trapFocus, true)
-  
-  // Focus the first input after next tick
-  nextTick(() => {
-    try {
-      if (firstInputRef.value) {
-        // Check if it's a Vue component with $el or a DOM element
-        const element = (firstInputRef.value as any)?.$el || firstInputRef.value
-        if (element && typeof element.focus === 'function') {
-          element.focus()
-        } else if (element && element.querySelector) {
-          // Try to find a focusable element within the component
-          const focusable = element.querySelector('input, select, textarea, button')
-          if (focusable && typeof focusable.focus === 'function') {
-            focusable.focus()
-          }
-        }
-      } else if (modalRef.value) {
-        modalRef.value.focus()
-      }
-    } catch (error) {
-      console.warn('Could not focus first input:', error)
-      // Fallback to modal focus
-      if (modalRef.value) {
-        modalRef.value.focus()
-      }
-    }
-  })
-}
-
+// Cleanup function for when modal closes
 function cleanupModal() {
   // Clear validation timeout
   if (validationTimeout.value) {
@@ -516,19 +423,6 @@ function cleanupModal() {
   // Reset delete confirmation state
   showDeleteConfirmation.value = false
   isDeleting.value = false
-  
-  // Restore body scroll
-  document.body.style.overflow = ''
-  
-  // Remove event listeners
-  document.removeEventListener('keydown', handleKeydown, true)
-  document.removeEventListener('keydown', trapFocus, true)
-  
-  // Restore focus to previously active element
-  if (previousActiveElement) {
-    previousActiveElement.focus()
-    previousActiveElement = null
-  }
 }
 
 // Initialize form data when session changes
@@ -555,7 +449,6 @@ function initializeFormData() {
 watch(() => props.isOpen, (newValue) => {
   if (newValue) {
     initializeFormData()
-    setupModal()
   } else {
     cleanupModal()
   }
@@ -621,50 +514,19 @@ watch([startDate, endDate], () => {
 onMounted(() => {
   if (props.isOpen) {
     initializeFormData()
-    setupModal()
   }
 })
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition
-      name="modal"
-      appear
-    >
-      <div
-        v-if="isOpen"
-        class="pumping-edit-modal-overlay"
-        @click="handleBackdropClick"
-        @touchstart.passive="handleBackdropClick"
-      >
-        <div
-          ref="modalRef"
-          class="pumping-edit-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Edit pumping session"
-          tabindex="-1"
-          @click.stop
-        >
-          <!-- Header -->
-          <div class="modal-header">
-            <h2 class="modal-title">
-              Edit Pumping Session
-            </h2>
-            <button
-              class="modal-close-button"
-              type="button"
-              aria-label="Close edit modal"
-              @click="handleClose"
-            >
-              <span class="close-icon" aria-hidden="true">&times;</span>
-            </button>
-          </div>
-
-          <!-- Content -->
-          <div class="modal-content">
-            <form @submit.prevent="handleSave" class="edit-form">
+  <ResponsiveModal
+    :is-open="props.isOpen"
+    title="Edit Pumping Session"
+    :close-on-backdrop="true"
+    @close="handleClose"
+  >
+    <!-- Modal Content -->
+    <form @submit.prevent="handleSave" class="edit-form">
               <!-- Start Time Section -->
               <div class="form-section">
                 <h3 class="section-title">Start Time</h3>
@@ -845,104 +707,90 @@ onMounted(() => {
                 </ul>
               </div>
             </form>
-          </div>
 
-          <!-- Footer -->
-          <div class="modal-footer">
-            <div class="footer-left">
-              <button
-                type="button"
-                class="btn btn-delete"
-                @click="handleDeleteClick"
-                :disabled="isSaving || isDeleting"
-              >
-                Delete Session
-              </button>
-            </div>
-            <div class="footer-right">
-              <button
-                type="button"
-                class="btn btn-cancel"
-                @click="handleCancel"
-                :disabled="isSaving || isDeleting"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                class="btn btn-save"
-                @click="handleSave"
-                :disabled="!isValid || isSaving || isDeleting"
-              >
-                {{ isSaving ? 'Saving...' : 'Save Changes' }}
-              </button>
-            </div>
-          </div>
+    <!-- Footer -->
+    <template #footer>
+      <div class="modal-footer">
+        <div class="footer-left">
+          <button
+            type="button"
+            class="btn btn-delete"
+            @click="handleDeleteClick"
+            :disabled="isSaving || isDeleting"
+          >
+            Delete Session
+          </button>
+        </div>
+        <div class="footer-right">
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="handleCancel"
+            :disabled="isSaving || isDeleting"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-save"
+            @click="handleSave"
+            :disabled="!isValid || isSaving || isDeleting"
+          >
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
         </div>
       </div>
-    </Transition>
-  </Teleport>
+    </template>
+  </ResponsiveModal>
+
 
   <!-- Delete Confirmation Dialog -->
-  <Teleport to="body">
-    <Transition name="modal" appear>
-      <div
-        v-if="showDeleteConfirmation"
-        class="delete-confirmation-overlay"
-        @click="handleDeleteCancel"
-      >
-        <div
-          class="delete-confirmation-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-confirmation-title"
-          @click.stop
-        >
-          <div class="delete-confirmation-header">
-            <h3 id="delete-confirmation-title" class="delete-confirmation-title">
-              Delete Pumping Session
-            </h3>
-          </div>
-          
-          <div class="delete-confirmation-content">
-            <p class="delete-confirmation-message">
-              Are you sure you want to delete this pumping session? This action cannot be undone.
-            </p>
-            <div v-if="editSession" class="session-details">
-              <p class="session-detail">
-                <strong>Start:</strong> {{ format(new Date(editSession.start_time), 'MMM d, yyyy h:mm a') }}
-              </p>
-              <p class="session-detail">
-                <strong>Duration:</strong> {{ durationDisplay }}
-              </p>
-              <p class="session-detail">
-                <strong>Total Amount:</strong> {{ formatAmount(editSession.total_amount, babyStore.measurementUnit) }}
-              </p>
-            </div>
-          </div>
-          
-          <div class="delete-confirmation-footer">
-            <button
-              type="button"
-              class="btn btn-cancel"
-              @click="handleDeleteCancel"
-              :disabled="isDeleting"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="btn btn-delete-confirm"
-              @click="handleDeleteConfirm"
-              :disabled="isDeleting"
-            >
-              {{ isDeleting ? 'Deleting...' : 'Delete Session' }}
-            </button>
-          </div>
-        </div>
+  <ResponsiveModal
+    :is-open="showDeleteConfirmation"
+    title="Delete Pumping Session"
+    :close-on-backdrop="true"
+    max-width="400px"
+    @close="handleDeleteCancel"
+  >
+    <div class="delete-confirmation-content">
+      <p class="delete-confirmation-message">
+        Are you sure you want to delete this pumping session? This action cannot be undone.
+      </p>
+      <div v-if="editSession" class="session-details">
+        <p class="session-detail">
+          <strong>Start:</strong> {{ format(new Date(editSession.start_time), 'MMM d, yyyy h:mm a') }}
+        </p>
+        <p class="session-detail">
+          <strong>Duration:</strong> {{ durationDisplay }}
+        </p>
+        <p class="session-detail">
+          <strong>Total Amount:</strong> {{ formatAmount(editSession.total_amount, babyStore.measurementUnit) }}
+        </p>
       </div>
-    </Transition>
-  </Teleport>
+    </div>
+    
+    <template #footer>
+      <div class="delete-confirmation-footer">
+        <button
+          type="button"
+          class="btn btn-cancel"
+          @click="handleDeleteCancel"
+          :disabled="isDeleting"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-delete-confirm"
+          @click="handleDeleteConfirm"
+          :disabled="isDeleting"
+        >
+          {{ isDeleting ? 'Deleting...' : 'Delete Session' }}
+        </button>
+      </div>
+    </template>
+  </ResponsiveModal>
+
 </template>
 <style 
 scoped>
@@ -957,93 +805,6 @@ scoped>
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-/* Modal Overlay */
-.pumping-edit-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-  backdrop-filter: blur(2px);
-}
-
-/* Modal Container */
-.pumping-edit-modal {
-  position: relative;
-  background: var(--color-midnight);
-  border-radius: 1rem;
-  max-width: 600px;
-  width: 100%;
-  max-height: 90vh;
-  overflow: hidden;
-  box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.15),
-    0 10px 20px rgba(0, 0, 0, 0.1);
-  outline: none;
-  display: flex;
-  flex-direction: column;
-  color: white;
-}
-
-/* Header */
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.5rem 2rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0;
-}
-
-.modal-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: white;
-  margin: 0;
-}
-
-.modal-close-button {
-  width: 2.5rem;
-  height: 2.5rem;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.modal-close-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
-}
-
-.modal-close-button:focus {
-  outline: 2px solid var(--color-periwinkle);
-  outline-offset: 2px;
-}
-
-.close-icon {
-  font-size: 1.5rem;
-  color: rgba(255, 255, 255, 0.8);
-  line-height: 1;
-}
-
-/* Content */
-.modal-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1.5rem 2rem;
 }
 
 .edit-form {
@@ -1064,12 +825,6 @@ scoped>
   font-weight: 600;
   color: white;
   margin: 0;
-}
-
-.time-inputs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
 }
 
 .amount-inputs {
@@ -1317,46 +1072,7 @@ scoped>
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
-/* Delete Confirmation Modal */
-.delete-confirmation-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  padding: 1rem;
-  backdrop-filter: blur(4px);
-}
-
-.delete-confirmation-modal {
-  background: var(--color-midnight);
-  border-radius: 1rem;
-  max-width: 400px;
-  width: 100%;
-  box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.3),
-    0 10px 20px rgba(0, 0, 0, 0.2);
-  outline: none;
-  color: white;
-}
-
-.delete-confirmation-header {
-  padding: 1.5rem 1.5rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.delete-confirmation-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #dc2626;
-  margin: 0;
-  text-align: center;
-}
+/* Delete Confirmation Content */
 
 .delete-confirmation-content {
   padding: 1.5rem;
@@ -1412,61 +1128,9 @@ scoped>
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
-/* Modal Transitions */
-.modal-enter-active,
-.modal-leave-active {
-  transition: all 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-from .pumping-edit-modal,
-.modal-leave-to .pumping-edit-modal,
-.modal-enter-from .delete-confirmation-modal,
-.modal-leave-to .delete-confirmation-modal {
-  transform: scale(0.9) translateY(2rem);
-}
-
-.modal-enter-to .pumping-edit-modal,
-.modal-leave-from .pumping-edit-modal,
-.modal-enter-to .delete-confirmation-modal,
-.modal-leave-from .delete-confirmation-modal {
-  transform: scale(1) translateY(0);
-}
-
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
-  .pumping-edit-modal-overlay {
-    padding: 0;
-    align-items: stretch;
-    justify-content: stretch;
-  }
-
-  .pumping-edit-modal {
-    border-radius: 0;
-    max-width: none;
-    max-height: none;
-    height: 100vh;
-    width: 100vw;
-  }
-
-  .modal-header {
-    padding: 1rem 1.5rem 0.75rem;
-  }
-
-  .modal-title {
-    font-size: 1.25rem;
-  }
-
-  .modal-content {
-    padding: 1rem 1.5rem;
-  }
-
   .modal-footer {
-    padding: 0.75rem 1.5rem 1rem;
     flex-direction: column;
     gap: 1rem;
   }
@@ -1493,14 +1157,6 @@ scoped>
     gap: 1rem;
   }
 
-  .delete-confirmation-overlay {
-    padding: 1rem;
-  }
-
-  .delete-confirmation-modal {
-    max-width: none;
-  }
-
   .delete-confirmation-footer {
     flex-direction: column;
     gap: 0.75rem;
@@ -1509,20 +1165,11 @@ scoped>
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-  .modal-enter-active,
-  .modal-leave-active,
   .btn,
   .amount-input,
   .notes-textarea,
-  .modal-close-button {
+  .duration-display {
     transition: none;
-  }
-
-  .modal-enter-from .pumping-edit-modal,
-  .modal-leave-to .pumping-edit-modal,
-  .modal-enter-from .delete-confirmation-modal,
-  .modal-leave-to .delete-confirmation-modal {
-    transform: none;
   }
 }
 
@@ -1547,10 +1194,6 @@ scoped>
 
 /* High Contrast Mode */
 @media (prefers-contrast: high) {
-  .pumping-edit-modal {
-    border: 2px solid white;
-  }
-  
   .field-error {
     background: rgba(220, 38, 38, 0.2);
     padding: 0.25rem;

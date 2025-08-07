@@ -38,6 +38,9 @@ const isSaving = ref(false)
 const amountInput = ref<HTMLInputElement | null>(null)
 const topupAmountInput = ref<HTMLInputElement | null>(null)
 
+// UI state
+const showMoreOptions = ref(false)
+
 // Computed properties for unit handling
 const unitLabel = computed(() => getUnitLabel(store.measurementUnit))
 const inputStep = computed(() => getInputStep(store.measurementUnit))
@@ -259,10 +262,27 @@ async function handleDelete() {
             <option value="both">Both</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Notes</label>
-          <textarea v-model="notes" rows="2"></textarea>
+        
+        <!-- More Options Toggle -->
+        <div class="more-options-toggle">
+          <button
+            type="button"
+            @click="showMoreOptions = !showMoreOptions"
+            class="toggle-btn"
+          >
+            <span>{{ showMoreOptions ? "Hide" : "More" }} Options</span>
+            <span class="arrow" :class="{ rotated: showMoreOptions }">▼</span>
+          </button>
         </div>
+        
+        <!-- More Options -->
+        <div v-if="showMoreOptions" class="more-options">
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea v-model="notes" rows="2"></textarea>
+          </div>
+        </div>
+        
         <div class="form-actions">
           <button type="submit" class="btn btn-save" :disabled="isSaving">
             {{ isSaving ? 'Saving...' : 'Save Changes' }}
@@ -280,6 +300,41 @@ async function handleDelete() {
 </template>
 
 <style scoped>
+.more-options-toggle {
+  margin: 1rem 0;
+  text-align: center;
+}
 
+.toggle-btn {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #666;
+  text-decoration: none;
+  transition: all 0.2s;
+}
 
+.toggle-btn:hover {
+  color: var(--color-lavendar);
+  background-color: var(--color-midnight);
+  text-decoration: underline;
+}
+
+.arrow {
+  transition: transform 0.2s;
+}
+
+.arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.more-options {
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
 </style>  

@@ -460,11 +460,6 @@ defineExpose({
   text-decoration: underline;
 }
 
-.toggle-btn:focus {
-  outline: 3px solid var(--color-periwinkle);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
 
 .arrow {
   transition: transform 0.2s;

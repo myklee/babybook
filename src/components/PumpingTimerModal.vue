@@ -1,78 +1,87 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
-import DualBreastTimer from './DualBreastTimer.vue'
-import { useBabyStore } from '../stores/babyStore'
-import { validatePumpingSession } from '../types/pumping'
-import { 
-  getStorageValue, 
-  getInputStep, 
-  getUnitLabel
-} from '../lib/measurements'
+import { ref, onMounted, onUnmounted, nextTick, watch, computed } from "vue";
+import DualBreastTimer from "./DualBreastTimer.vue";
+import { useBabyStore } from "../stores/babyStore";
+import { validatePumpingSession } from "../types/pumping";
+import {
+  getStorageValue,
+  getInputStep,
+  getUnitLabel,
+} from "../lib/measurements";
 
 interface Props {
-  isOpen: boolean
-  babyId?: string | null // Optional - for backward compatibility, but not used in UI
+  isOpen: boolean;
+  babyId?: string | null; // Optional - for backward compatibility, but not used in UI
 }
 
 interface Emits {
-  (e: 'close'): void
-  (e: 'save', session: any): void
+  (e: "close"): void;
+  (e: "save", session: any): void;
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
 
-const babyStore = useBabyStore()
-const modalRef = ref<HTMLElement>()
-const dualTimerRef = ref<InstanceType<typeof DualBreastTimer>>()
-const isSaving = ref(false)
+const babyStore = useBabyStore();
+const modalRef = ref<HTMLElement>();
+const dualTimerRef = ref<InstanceType<typeof DualBreastTimer>>();
+const isSaving = ref(false);
 
 // Form state (display values in current unit)
-const leftDisplayAmount = ref<number | null>(null)
-const rightDisplayAmount = ref<number | null>(null)
-const notes = ref('')
-const showAdvanced = ref(false)
+const leftDisplayAmount = ref<number | null>(null);
+const rightDisplayAmount = ref<number | null>(null);
+const notes = ref("");
+const showAdvanced = ref(false);
 
 // Validation state
-const validationErrors = ref<string[]>([])
-const validationWarnings = ref<string[]>([])
+const validationErrors = ref<string[]>([]);
+const validationWarnings = ref<string[]>([]);
 
 // Focus management
-let previousActiveElement: HTMLElement | null = null
+let previousActiveElement: HTMLElement | null = null;
 
 // Computed properties for unit handling
-const unitLabel = computed(() => getUnitLabel(babyStore.measurementUnit))
-const inputStep = computed(() => getInputStep(babyStore.measurementUnit))
-const totalDisplayAmount = computed(() => (leftDisplayAmount.value || 0) + (rightDisplayAmount.value || 0))
+const unitLabel = computed(() => getUnitLabel(babyStore.measurementUnit));
+const inputStep = computed(() => getInputStep(babyStore.measurementUnit));
+const totalDisplayAmount = computed(
+  () => (leftDisplayAmount.value || 0) + (rightDisplayAmount.value || 0)
+);
 
 // Handle duration changes from DualBreastTimer
 // Note: DualBreastTimer handles duration internally, we'll get the values in handleSave
 
 // Handle amount input changes
 function handleAmountChange() {
-  validateForm()
+  validateForm();
 }
 
 // Validate the form (called when amounts change)
 function validateForm() {
   // We can't validate duration here since it's managed by DualBreastTimer
   // Validation will happen in handleSave when we have the duration values
-  validationErrors.value = []
-  validationWarnings.value = []
+  validationErrors.value = [];
+  validationWarnings.value = [];
 }
 
 // Handle save from dual timer
-async function handleSave(leftDur: number, rightDur: number, _sessionNotes?: string, startTime?: Date) {
-  if (isSaving.value) return
-  
+async function handleSave(
+  leftDur: number,
+  rightDur: number,
+  _sessionNotes?: string,
+  startTime?: Date
+) {
+  if (isSaving.value) return;
+
   // Convert display amounts to storage amounts (ml)
-  const leftStorageAmount = leftDisplayAmount.value !== null 
-    ? getStorageValue(leftDisplayAmount.value, babyStore.measurementUnit) 
-    : null
-  const rightStorageAmount = rightDisplayAmount.value !== null 
-    ? getStorageValue(rightDisplayAmount.value, babyStore.measurementUnit) 
-    : null
-  
+  const leftStorageAmount =
+    leftDisplayAmount.value !== null
+      ? getStorageValue(leftDisplayAmount.value, babyStore.measurementUnit)
+      : null;
+  const rightStorageAmount =
+    rightDisplayAmount.value !== null
+      ? getStorageValue(rightDisplayAmount.value, babyStore.measurementUnit)
+      : null;
+
   // Validate before saving
   const validation = validatePumpingSession(
     leftDur,
@@ -80,15 +89,15 @@ async function handleSave(leftDur: number, rightDur: number, _sessionNotes?: str
     leftStorageAmount,
     rightStorageAmount,
     startTime
-  )
-  
+  );
+
   if (!validation.is_valid) {
-    validationErrors.value = validation.errors.map(e => e.message)
-    return
+    validationErrors.value = validation.errors.map((e) => e.message);
+    return;
   }
-  
-  isSaving.value = true
-  
+
+  isSaving.value = true;
+
   try {
     // Use the amounts from our form inputs and notes from our form (not from DualBreastTimer)
     const session = await babyStore.addPumpingSession(
@@ -99,83 +108,85 @@ async function handleSave(leftDur: number, rightDur: number, _sessionNotes?: str
       notes.value || undefined,
       startTime,
       props.babyId || null
-    )
-    
-    emit('save', session)
-    
+    );
+
+    emit("save", session);
+
     // Reset form
-    resetForm()
-    handleClose()
+    resetForm();
+    handleClose();
   } catch (error) {
-    console.error('Error saving pumping session:', error)
+    console.error("Error saving pumping session:", error);
     // Error handling is done in the store
   } finally {
-    isSaving.value = false
+    isSaving.value = false;
   }
 }
 
 // Handle cancel from dual timer
 function handleCancel() {
-  handleClose()
+  handleClose();
 }
 
 // Handle modal close
 function handleClose() {
-  emit('close')
+  emit("close");
 }
 
 // Reset form state
 function resetForm() {
-  leftDisplayAmount.value = null
-  rightDisplayAmount.value = null
-  notes.value = ''
-  showAdvanced.value = false
-  validationErrors.value = []
-  validationWarnings.value = []
+  leftDisplayAmount.value = null;
+  rightDisplayAmount.value = null;
+  notes.value = "";
+  showAdvanced.value = false;
+  validationErrors.value = [];
+  validationWarnings.value = [];
 }
 
 // Handle backdrop click
 function handleBackdropClick(event: MouseEvent | TouchEvent) {
   if (event.target === event.currentTarget) {
-    handleCancel()
+    handleCancel();
   }
 }
 
 // Keyboard shortcuts
 function handleKeydown(event: KeyboardEvent) {
-  if (!props.isOpen) return
+  if (!props.isOpen) return;
 
   switch (event.key) {
-    case 'Escape':
-      event.preventDefault()
-      event.stopPropagation()
-      handleCancel()
-      break
+    case "Escape":
+      event.preventDefault();
+      event.stopPropagation();
+      handleCancel();
+      break;
   }
 }
 
 // Focus management
 function trapFocus(event: KeyboardEvent) {
-  if (!props.isOpen || event.key !== 'Tab') return
+  if (!props.isOpen || event.key !== "Tab") return;
 
-  const modal = modalRef.value
-  if (!modal) return
+  const modal = modalRef.value;
+  if (!modal) return;
 
   const focusableElements = modal.querySelectorAll(
     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  )
-  const firstElement = focusableElements[0] as HTMLElement
-  const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+  );
+  const firstElement = focusableElements[0] as HTMLElement;
+  const lastElement = focusableElements[
+    focusableElements.length - 1
+  ] as HTMLElement;
 
   if (event.shiftKey) {
     if (document.activeElement === firstElement) {
-      event.preventDefault()
-      lastElement.focus()
+      event.preventDefault();
+      lastElement.focus();
     }
   } else {
     if (document.activeElement === lastElement) {
-      event.preventDefault()
-      firstElement.focus()
+      event.preventDefault();
+      firstElement.focus();
     }
   }
 }
@@ -183,212 +194,242 @@ function trapFocus(event: KeyboardEvent) {
 // Lifecycle management
 onMounted(() => {
   if (props.isOpen) {
-    setupModal()
+    setupModal();
   }
-})
+});
 
 onUnmounted(() => {
-  cleanupModal()
-})
+  cleanupModal();
+});
 
 // Watch for isOpen changes
 function setupModal() {
   // Store the previously focused element
-  previousActiveElement = document.activeElement as HTMLElement
-  
+  previousActiveElement = document.activeElement as HTMLElement;
+
   // Lock body scroll
-  document.body.style.overflow = 'hidden'
-  
+  document.body.style.overflow = "hidden";
+
   // Add event listeners
-  document.addEventListener('keydown', handleKeydown, true)
-  document.addEventListener('keydown', trapFocus, true)
-  
+  document.addEventListener("keydown", handleKeydown, true);
+  document.addEventListener("keydown", trapFocus, true);
+
   // Focus the modal after next tick to ensure it's rendered
   nextTick(() => {
     if (modalRef.value) {
-      modalRef.value.focus()
+      modalRef.value.focus();
     }
-  })
+  });
 }
 
 function cleanupModal() {
   // Restore body scroll
-  document.body.style.overflow = ''
-  
+  document.body.style.overflow = "";
+
   // Remove event listeners
-  document.removeEventListener('keydown', handleKeydown, true)
-  document.removeEventListener('keydown', trapFocus, true)
-  
+  document.removeEventListener("keydown", handleKeydown, true);
+  document.removeEventListener("keydown", trapFocus, true);
+
   // Restore focus to previously active element
   if (previousActiveElement) {
-    previousActiveElement.focus()
-    previousActiveElement = null
+    previousActiveElement.focus();
+    previousActiveElement = null;
   }
 }
 
 // Watch for prop changes
-watch(() => props.isOpen, (newValue, oldValue) => {
-  if (newValue !== oldValue) {
-    if (newValue) {
-      setupModal()
-    } else {
-      cleanupModal()
+watch(
+  () => props.isOpen,
+  (newValue, oldValue) => {
+    if (newValue !== oldValue) {
+      if (newValue) {
+        setupModal();
+      } else {
+        cleanupModal();
+      }
     }
-  }
-}, { immediate: false })
+  },
+  { immediate: false }
+);
 
 // Watch for isOpen to reset form when modal opens
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    resetForm()
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      resetForm();
+    }
   }
-})
+);
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition
-      name="modal"
-      appear
+  <div
+    v-if="isOpen"
+    class="modal-overlay"
+    @click="handleBackdropClick"
+    @touchstart.passive="handleBackdropClick"
+  >
+    <div
+      ref="modalRef"
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Pumping timer"
+      tabindex="-1"
+      @click.stop
     >
-      <div
-        v-if="isOpen"
-        class="modal-overlay"
-        @click="handleBackdropClick"
-        @touchstart.passive="handleBackdropClick"
-      >
-        <div
-          ref="modalRef"
-          class="modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Pumping timer"
-          tabindex="-1"
-          @click.stop
-        >
-          <h3 class="modal-title">
-            Pumping Timer
-          </h3>
+      <h3 class="modal-title">Pumping Timer</h3>
 
-          <!-- Amount Display (only show if amounts are entered) -->
-          <div v-if="totalDisplayAmount > 0" class="amount-summary">
-            <span class="amount-display">
-              {{ totalDisplayAmount }}{{ unitLabel }} total pumped
-            </span>
+      <!-- Amount Display (only show if amounts are entered) -->
+      <div v-if="totalDisplayAmount > 0" class="amount-summary">
+        <span class="amount-display">
+          {{ totalDisplayAmount }}{{ unitLabel }} total pumped
+        </span>
+      </div>
+
+      <!-- Main content -->
+      <div class="pumping-content">
+        <!-- Timer Controls -->
+        <DualBreastTimer
+          ref="dualTimerRef"
+          :baby-id="'pumping'"
+          :baby-name="'Pumping'"
+          :session-type="'pumping'"
+          @save="handleSave"
+          @cancel="handleCancel"
+        />
+
+        <!-- Amount Inputs -->
+        <div class="amount-inputs">
+          <h4 class="section-title">Amount Pumped</h4>
+          <div class="amount-row">
+            <div class="amount-input-group">
+              <label for="left-amount">Left Breast ({{ unitLabel }})</label>
+              <input
+                id="left-amount"
+                v-model.number="leftDisplayAmount"
+                type="number"
+                min="0"
+                :step="inputStep"
+                placeholder="0"
+                class="amount-input"
+                aria-describedby="left-amount-help"
+                @input="handleAmountChange"
+              />
+              <div id="left-amount-help" class="sr-only">
+                Enter the amount of milk pumped from the left breast in
+                {{ unitLabel }}
+              </div>
+            </div>
+            <div class="amount-input-group">
+              <label for="right-amount">Right Breast ({{ unitLabel }})</label>
+              <input
+                id="right-amount"
+                v-model.number="rightDisplayAmount"
+                type="number"
+                min="0"
+                :step="inputStep"
+                placeholder="0"
+                class="amount-input"
+                aria-describedby="right-amount-help"
+                @input="handleAmountChange"
+              />
+              <div id="right-amount-help" class="sr-only">
+                Enter the amount of milk pumped from the right breast in
+                {{ unitLabel }}
+              </div>
+            </div>
           </div>
+          <div
+            v-if="totalDisplayAmount > 0"
+            class="total-amount"
+            role="status"
+            aria-live="polite"
+          >
+            Total: {{ totalDisplayAmount }}{{ unitLabel }}
+          </div>
+        </div>
 
-          <!-- Main content -->
-          <div class="pumping-content">
-            <!-- Timer Controls -->
-            <DualBreastTimer
-              ref="dualTimerRef"
-              :baby-id="'pumping'"
-              :baby-name="'Pumping'"
-              :session-type="'pumping'"
-              @save="handleSave"
-              @cancel="handleCancel"
-            />
+        <!-- More Options Toggle -->
+        <div class="advanced-toggle">
+          <button
+            type="button"
+            @click="showAdvanced = !showAdvanced"
+            class="toggle-btn"
+            :aria-expanded="showAdvanced"
+            aria-controls="advanced-options"
+            :aria-label="`${
+              showAdvanced ? 'Hide' : 'Show'
+            } additional options for notes`"
+          >
+            <span>{{ showAdvanced ? "Hide" : "More" }} Options</span>
+            <span
+              class="arrow"
+              :class="{ rotated: showAdvanced }"
+              aria-hidden="true"
+              >▼</span
+            >
+          </button>
+        </div>
 
-            <!-- Amount Inputs -->
-            <div class="amount-inputs">
-              <h4 class="section-title">Amount Pumped</h4>
-              <div class="amount-row">
-                <div class="amount-input-group">
-                  <label for="left-amount">Left Breast ({{ unitLabel }})</label>
-                  <input
-                    id="left-amount"
-                    v-model.number="leftDisplayAmount"
-                    type="number"
-                    min="0"
-                    :step="inputStep"
-                    placeholder="0"
-                    class="amount-input"
-                    aria-describedby="left-amount-help"
-                    @input="handleAmountChange"
-                  />
-                  <div id="left-amount-help" class="sr-only">
-                    Enter the amount of milk pumped from the left breast in {{ unitLabel }}
-                  </div>
-                </div>
-                <div class="amount-input-group">
-                  <label for="right-amount">Right Breast ({{ unitLabel }})</label>
-                  <input
-                    id="right-amount"
-                    v-model.number="rightDisplayAmount"
-                    type="number"
-                    min="0"
-                    :step="inputStep"
-                    placeholder="0"
-                    class="amount-input"
-                    aria-describedby="right-amount-help"
-                    @input="handleAmountChange"
-                  />
-                  <div id="right-amount-help" class="sr-only">
-                    Enter the amount of milk pumped from the right breast in {{ unitLabel }}
-                  </div>
-                </div>
-              </div>
-              <div v-if="totalDisplayAmount > 0" class="total-amount" role="status" aria-live="polite">
-                Total: {{ totalDisplayAmount }}{{ unitLabel }}
-              </div>
+        <!-- More Options -->
+        <div v-if="showAdvanced" id="advanced-options" class="advanced-options">
+          <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea
+              id="notes"
+              v-model="notes"
+              rows="2"
+              placeholder="Optional notes..."
+              maxlength="500"
+              class="notes-textarea"
+              aria-describedby="notes-help notes-counter"
+            ></textarea>
+            <div id="notes-help" class="sr-only">
+              Add any additional notes about this pumping session
             </div>
-
-            <!-- More Options Toggle -->
-            <div class="advanced-toggle">
-              <button
-                type="button"
-                @click="showAdvanced = !showAdvanced"
-                class="toggle-btn"
-                :aria-expanded="showAdvanced"
-                aria-controls="advanced-options"
-                :aria-label="`${showAdvanced ? 'Hide' : 'Show'} additional options for notes`"
-              >
-                <span>{{ showAdvanced ? "Hide" : "More" }} Options</span>
-                <span class="arrow" :class="{ rotated: showAdvanced }" aria-hidden="true">▼</span>
-              </button>
-            </div>
-
-            <!-- More Options -->
-            <div v-if="showAdvanced" id="advanced-options" class="advanced-options">
-              <div class="form-group">
-                <label for="notes">Notes</label>
-                <textarea
-                  id="notes"
-                  v-model="notes"
-                  rows="2"
-                  placeholder="Optional notes..."
-                  maxlength="500"
-                  class="notes-textarea"
-                  aria-describedby="notes-help notes-counter"
-                ></textarea>
-                <div id="notes-help" class="sr-only">
-                  Add any additional notes about this pumping session
-                </div>
-                <div id="notes-counter" class="notes-counter" aria-live="polite">
-                  {{ notes.length }} of 500 characters used
-                </div>
-              </div>
-            </div>
-
-            <!-- Validation Messages -->
-            <div v-if="validationErrors.length > 0" class="validation-errors" role="alert" aria-live="assertive">
-              <h5 class="sr-only">Validation Errors</h5>
-              <div v-for="error in validationErrors" :key="error" class="error-message">
-                {{ error }}
-              </div>
-            </div>
-
-            <div v-if="validationWarnings.length > 0" class="validation-warnings" role="alert" aria-live="polite">
-              <h5 class="sr-only">Validation Warnings</h5>
-              <div v-for="warning in validationWarnings" :key="warning" class="warning-message">
-                {{ warning }}
-              </div>
+            <div id="notes-counter" class="notes-counter" aria-live="polite">
+              {{ notes.length }} of 500 characters used
             </div>
           </div>
         </div>
+
+        <!-- Validation Messages -->
+        <div
+          v-if="validationErrors.length > 0"
+          class="validation-errors"
+          role="alert"
+          aria-live="assertive"
+        >
+          <h5 class="sr-only">Validation Errors</h5>
+          <div
+            v-for="error in validationErrors"
+            :key="error"
+            class="error-message"
+          >
+            {{ error }}
+          </div>
+        </div>
+
+        <div
+          v-if="validationWarnings.length > 0"
+          class="validation-warnings"
+          role="alert"
+          aria-live="polite"
+        >
+          <h5 class="sr-only">Validation Warnings</h5>
+          <div
+            v-for="warning in validationWarnings"
+            :key="warning"
+            class="warning-message"
+          >
+            {{ warning }}
+          </div>
+        </div>
       </div>
-    </Transition>
-  </Teleport>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -403,52 +444,6 @@ watch(() => props.isOpen, (isOpen) => {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-/* Modal Base */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-  backdrop-filter: blur(2px);
-}
-
-.modal {
-  background: var(--color-midnight);
-  border-radius: 1rem;
-  max-width: 500px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.15),
-    0 10px 20px rgba(0, 0, 0, 0.1);
-  outline: none;
-  color: white;
-  padding: 2rem;
-  /* Ensure sufficient color contrast */
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.modal:focus {
-  outline: 3px solid var(--color-periwinkle);
-  outline-offset: 2px;
-}
-
-.modal-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: white;
-  margin: 0 0 1.5rem 0;
-  text-align: center;
 }
 
 /* Amount Summary */
