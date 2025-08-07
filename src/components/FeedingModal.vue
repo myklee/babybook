@@ -4,6 +4,7 @@ import { useBabyStore } from "../stores/babyStore";
 import TimePicker from "./TimePicker.vue";
 import DatePicker from "./DatePicker.vue";
 import BreastSelector from "./BreastSelector.vue";
+import ResponsiveModal from "./ResponsiveModal.vue";
 import type { BreastType } from "../types/nursing";
 import { 
   getDisplayValue, 
@@ -67,10 +68,12 @@ const breastUsed = ref<BreastType>("left");
 // UI state
 const showAdvanced = ref(false);
 
+// Dynamic modal title
+const modalTitle = computed(() => `Record Feeding for ${props.babyName}`);
+
 
 onMounted(() => {
-    // Lock body scroll when modal opens
-    document.body.style.overflow = "hidden";
+    // ResponsiveModal handles body scroll locking
 
     const now = new Date();
     // Set default date
@@ -128,8 +131,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    // Restore body scroll when modal is destroyed
-    document.body.style.overflow = "";
+    // ResponsiveModal handles body scroll restoration
 });
 
 // Watch for feeding type changes to update default amount
@@ -268,11 +270,15 @@ async function handleSubmit() {
 </script>
 
 <template>
-    <div class="modal-overlay" @click="emit('close')">
-        <div class="modal" @click.stop>
-            <h3 class="modal-title">Record Feeding for {{ babyName }}</h3>
-
-            <form @submit.prevent="handleSubmit">
+    <ResponsiveModal
+        :is-open="true"
+        :title="modalTitle"
+        :close-on-backdrop="true"
+        max-width="500px"
+        @close="emit('close')"
+    >
+        <!-- Form Content -->
+        <form @submit.prevent="handleSubmit">
                 <div class="form-group">
                     <label for="feeding-date">Date</label>
                     <DatePicker v-model="customDate" id="feeding-date" />
@@ -373,28 +379,30 @@ async function handleSubmit() {
                         ></textarea>
                     </div>
                 </div>
-                <div class="form-actions">
-                    <button
-                        type="submit"
-                        class="btn btn-save"
-                        :disabled="isSaving"
-                    >
-                        {{ isSaving ? "Saving..." : "Save" }}
-                    </button>
-                    <button
-                        type="button"
-                        class="btn btn-cancel"
-                        @click="emit('close')"
-                        :disabled="isSaving"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+        </form>
 
-
+        <!-- Footer Actions -->
+        <template #footer>
+            <div class="form-actions">
+                <button
+                    type="button"
+                    class="btn btn-save"
+                    @click="handleSubmit"
+                    :disabled="isSaving"
+                >
+                    {{ isSaving ? "Saving..." : "Save" }}
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-cancel"
+                    @click="emit('close')"
+                    :disabled="isSaving"
+                >
+                    Cancel
+                </button>
+            </div>
+        </template>
+    </ResponsiveModal>
 </template>
 
 <style scoped>
@@ -468,7 +476,50 @@ async function handleSubmit() {
     padding-top: 1rem;
     margin-top: 1rem;
 }
-</style>
+
+/* Footer Actions */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-save {
+    background: linear-gradient(135deg, var(--color-periwinkle) 0%, #8b5cf6 100%);
+    color: white;
+}
+
+.btn-save:hover:not(:disabled) {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-cancel:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
 
 /* Nursing-specific styles */
 .nursing-options {
@@ -532,6 +583,19 @@ async function handleSubmit() {
     text-align: center;
 }
 
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .form-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 1rem;
+    }
+}
+
 /* Responsive adjustments for nursing options */
 @media (max-width: 480px) {
     .nursing-mode-selector {
@@ -577,3 +641,4 @@ async function handleSubmit() {
         transform: none;
     }
 }
+</style>
