@@ -705,31 +705,33 @@ watch([startDate, endDate], () => {
     </form>
 
     <template #footer>
-      <button
-        type="button"
-        class="btn btn-delete"
-        @click="handleDeleteClick"
-        :disabled="isSaving || isDeleting"
-      >
-        Delete Session
-      </button>
-
-      <button
-        type="button"
-        class="btn btn-cancel"
-        @click="handleCancel"
-        :disabled="isSaving || isDeleting"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        class="btn btn-save"
-        @click="handleSave"
-        :disabled="!isValid || isSaving || isDeleting"
-      >
-        {{ isSaving ? "Saving..." : "Save Changes" }}
-      </button>
+      <div class="btn-group">
+        <button
+          type="button"
+          class="btn btn-delete"
+          @click="handleDeleteClick"
+          :disabled="isSaving || isDeleting"
+        >
+          Delete Session
+        </button>
+        <button
+          type="button"
+          class="btn btn-cancel"
+          @click="handleCancel"
+          :disabled="isSaving || isDeleting"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-save"
+          :class="{ 'btn-loading': isSaving }"
+          @click="handleSave"
+          :disabled="!isValid || isSaving || isDeleting"
+        >
+          {{ isSaving ? "Saving..." : "Save Changes" }}
+        </button>
+      </div>
     </template>
   </ResponsiveModal>
 
@@ -764,7 +766,7 @@ watch([startDate, endDate], () => {
     </div>
 
     <template #footer>
-      <div class="delete-confirmation-footer">
+      <div class="btn-group">
         <button
           type="button"
           class="btn btn-cancel"
@@ -776,6 +778,7 @@ watch([startDate, endDate], () => {
         <button
           type="button"
           class="btn btn-delete-confirm"
+          :class="{ 'btn-loading': isDeleting }"
           @click="handleDeleteConfirm"
           :disabled="isDeleting"
         >
@@ -786,4 +789,216 @@ watch([startDate, endDate], () => {
   </ResponsiveModal>
 </template>
 
-<style scoped></style>
+<style scoped>
+/* Import shared modal button styles */
+@import '../styles/modal-buttons.css';
+
+/* Form Styles */
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Form Sections */
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.time-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Duration Display */
+.duration-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  transition: border-color 0.2s ease;
+}
+
+.duration-display.error {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.duration-label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.duration-value {
+  font-weight: 600;
+  color: #059669;
+}
+
+.duration-note {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Character Count */
+.character-count {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+/* Notes Textarea */
+.notes-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.notes-textarea:focus {
+  outline: none;
+  border-color: #dda0dd;
+  box-shadow: 0 0 0 3px rgba(221, 160, 221, 0.1);
+}
+
+.notes-textarea.error {
+  border-color: #dc2626;
+}
+
+.notes-textarea.error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+/* Field Errors */
+.field-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field-error {
+  font-size: 0.875rem;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.field-error::before {
+  content: '⚠';
+  font-size: 0.75rem;
+}
+
+/* Validation Errors */
+.validation-errors {
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+}
+
+.errors-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #dc2626;
+  margin: 0 0 0.5rem 0;
+}
+
+.errors-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.error-item {
+  font-size: 0.875rem;
+  color: #dc2626;
+  margin-bottom: 0.25rem;
+}
+
+.error-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Delete Confirmation */
+.delete-confirmation-message {
+  font-size: 0.875rem;
+  color: #374151;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.session-details {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.session-detail {
+  font-size: 0.875rem;
+  color: #374151;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
+
+.session-detail:last-child {
+  margin-bottom: 0;
+}
+
+.session-detail strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+.delete-confirmation-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .time-inputs {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .delete-confirmation-footer {
+    flex-direction: column;
+    width: 100%;
+  }
+}
+</style>

@@ -292,12 +292,12 @@ async function handleSave() {
 
       <!-- Footer Actions -->
       <template #footer>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-save" :disabled="!canSave" @click="handleSave">
-            {{ isSaving ? 'Saving...' : 'Save' }}
-          </button>
+        <div class="btn-group-end">
           <button type="button" class="btn btn-cancel" @click="emit('close')" :disabled="isSaving">
             Cancel
+          </button>
+          <button type="submit" class="btn btn-save" :class="{ 'btn-loading': isSaving }" :disabled="!canSave" @click="handleSave">
+            {{ isSaving ? 'Saving...' : 'Save' }}
           </button>
         </div>
       </template>
@@ -519,49 +519,8 @@ async function handleSave() {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Form Actions */
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-}
-
-.btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-save {
-  background: linear-gradient(135deg, var(--color-periwinkle) 0%, #8b5cf6 100%);
-  color: white;
-}
-
-.btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-}
-
-.btn-cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.btn-cancel:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
+/* Import shared modal button styles */
+@import '../styles/modal-buttons.css';
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
@@ -579,14 +538,6 @@ async function handleSave() {
     align-items: flex-start;
   }
   
-  .form-actions {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .btn {
-    width: 100%;
-    padding: 1rem;
-  }
+  /* Mobile button styles handled by shared CSS */
 }
 </style>

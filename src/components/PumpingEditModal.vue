@@ -703,35 +703,32 @@ onMounted(() => {
 
     <!-- Footer -->
     <template #footer>
-      <div class="modal-footer">
-        <div class="footer-left">
-          <button
-            type="button"
-            class="btn btn-delete"
-            @click="handleDeleteClick"
-            :disabled="isSaving || isDeleting"
-          >
-            Delete Session
-          </button>
-        </div>
-        <div class="footer-right">
-          <button
-            type="button"
-            class="btn btn-cancel"
-            @click="handleCancel"
-            :disabled="isSaving || isDeleting"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-save"
-            @click="handleSave"
-            :disabled="!isValid || isSaving || isDeleting"
-          >
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
-          </button>
-        </div>
+      <div class="btn-group">
+        <button
+          type="button"
+          class="btn btn-delete"
+          @click="handleDeleteClick"
+          :disabled="isSaving || isDeleting"
+        >
+          Delete Session
+        </button>
+        <button
+          type="button"
+          class="btn btn-cancel"
+          @click="handleCancel"
+          :disabled="isSaving || isDeleting"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-save"
+          :class="{ 'btn-loading': isSaving }"
+          @click="handleSave"
+          :disabled="!isValid || isSaving || isDeleting"
+        >
+          {{ isSaving ? 'Saving...' : 'Save Changes' }}
+        </button>
       </div>
     </template>
   </ResponsiveModal>
@@ -763,7 +760,7 @@ onMounted(() => {
     </div>
     
     <template #footer>
-      <div class="delete-confirmation-footer">
+      <div class="btn-group">
         <button
           type="button"
           class="btn btn-cancel"
@@ -775,6 +772,7 @@ onMounted(() => {
         <button
           type="button"
           class="btn btn-delete-confirm"
+          :class="{ 'btn-loading': isDeleting }"
           @click="handleDeleteConfirm"
           :disabled="isDeleting"
         >
@@ -993,77 +991,10 @@ scoped>
   margin-bottom: 0;
 }
 
-/* Footer */
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0;
-}
+/* Footer styles are handled by shared button groups */
 
-.footer-left {
-  display: flex;
-}
-
-.footer-right {
-  display: flex;
-  gap: 1rem;
-}
-
-/* Buttons */
-.btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-save {
-  background: linear-gradient(135deg, var(--color-periwinkle) 0%, #8b5cf6 100%);
-  color: white;
-}
-
-.btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-}
-
-.btn-cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.btn-cancel:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.btn-delete {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  color: white;
-}
-
-.btn-delete:hover:not(:disabled) {
-  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-}
+/* Import shared modal button styles */
+@import '../styles/modal-buttons.css';
 
 /* Delete Confirmation Content */
 
@@ -1102,57 +1033,16 @@ scoped>
   color: white;
 }
 
-.delete-confirmation-footer {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  padding: 1rem 1.5rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
+/* Delete confirmation footer styles are handled by shared button groups */
 
-.btn-delete-confirm {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  color: white;
-}
 
-.btn-delete-confirm:hover:not(:disabled) {
-  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-}
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
-  .modal-footer {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .footer-left,
-  .footer-right {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .footer-right {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .btn {
-    width: 100%;
-    padding: 1rem;
-  }
-
   .time-inputs,
   .amount-inputs {
     grid-template-columns: 1fr;
     gap: 1rem;
-  }
-
-  .delete-confirmation-footer {
-    flex-direction: column;
-    gap: 0.75rem;
   }
 }
 
@@ -1172,18 +1062,7 @@ scoped>
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
 }
 
-.btn:focus {
-  outline: 2px solid var(--color-periwinkle);
-  outline-offset: 2px;
-}
-
-.btn-delete:focus {
-  outline-color: #dc2626;
-}
-
-.btn-delete-confirm:focus {
-  outline-color: #dc2626;
-}
+/* Button focus styles are handled by shared styles */
 
 /* High Contrast Mode */
 @media (prefers-contrast: high) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, nextTick } from "vue";
 import { useBabyStore } from "../stores/babyStore";
 import { format } from "date-fns";
 import DatePicker from "./DatePicker.vue";
@@ -113,6 +113,13 @@ onMounted(() => {
     if (sleep.end_time) {
       setDateTime(sleep.end_time, true);
     }
+  }
+
+  // Focus on amount input for feeding records
+  if (props.type === "feeding") {
+    nextTick(() => {
+      amountInput.value?.focus();
+    });
   }
 });
 
@@ -283,15 +290,7 @@ async function handleDelete() {
           >Add formula amount given after breastfeeding</small
         >
       </div>
-      <div v-if="type === 'feeding'" class="form-group">
-        <label>Type</label>
-        <select v-model="feedingType">
-          <option value="breast">Breast</option>
-          <option value="nursing">Nursing</option>
-          <option value="formula">Formula</option>
-          <option value="solid">Solid</option>
-        </select>
-      </div>
+
       <div v-if="type === 'diaper'" class="form-group">
         <label>Type</label>
         <select v-model="diaperType">
@@ -315,6 +314,15 @@ async function handleDelete() {
 
       <!-- More Options -->
       <div v-if="showMoreOptions" class="more-options">
+        <div v-if="type === 'feeding'" class="form-group">
+          <label>Type</label>
+          <select v-model="feedingType">
+            <option value="breast">Breast</option>
+            <option value="nursing">Nursing</option>
+            <option value="formula">Formula</option>
+            <option value="solid">Solid</option>
+          </select>
+        </div>
         <div class="form-group">
           <label>Notes</label>
           <textarea v-model="notes" rows="2"></textarea>
@@ -324,7 +332,7 @@ async function handleDelete() {
 
     <!-- Footer Actions -->
     <template #footer>
-      <div class="form-actions">
+      <div class="btn-group">
         <button
           type="button"
           class="btn btn-delete"
@@ -333,7 +341,6 @@ async function handleDelete() {
         >
           Delete
         </button>
-
         <button
           type="button"
           class="btn btn-cancel"
@@ -345,6 +352,7 @@ async function handleDelete() {
         <button
           type="button"
           class="btn btn-save"
+          :class="{ 'btn-loading': isSaving }"
           @click="handleSubmit"
           :disabled="isSaving"
         >
@@ -355,7 +363,13 @@ async function handleDelete() {
   </ResponsiveModal>
 </template>
 
+<style>
+/* Import shared modal button styles - must be outside scoped for proper import */
+@import '../styles/modal-buttons.css';
+</style>
+
 <style scoped>
+
 .more-options-toggle {
   margin: 1rem 0;
   text-align: center;
@@ -394,17 +408,5 @@ async function handleDelete() {
   margin-top: 1rem;
 }
 
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
-  .action-buttons {
-    flex-direction: column;
-    width: 100%;
-    gap: 0.75rem;
-  }
-
-  .btn {
-    width: 100%;
-    padding: 1rem;
-  }
-}
+/* Mobile responsiveness handled by shared button styles */
 </style>
