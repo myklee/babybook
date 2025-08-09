@@ -48,7 +48,6 @@ const time = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
     ampm: "AM",
 });
 const isSaving = ref(false);
-const timeInput = ref<HTMLInputElement | null>(null);
 const amountInput = ref<HTMLInputElement | null>(null);
 
 // Nursing session data
