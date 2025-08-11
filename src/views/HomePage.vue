@@ -14,7 +14,7 @@ import PersistentNursingIndicator from '../components/PersistentNursingIndicator
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
 import formulaIcon from '../assets/icons/flask-conical.svg'
 import spoonIcon from '../assets/icons/spoon.svg'
-import bookUserIcon from '../assets/icons/book-user.svg'
+import historyIcon from '../assets/icons/history.svg'
 import addBabyIcon from '../assets/icons/add-baby.svg'
 import userRoundIcon from '../assets/icons/circle-user-round.svg'
 import { format } from 'date-fns'
@@ -399,26 +399,28 @@ function handleSleepClick() {
       <div class="baby-selectors">
         <div v-for="baby in store.babies" :key="baby.id" class="baby-selector"
           :class="{ 'selected': selectedBaby?.id === baby.id }" @click="selectBaby(baby)">
-          <SleepingAnimation :is-sleeping="store.isBabySleeping(baby.id)" :size="100">
+          <SleepingAnimation :is-sleeping="store.isBabySleeping(baby.id)" :size="80">
             <img :src="baby.image_url || `https://api.dicebear.com/8.x/thumbs/svg?seed=${baby.name}&backgroundColor=1a1a2e&shapeColor=2c2c54`" :alt="baby.name"
               class="baby-photo" />
           </SleepingAnimation>
-          <div class="baby-name-container">
-            <span class="baby-name">{{ baby.name }}</span>
-            <div class="baby-actions">
-              <button class="history-icon-btn" @click.stop="goToBabyHistory(baby)">
-                <img :src="bookUserIcon" alt="View History" class="history-icon" />
-              </button>
+          <div class="baby-info">
+            <div class="baby-name-container">
+              <span class="baby-name">{{ baby.name }}</span>
+              <div class="baby-actions">
+                <button class="history-icon-btn" @click.stop="goToBabyHistory(baby)">
+                  <img :src="historyIcon" alt="View History" class="history-icon" />
+                </button>
+              </div>
             </div>
-          </div>
-          <div v-if="store.babies.length > 0 && getLastFeedingTime(baby.id)" class="baby-last-feeding">
-            <img :src="getFeedingIcon(getLastFeedingTime(baby.id)?.type)" class="feeding-icon" alt="Feeding type" />
-            <span class="feeding-time">{{ getLastFeedingTime(baby.id)?.time }}</span>
-          </div>
-          <div v-if="getNextFeedingTime(baby.id)" class="baby-next-feeding"
-            :class="getNextFeedingTime(baby.id)?.status">
-            <span class="next-feeding-time">{{ getNextFeedingTime(baby.id)?.time }}</span>
-            <span class="next-feeding-actual-time">at {{ getNextFeedingTime(baby.id)?.actualTime }}</span>
+            <div v-if="store.babies.length > 0 && getLastFeedingTime(baby.id)" class="baby-last-feeding">
+              <img :src="getFeedingIcon(getLastFeedingTime(baby.id)?.type)" class="feeding-icon" alt="Feeding type" />
+              <span class="feeding-time">{{ getLastFeedingTime(baby.id)?.time }}</span>
+            </div>
+            <div v-if="getNextFeedingTime(baby.id)" class="baby-next-feeding"
+              :class="getNextFeedingTime(baby.id)?.status">
+              <span class="next-feeding-time">{{ getNextFeedingTime(baby.id)?.time }}</span>
+              <span class="next-feeding-actual-time">at {{ getNextFeedingTime(baby.id)?.actualTime }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -619,6 +621,7 @@ function handleSleepClick() {
 
 .baby-selectors {
   display: flex;
+  flex-direction: row;
   justify-content: center;
   gap: clamp(0.5rem, 2vw, 1rem);
   margin-bottom: 2rem;
@@ -627,7 +630,7 @@ function handleSleepClick() {
 
 .baby-selector {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   position: relative;
   padding: 1rem;
@@ -636,7 +639,8 @@ function handleSleepClick() {
   background-color: transparent;
   border: 2px solid transparent;
   transition: all 0.2s ease-in-out;
-  min-width: 120px;
+  min-width: 200px;
+  gap: 1rem;
 }
 
 .baby-selector.selected {
@@ -645,17 +649,25 @@ function handleSleepClick() {
 }
 
 .baby-photo {
-  width: clamp(80px, 15vw, 100px);
-  height: clamp(80px, 15vw, 100px);
+  width: clamp(60px, 12vw, 80px);
+  height: clamp(60px, 12vw, 80px);
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+}
+
+.baby-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.5rem;
 }
 
 .baby-name-container {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
 }
 
 .baby-name {
@@ -697,7 +709,6 @@ function handleSleepClick() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.5rem;
   font-size: 0.875rem;
   opacity: 0.8;
 }
@@ -755,59 +766,71 @@ function handleSleepClick() {
 
 .action-btn.breast {
   background-color: var(--color-feeding-breast);
-  color: var(--color-text-primary);
+  color: #2d2d2d;
 }
 
 .action-btn.nursing {
   background-color: var(--color-feeding-nursing);
-  color: var(--color-text-primary);
+  color: #2d2d2d;
 }
 
 .action-btn.pump {
   background-color: var(--color-feeding-pump);
-  color: var(--color-text-primary);
+  color: #ffffff;
 }
 
 .action-btn.formula {
   background-color: var(--color-feeding-formula);
-  color: var(--color-text-primary);
+  color: #2d2d2d;
 }
 
 .action-btn.solid {
   background-color: var(--color-feeding-solid);
-  color: var(--color-text-primary);
+  color: #ffffff;
 }
 
 .action-btn.poop {
   background-color: var(--color-diaper-poop);
-  color: var(--color-text-primary);
+  color: #ffffff;
 }
 
 .action-btn.poop .icon {
   stroke-width: 0;
-  fill: var(--color-text-primary);
+  fill: #ffffff;
 }
 
 .action-btn.pee {
   background-color: var(--color-diaper-pee);
-  color: var(--color-text-primary);
-}
-
-.action-btn.wake,
-.action-btn.sleep {
-  color: var(--color-text-primary);
+  color: #2d2d2d;
 }
 
 .action-btn.wake {
   background-color: var(--color-sleep-wake);
+  color: #ffffff;
 }
 
 .action-btn.sleep {
   background-color: var(--color-sleep-sleep);
+  color: #ffffff;
+}
+
+/* Icon color adjustments for better contrast */
+.action-btn.breast .icon,
+.action-btn.nursing .icon,
+.action-btn.formula .icon,
+.action-btn.pee .icon {
+  filter: brightness(0) saturate(100%) invert(0%);
+}
+
+.action-btn.pump .icon,
+.action-btn.solid .icon,
+.action-btn.poop .icon,
+.action-btn.wake .icon,
+.action-btn.sleep .icon {
+  filter: brightness(0) invert(1);
 }
 
 .action-btn.sleep .icon {
-  filter: brightness(0) invert(1);
   margin-right: 0.5rem;
 }
 

@@ -483,11 +483,12 @@ async function signOut() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
+  padding: 1.5rem;
   background: var(--color-surface-hover);
   border-radius: 15px;
   border: 1px solid var(--color-surface-border);
   transition: all 0.2s ease;
+  min-height: 80px;
 }
 
 .baby-card:hover {
@@ -499,6 +500,7 @@ async function signOut() {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex: 1;
 }
 
 .baby-photo {
