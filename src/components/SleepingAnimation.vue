@@ -93,7 +93,7 @@ watch(() => props.isSleeping, (newValue) => {
   position: absolute;
   left: 50%;
   top: 50%;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-text-tertiary);
   font-weight: bold;
   pointer-events: none;
   z-index: 2;
@@ -178,7 +178,7 @@ watch(() => props.isSleeping, (newValue) => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(15, 15, 40, 0.85);
+  background: var(--color-bg-secondary);
   border-radius: 50%;
   z-index: 1;
 }

@@ -166,9 +166,9 @@ function handleKeydown(event: KeyboardEvent, breast: BreastType) {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--color-border);
   border-radius: 0.75rem;
-  background: white;
+  background: var(--color-bg-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 4rem;
@@ -176,20 +176,20 @@ function handleKeydown(event: KeyboardEvent, breast: BreastType) {
 }
 
 .breast-option:hover:not(.disabled) {
-  border-color: #dda0dd;
-  background: #faf5ff;
+  border-color: var(--color-text-accent);
+  background: var(--color-surface-hover);
   transform: translateY(-1px);
 }
 
 .breast-option:focus {
   outline: none;
-  border-color: #dda0dd;
-  box-shadow: 0 0 0 3px rgba(221, 160, 221, 0.2);
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring, rgba(99, 102, 241, 0.1));
 }
 
 .breast-option.active {
-  border-color: #dda0dd;
-  background: #dda0dd;
+  border-color: var(--color-text-accent);
+  background: var(--color-text-accent);
   color: white;
 }
 

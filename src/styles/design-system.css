@@ -1,0 +1,312 @@
+/* Design System - Color Variables and Theme Foundation */
+
+:root {
+  /* ===== BRAND COLORS ===== */
+  /* Primary brand colors */
+  --color-primary: #9c27b0;
+  --color-primary-dark: #7b1fa2;
+  --color-primary-darker: #6a1b9a;
+  --color-primary-light: #ba68c8;
+  --color-primary-lighter: #ce93d8;
+
+  /* Secondary brand colors */
+  --color-secondary: #a0a0e0;
+  --color-secondary-dark: #8e8ec8;
+  --color-secondary-light: #b8b8e8;
+
+  /* ===== SEMANTIC COLORS ===== */
+  /* Success colors */
+  --color-success: #22c55e;
+  --color-success-dark: #16a34a;
+  --color-success-light: #4ade80;
+  --color-success-bg: rgba(34, 197, 94, 0.1);
+  --color-success-border: rgba(34, 197, 94, 0.2);
+
+  /* Error colors */
+  --color-error: #ef4444;
+  --color-error-dark: #dc2626;
+  --color-error-light: #f87171;
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-error-border: rgba(239, 68, 68, 0.2);
+
+  /* Warning colors */
+  --color-warning: #f59e0b;
+  --color-warning-dark: #d97706;
+  --color-warning-light: #fbbf24;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-warning-border: rgba(245, 158, 11, 0.2);
+
+  /* Info colors */
+  --color-info: #3b82f6;
+  --color-info-dark: #2563eb;
+  --color-info-light: #60a5fa;
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+  --color-info-border: rgba(59, 130, 246, 0.2);
+
+  /* ===== BACKGROUND COLORS ===== */
+  --color-bg-primary: #1a1a2e;
+  --color-bg-secondary: #0d1b1e;
+  --color-bg-tertiary: #23243a;
+  --color-bg-quaternary: #21022b;
+
+  /* Surface colors */
+  --color-surface: rgba(255, 255, 255, 0.05);
+  --color-surface-hover: rgba(255, 255, 255, 0.08);
+  --color-surface-active: rgba(255, 255, 255, 0.1);
+  --color-surface-border: rgba(255, 255, 255, 0.1);
+  --color-surface-border-hover: rgba(255, 255, 255, 0.2);
+
+  /* ===== TEXT COLORS ===== */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #e0e0ff;
+  --color-text-tertiary: rgba(255, 255, 255, 0.8);
+  --color-text-quaternary: rgba(255, 255, 255, 0.6);
+  --color-text-disabled: rgba(255, 255, 255, 0.5);
+  --color-text-accent: #a0a0e0;
+
+  /* ===== FEEDING TYPE COLORS ===== */
+  --color-feeding-breast: #f5f5dc;
+  --color-feeding-nursing: #dda0dd;
+  --color-feeding-pump: #9370db;
+  --color-feeding-formula: #7fffd4;
+  --color-feeding-solid: #ff6b6b;
+
+  /* ===== DIAPER COLORS ===== */
+  --color-diaper-pee: #ffd700;
+  --color-diaper-poop: #8d4a24;
+  --color-diaper-both: #fffc3a;
+
+  /* ===== SLEEP COLORS ===== */
+  --color-sleep-wake: #05409e;
+  --color-sleep-sleep: #090524;
+
+  /* ===== INTERACTION COLORS ===== */
+  --color-hover: rgba(255, 255, 255, 0.1);
+  --color-active: rgba(255, 255, 255, 0.15);
+  --color-focus: #9c27b0;
+  --color-focus-ring: rgba(156, 39, 176, 0.2);
+
+  /* ===== BUTTON COLORS ===== */
+  /* Primary buttons */
+  --btn-primary-bg: linear-gradient(135deg, #9c27b0, #7b1fa2);
+  --btn-primary-bg-hover: linear-gradient(135deg, #8e24aa, #6a1b9a);
+  --btn-primary-text: #ffffff;
+  --btn-primary-shadow: rgba(156, 39, 176, 0.3);
+  --btn-primary-shadow-hover: rgba(156, 39, 176, 0.4);
+
+  /* Secondary buttons */
+  --btn-secondary-bg: transparent;
+  --btn-secondary-bg-hover: rgba(255, 255, 255, 0.05);
+  --btn-secondary-text: #a0a0e0;
+  --btn-secondary-text-hover: #ffffff;
+  --btn-secondary-border: rgba(255, 255, 255, 0.1);
+  --btn-secondary-border-hover: rgba(255, 255, 255, 0.2);
+
+  /* Danger buttons */
+  --btn-danger-bg: #ef4444;
+  --btn-danger-bg-hover: #dc2626;
+  --btn-danger-text: #ffffff;
+  --btn-danger-shadow: rgba(239, 68, 68, 0.3);
+
+  /* ===== FORM COLORS ===== */
+  --form-input-bg: rgba(255, 255, 255, 0.05);
+  --form-input-bg-focus: rgba(255, 255, 255, 0.08);
+  --form-input-border: rgba(255, 255, 255, 0.1);
+  --form-input-border-focus: #9c27b0;
+  --form-input-text: #ffffff;
+  --form-input-placeholder: rgba(255, 255, 255, 0.5);
+  --form-label-text: #a0a0e0;
+
+  /* ===== SHADOW COLORS ===== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+
+  /* ===== LEGACY COLORS (for backward compatibility) ===== */
+  --color-pee: #fffc3a;
+  --color-formula: #7fffea;
+  --color-poo: #8d4a24;
+  --color-milk: #fffde8;
+  --color-lavendar: #b39ddb;
+  --color-midnight: #0d1b1e;
+  --color-raven: #23243a;
+  --color-prince: #21022b;
+  --color-periwinkle: #a0a0e0;
+}
+
+/* ===== DARK THEME (Default) ===== */
+[data-theme="dark"] {
+  /* Override any light theme specific colors here if needed */
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] {
+  /* Background colors */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-tertiary: #f1f5f9;
+  --color-bg-quaternary: #e2e8f0;
+
+  /* Surface colors */
+  --color-surface: rgba(0, 0, 0, 0.05);
+  --color-surface-hover: rgba(0, 0, 0, 0.08);
+  --color-surface-active: rgba(0, 0, 0, 0.1);
+  --color-surface-border: rgba(0, 0, 0, 0.1);
+  --color-surface-border-hover: rgba(0, 0, 0, 0.2);
+
+  /* Text colors */
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #334155;
+  --color-text-tertiary: #475569;
+  --color-text-quaternary: #64748b;
+  --color-text-disabled: #94a3b8;
+  --color-text-accent: #6366f1;
+
+  /* Form colors */
+  --form-input-bg: rgba(0, 0, 0, 0.05);
+  --form-input-bg-focus: rgba(0, 0, 0, 0.08);
+  --form-input-border: rgba(0, 0, 0, 0.1);
+  --form-input-text: #1e293b;
+  --form-input-placeholder: rgba(0, 0, 0, 0.5);
+  --form-label-text: #374151;
+
+  /* Interaction colors */
+  --color-hover: rgba(0, 0, 0, 0.05);
+  --color-active: rgba(0, 0, 0, 0.1);
+
+  /* Secondary button adjustments for light theme */
+  --btn-secondary-bg: transparent;
+  --btn-secondary-bg-hover: rgba(0, 0, 0, 0.05);
+  --btn-secondary-text: #6366f1;
+  --btn-secondary-text-hover: #4f46e5;
+  --btn-secondary-border: rgba(0, 0, 0, 0.1);
+  --btn-secondary-border-hover: rgba(0, 0, 0, 0.2);
+}
+
+/* ===== HIGH CONTRAST THEME ===== */
+[data-theme="high-contrast"] {
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #000000;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #ffffff;
+  --color-primary: #ffff00;
+  --color-focus: #ffff00;
+  --color-focus-ring: rgba(255, 255, 0, 0.5);
+
+  /* High contrast button colors */
+  --btn-primary-bg: #ffff00;
+  --btn-primary-text: #000000;
+  --btn-secondary-bg: transparent;
+  --btn-secondary-text: #ffffff;
+  --btn-secondary-border: #ffffff;
+  --btn-danger-bg: #ff0000;
+  --btn-danger-text: #ffffff;
+}
+
+/* ===== PERFORMANCE OPTIMIZATIONS ===== */
+/* Transition variables for consistent performance */
+:root {
+  --transition-fast: 0.15s;
+  --transition-normal: 0.2s;
+  --transition-slow: 0.3s;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-easing-out: cubic-bezier(0, 0, 0.2, 1);
+  --transition-easing-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Theme transition optimization - only animate specific properties */
+* {
+  transition: background-color var(--transition-fast) var(--transition-easing),
+    border-color var(--transition-fast) var(--transition-easing),
+    color var(--transition-fast) var(--transition-easing),
+    box-shadow var(--transition-fast) var(--transition-easing);
+}
+
+/* CSS containment for better performance */
+.modal,
+.theme-switcher,
+.form-group,
+.btn {
+  contain: layout style;
+}
+
+/* Disable transitions during theme changes to prevent flicker */
+.theme-transitioning * {
+  transition: none !important;
+}
+
+/* Performance optimization for frequently changing elements */
+.timer-display,
+.progress-bar,
+.animation-element {
+  will-change: transform, opacity;
+  contain: layout style paint;
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+    --transition-normal: 0ms;
+    --transition-slow: 0ms;
+  }
+
+  * {
+    transition: none !important;
+  }
+}
+
+/* ===== COLOR SCHEME PREFERENCE ===== */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    /* Apply light theme variables when no theme is explicitly set and user prefers light */
+    --color-bg-primary: #ffffff;
+    --color-text-primary: #1e293b;
+    /* Add other light theme variables as needed */
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    /* Dark theme is already the default, but we can add overrides here if needed */
+  }
+}
+
+/* ===== UTILITY CLASSES ===== */
+.text-primary {
+  color: var(--color-text-primary) !important;
+}
+.text-secondary {
+  color: var(--color-text-secondary) !important;
+}
+.text-accent {
+  color: var(--color-text-accent) !important;
+}
+.text-success {
+  color: var(--color-success) !important;
+}
+.text-error {
+  color: var(--color-error) !important;
+}
+.text-warning {
+  color: var(--color-warning) !important;
+}
+
+.bg-primary {
+  background-color: var(--color-bg-primary) !important;
+}
+.bg-secondary {
+  background-color: var(--color-bg-secondary) !important;
+}
+.bg-surface {
+  background-color: var(--color-surface) !important;
+}
+
+.border-surface {
+  border-color: var(--color-surface-border) !important;
+}
+.border-primary {
+  border-color: var(--color-primary) !important;
+}

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Components Theme Test</title>
+    <style>
+        /* Import design system styles */
+        @import url('./src/styles/design-system.css');
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .theme-switcher {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background-color: var(--color-surface);
+            border-radius: 8px;
+        }
+        
+        .theme-switcher button {
+            margin-right: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--color-surface-border);
+            background-color: var(--color-surface);
+            color: var(--color-text-primary);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .theme-switcher button.active {
+            background-color: var(--color-primary);
+            color: white;
+        }
+        
+        .form-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: var(--color-surface);
+            border-radius: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .size-demo {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .size-demo > div {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        /* Form component styles (simplified versions for testing) */
+        .form-input, .form-textarea {
+            width: 100%;
+            border: 1px solid var(--form-input-border);
+            border-radius: 8px;
+            background-color: var(--form-input-bg);
+            color: var(--form-input-text);
+            font-family: inherit;
+            font-size: 1rem;
+            line-height: 1.5;
+            transition: all 0.2s ease-in-out;
+            outline: none;
+            padding: 0.75rem 1rem;
+        }
+        
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: var(--form-input-placeholder);
+        }
+        
+        .form-input:focus, .form-textarea:focus {
+            background-color: var(--form-input-bg-focus);
+            border-color: var(--form-input-border-focus);
+            box-shadow: 0 0 0 3px var(--color-focus-ring);
+        }
+        
+        .form-input--sm, .form-textarea--sm {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .form-input--lg, .form-textarea--lg {
+            padding: 1rem 1.25rem;
+            font-size: 1.125rem;
+        }
+        
+        .form-input--error, .form-textarea--error {
+            border-color: var(--color-error);
+        }
+        
+        .form-input--success, .form-textarea--success {
+            border-color: var(--color-success);
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-label {
+            display: inline-block;
+            color: var(--form-label-text);
+            font-weight: 500;
+            line-height: 1.5;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+        
+        .form-label--error {
+            color: var(--color-error);
+        }
+        
+        .form-label--success {
+            color: var(--color-success);
+        }
+        
+        .form-label__required {
+            color: var(--color-error);
+            margin-left: 0.25rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Form Components Theme Test</h1>
+        
+        <div class="theme-switcher">
+            <h3>Theme Switcher</h3>
+            <button onclick="setTheme('light')" id="light-btn">Light</button>
+            <button onclick="setTheme('dark')" id="dark-btn" class="active">Dark</button>
+            <button onclick="setTheme('high-contrast')" id="high-contrast-btn">High Contrast</button>
+        </div>
+        
+        <div class="form-section">
+            <h2>Form Input Component</h2>
+            
+            <div class="form-group">
+                <label class="form-label" for="input-default">Default Input</label>
+                <input type="text" id="input-default" class="form-input" placeholder="Enter text here...">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label form-label--error" for="input-error">Error State <span class="form-label__required">*</span></label>
+                <input type="text" id="input-error" class="form-input form-input--error" placeholder="This has an error" value="Invalid input">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label form-label--success" for="input-success">Success State</label>
+                <input type="text" id="input-success" class="form-input form-input--success" placeholder="This is valid" value="Valid input">
+            </div>
+            
+            <h3>Size Variants</h3>
+            <div class="size-demo">
+                <div>
+                    <label class="form-label" for="input-sm">Small</label>
+                    <input type="text" id="input-sm" class="form-input form-input--sm" placeholder="Small input">
+                </div>
+                <div>
+                    <label class="form-label" for="input-md">Medium</label>
+                    <input type="text" id="input-md" class="form-input" placeholder="Medium input">
+                </div>
+                <div>
+                    <label class="form-label" for="input-lg">Large</label>
+                    <input type="text" id="input-lg" class="form-input form-input--lg" placeholder="Large input">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>Form Textarea Component</h2>
+            
+            <div class="form-group">
+                <label class="form-label" for="textarea-default">Default Textarea</label>
+                <textarea id="textarea-default" class="form-textarea" placeholder="Enter your message here..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label form-label--error" for="textarea-error">Error State <span class="form-label__required">*</span></label>
+                <textarea id="textarea-error" class="form-textarea form-textarea--error" placeholder="This has an error">This content has validation errors</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label form-label--success" for="textarea-success">Success State</label>
+                <textarea id="textarea-success" class="form-textarea form-textarea--success" placeholder="This is valid">This content is valid</textarea>
+            </div>
+            
+            <h3>Size Variants</h3>
+            <div class="size-demo">
+                <div>
+                    <label class="form-label" for="textarea-sm">Small</label>
+                    <textarea id="textarea-sm" class="form-textarea form-textarea--sm" placeholder="Small textarea"></textarea>
+                </div>
+                <div>
+                    <label class="form-label" for="textarea-md">Medium</label>
+                    <textarea id="textarea-md" class="form-textarea" placeholder="Medium textarea"></textarea>
+                </div>
+                <div>
+                    <label class="form-label" for="textarea-lg">Large</label>
+                    <textarea id="textarea-lg" class="form-textarea form-textarea--lg" placeholder="Large textarea"></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>Form Label Component</h2>
+            
+            <div class="form-group">
+                <label class="form-label">Default Label</label>
+                <label class="form-label">Required Label <span class="form-label__required">*</span></label>
+                <label class="form-label form-label--error">Error Label <span class="form-label__required">*</span></label>
+                <label class="form-label form-label--success">Success Label</label>
+                <label class="form-label form-label--disabled">Disabled Label</label>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Update active button
+            document.querySelectorAll('.theme-switcher button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(theme + '-btn').classList.add('active');
+            
+            // Store theme preference
+            localStorage.setItem('theme', theme);
+        }
+        
+        // Load saved theme or default to dark
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
+        
+        // Test focus states
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Form components test page loaded');
+            console.log('Current theme:', document.documentElement.getAttribute('data-theme'));
+        });
+    </script>
+</body>
+</html>
+</template>

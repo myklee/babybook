@@ -384,7 +384,7 @@ async function handleDelete() {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: #666;
+  color: var(--color-text-secondary);
   text-decoration: none;
   transition: all 0.2s;
 }

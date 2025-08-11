@@ -37,23 +37,24 @@ const handleFocus = (event: FocusEvent) => {
     width: 100%;
     padding: 1rem 1.25rem;
     border-radius: 15px;
-    background-color: rgba(255, 255, 255, 0.05);
-    color: white;
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
     font-size: 1rem;
     transition: all 0.2s ease;
     font-family: inherit;
     box-sizing: border-box;
+    border: 1px solid var(--color-border);
 }
 
 .date-input:focus {
     outline: none;
-    border-color: #9c27b0;
-    background-color: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+    border-color: var(--color-border-focus);
+    background-color: var(--color-surface-hover);
+    box-shadow: 0 0 0 3px var(--color-focus-ring, rgba(99, 102, 241, 0.1));
 }
 
 .date-input:invalid {
-    border-color: #ef4444;
+    border-color: var(--color-error);
 }
 
 /* Mobile responsiveness */

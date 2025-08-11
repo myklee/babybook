@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
 import IconButton from '../components/IconButton.vue'
 import EditBabyModal from '../components/EditBabyModal.vue'
+import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import arrowBigLeftIcon from '../assets/icons/arrow-big-left.svg'
 import addBabyIcon from '../assets/icons/add-baby.svg'
 import pencilIcon from '../assets/icons/lucide_pencil.svg'
@@ -214,6 +215,12 @@ async function signOut() {
           </button>
         </section>
 
+        <!-- Theme Preference -->
+        <section class="profile-section">
+          <h2>Theme Preference</h2>
+          <ThemeSwitcher />
+        </section>
+
         <!-- Measurement Unit Preference -->
         <section class="profile-section">  
           <div class="measurement-options">
@@ -303,9 +310,9 @@ async function signOut() {
 
 <style scoped>
 .profile-page {
-  background-color: #1a1a2e;
+  background-color: var(--color-bg-primary);
   min-height: 100vh;
-  color: white;
+  color: var(--color-text-primary);
 }
 
 .container {
@@ -326,7 +333,7 @@ async function signOut() {
   margin: 0;
   font-size: 1.75rem;
   font-weight: 600;
-  color: #e0e0ff;
+  color: var(--color-text-secondary);
 }
 
 .header-spacer {
@@ -340,15 +347,15 @@ async function signOut() {
 }
 
 .profile-section {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border-radius: 20px;
   padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
 }
 
 .profile-section h2 {
   margin: 0 0 1.5rem 0;
-  color: #e0e0ff;
+  color: var(--color-text-secondary);
   font-size: 1.3rem;
   font-weight: 600;
 }
@@ -371,7 +378,7 @@ async function signOut() {
 .form-group label {
   display: block;
   margin-bottom: 0.75rem;
-  color: var(--color-periwinkle);
+  color: var(--form-label-text);
   font-weight: 500;
   font-size: 0.95rem;
 }
@@ -379,10 +386,10 @@ async function signOut() {
 .form-group input {
   width: 100%;
   padding: 1rem 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--form-input-border);
   border-radius: 15px;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: white;
+  background-color: var(--form-input-bg);
+  color: var(--form-input-text);
   font-size: 1rem;
   transition: all 0.2s ease;
   box-sizing: border-box;
@@ -390,13 +397,13 @@ async function signOut() {
 
 .form-group input:focus {
   outline: none;
-  border-color: #9c27b0;
-  background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+  border-color: var(--form-input-border-focus);
+  background-color: var(--form-input-bg-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .form-group input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--form-input-placeholder);
 }
 
 .input-with-button {
@@ -413,7 +420,7 @@ async function signOut() {
   padding: 1rem 1.5rem;
   border: none;
   border-radius: 15px;
-  color: white;
+  color: var(--btn-primary-text);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -423,32 +430,32 @@ async function signOut() {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #9c27b0, #7b1fa2);
-  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+  background: var(--btn-primary-bg);
+  box-shadow: 0 4px 12px var(--btn-primary-shadow);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #8e24aa, #6a1b9a);
+  background: var(--btn-primary-bg-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(156, 39, 176, 0.4);
+  box-shadow: 0 6px 16px var(--btn-primary-shadow-hover);
 }
 
 .btn-primary:disabled {
-  background: #666;
+  background: var(--color-text-disabled);
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, var(--color-error), var(--color-error-dark));
+  box-shadow: 0 4px 12px var(--btn-danger-shadow);
 }
 
 .btn-danger:hover {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: linear-gradient(135deg, var(--color-error-dark), var(--color-error-dark));
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 6px 16px var(--btn-danger-shadow);
 }
 
 .full-width {
@@ -458,7 +465,7 @@ async function signOut() {
 .empty-state {
   text-align: center;
   padding: 2rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
 }
 
 .empty-state p {
@@ -477,14 +484,14 @@ async function signOut() {
   align-items: center;
   justify-content: space-between;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface-hover);
   border-radius: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
   transition: all 0.2s ease;
 }
 
 .baby-card:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--color-surface-active);
   transform: translateY(-2px);
 }
 
@@ -499,12 +506,12 @@ async function signOut() {
   height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--color-surface-border-hover);
 }
 
 .baby-details h3 {
   margin: 0 0 0.25rem 0;
-  color: #e0e0ff;
+  color: var(--color-text-secondary);
   font-size: 1.1rem;
 }
 
@@ -530,7 +537,7 @@ async function signOut() {
 .toggle-text-left,
 .toggle-text-right {
   font-size: 1rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   white-space: nowrap;
 }
 
@@ -539,7 +546,7 @@ async function signOut() {
   width: 50px;
   height: 24px;
   border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-surface-border);
 }
 
 .toggle-input {
@@ -553,7 +560,7 @@ async function signOut() {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--color-text-tertiary);
   transition: transform 0.2s;
 }
 
@@ -572,14 +579,14 @@ async function signOut() {
 
 .measurement-description {
   font-size: 0.875rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   text-align: center;
 }
 
 .updating-indicator {
   text-align: center;
   padding: 0.5rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   font-style: italic;
 }
 

@@ -356,7 +356,7 @@ async function handleDelete() {
   display: block;
   font-weight: 500;
   margin-bottom: 0.5rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-text-tertiary);
 }
 
 .form-group input,
@@ -364,10 +364,10 @@ async function handleDelete() {
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--form-input-border);
   border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--form-input-bg);
+  color: var(--form-input-text);
   font-size: 1rem;
   transition: all 0.2s ease;
 }
@@ -376,9 +376,9 @@ async function handleDelete() {
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--color-periwinkle);
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  border-color: var(--form-input-border-focus);
+  background: var(--form-input-bg-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .form-group textarea {
@@ -390,7 +390,7 @@ async function handleDelete() {
 .form-group input::placeholder,
 .form-group select::placeholder,
 .form-group textarea::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--form-input-placeholder);
 }
 
 /* Form Actions */
@@ -422,46 +422,46 @@ async function handleDelete() {
 }
 
 .btn-save {
-  background: linear-gradient(135deg, var(--color-periwinkle) 0%, #8b5cf6 100%);
-  color: white;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
 }
 
 .btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  background: var(--btn-primary-bg-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 4px 12px var(--btn-primary-shadow-hover);
 }
 
 .btn-cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--btn-secondary-border);
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: var(--btn-secondary-bg-hover);
+  color: var(--btn-secondary-text-hover);
 }
 
 .btn-delete {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  color: white;
+  background: var(--btn-danger-bg);
+  color: var(--btn-danger-text);
 }
 
 .btn-delete:hover:not(:disabled) {
-  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  background: var(--btn-danger-bg-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 4px 12px var(--btn-danger-shadow);
 }
 
 /* Search Input */
 .search-input {
   width: 100%;
   padding: 1rem 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--form-input-border);
   border-radius: 15px;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--color-periwinkle);
+  background-color: var(--form-input-bg);
+  color: var(--color-text-accent);
   font-size: 1rem;
   transition: all 0.2s ease;
   box-sizing: border-box;
@@ -470,23 +470,23 @@ async function handleDelete() {
 
 .search-input:focus {
   outline: none;
-  border-color: #9c27b0;
-  background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+  border-color: var(--form-input-border-focus);
+  background-color: var(--form-input-bg-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--form-input-placeholder);
 }
 
 /* Suggestions */
 .suggestions-container {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--color-surface-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   margin-top: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   z-index: 10;
   max-height: 300px;
   overflow-y: auto;
@@ -497,8 +497,8 @@ async function handleDelete() {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-surface-hover);
+  border-bottom: 1px solid var(--color-surface-border);
   border-radius: 12px 12px 0 0;
   font-weight: 500;
   font-size: 0.875rem;
@@ -511,7 +511,7 @@ async function handleDelete() {
   font-size: 1.125rem;
   cursor: pointer;
   padding: 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-tertiary);
   transition: color 0.2s;
 }
 
@@ -531,7 +531,7 @@ async function handleDelete() {
 
 .suggestion-category h4 {
   margin: 1rem 0 0.5rem 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-quaternary);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -546,16 +546,16 @@ async function handleDelete() {
 
 .suggestion-item {
   padding: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-surface);
 }
 
 .suggestion-item:hover {
-  border-color: #9c27b0;
-  background: rgba(156, 39, 176, 0.1);
+  border-color: var(--color-primary);
+  background: var(--color-focus-ring);
   transform: translateY(-1px);
 }
 
@@ -570,15 +570,15 @@ async function handleDelete() {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-quaternary);
 }
 
 /* Selected Food */
 .selected-food-section {
   margin: 1rem 0;
   padding: 1rem;
-  background: rgba(76, 175, 80, 0.1);
-  border: 1px solid rgba(76, 175, 80, 0.3);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
   border-radius: 12px;
 }
 
@@ -590,14 +590,14 @@ async function handleDelete() {
 
 .selected-food-header h4 {
   margin: 0;
-  color: #4caf50;
+  color: var(--color-success);
   font-size: 1rem;
 }
 
 .clear-selection {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--btn-secondary-bg);
+  border: 1px solid var(--btn-secondary-border);
+  color: var(--btn-secondary-text);
   padding: 0.25rem 0.75rem;
   border-radius: 6px;
   cursor: pointer;
@@ -606,14 +606,14 @@ async function handleDelete() {
 }
 
 .clear-selection:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: var(--btn-secondary-bg-hover);
+  color: var(--btn-secondary-text-hover);
 }
 
 /* Notes Counter */
 .notes-counter {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-disabled);
   text-align: right;
   margin-top: 0.25rem;
 }
@@ -622,10 +622,10 @@ async function handleDelete() {
 .times-tried-input {
   width: 100%;
   padding: 1rem 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--form-input-border);
   border-radius: 15px;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--color-periwinkle);
+  background-color: var(--form-input-bg);
+  color: var(--color-text-accent);
   font-size: 1rem;
   transition: all 0.2s ease;
   box-sizing: border-box;
@@ -634,9 +634,9 @@ async function handleDelete() {
 
 .times-tried-input:focus {
   outline: none;
-  border-color: #9c27b0;
-  background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+  border-color: var(--form-input-border-focus);
+  background-color: var(--form-input-bg-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 /* Times Tried Input */
@@ -653,9 +653,9 @@ async function handleDelete() {
 
 .times-tried-input:focus {
   outline: none;
-  border-color: var(--color-periwinkle);
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  border-color: var(--form-input-border-focus);
+  background: var(--form-input-bg-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 /* Advanced Options */
@@ -673,14 +673,14 @@ async function handleDelete() {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-quaternary);
   text-decoration: none;
   transition: all 0.2s;
 }
 
 .toggle-btn:hover {
   color: var(--color-periwinkle);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface);
   border-radius: 6px;
 }
 
@@ -695,7 +695,7 @@ async function handleDelete() {
 .advanced-options {
   padding-top: 1rem;
   margin-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--color-surface-border);
 }
 
 /* Mobile Responsiveness */

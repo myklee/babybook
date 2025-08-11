@@ -224,7 +224,7 @@ defineExpose({
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--shadow-overlay, rgba(0, 0, 0, 0.6));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -237,16 +237,16 @@ defineExpose({
 /* Modal Container */
 .modal-container {
   position: relative;
-  background: var(--color-midnight, #1a1a2e);
+  background: var(--color-bg-primary);
   border-radius: 1rem;
   width: 100%;
   max-height: calc(100vh - 2rem);
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-2xl);
   outline: none;
   display: flex;
   flex-direction: column;
-  color: white;
+  color: var(--color-text-primary);
   margin: auto;
 }
 
@@ -266,7 +266,7 @@ defineExpose({
 .modal-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: white;
+  color: var(--color-text-primary);
   margin: 0;
   line-height: 1.2;
 }
@@ -275,7 +275,7 @@ defineExpose({
   width: 2.5rem;
   height: 2.5rem;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-surface);
   border-radius: 50%;
   cursor: pointer;
   position: absolute;
@@ -290,12 +290,12 @@ defineExpose({
 }
 
 .modal-close-button:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-surface-hover);
   transform: scale(1.05);
 }
 
 .modal-close-button:focus {
-  outline: 2px solid var(--color-periwinkle, #a855f7);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -306,8 +306,17 @@ defineExpose({
   transition: all 0.2s ease;
 }
 
+[data-theme="light"] .close-icon {
+  filter: brightness(0) invert(0) opacity(0.8);
+}
+
 .modal-close-button:hover .close-icon {
   filter: brightness(0) invert(1) opacity(1);
+  transform: scale(1.1);
+}
+
+[data-theme="light"] .modal-close-button:hover .close-icon {
+  filter: brightness(0) invert(0) opacity(1);
   transform: scale(1.1);
 }
 
@@ -321,7 +330,7 @@ defineExpose({
 /* Footer */
 .modal-footer {
   padding: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--color-surface-border);
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
@@ -429,15 +438,10 @@ defineExpose({
 
 /* Focus Styles */
 .modal-close-button:focus {
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
-/* Dark Theme Support */
-@media (prefers-color-scheme: dark) {
-  .modal-container {
-    background: var(--color-midnight, #0f0f1a);
-  }
-}
+/* Theme Support - handled by CSS variables */
 
 /* Print Styles */
 @media print {
@@ -449,7 +453,7 @@ defineExpose({
 
   .modal-container {
     box-shadow: none;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-surface-border);
     page-break-inside: avoid;
   }
 

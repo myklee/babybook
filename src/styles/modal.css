@@ -15,7 +15,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--shadow-overlay, rgba(0, 0, 0, 0.6));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -26,15 +26,13 @@
 
 .modal-container {
   position: relative;
-  background: white;
+  background: var(--color-bg-primary);
   border-radius: 1rem;
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
   overflow: hidden;
-  box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.15),
-    0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
   outline: none;
   display: flex;
   flex-direction: column;
@@ -46,20 +44,20 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.5rem 2rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
 .modal-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-text-primary);
   margin: 0;
 }
 
 .modal-subtitle {
   font-weight: 400;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 /* Modal Content */
@@ -75,7 +73,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 2rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
   flex-shrink: 0;
   gap: 1rem;
 }
@@ -102,16 +100,16 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .modal-close-button:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .modal-close-button:focus {
-  outline: 2px solid #dda0dd;
+  outline: 2px solid var(--color-text-accent);
   outline-offset: 2px;
 }
 
@@ -142,36 +140,38 @@
 }
 
 .btn-primary {
-  background: #dda0dd;
+  background: var(--color-text-accent);
   color: white;
-  border-color: #dda0dd;
+  border-color: var(--color-text-accent);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #d8b4fe;
-  border-color: #d8b4fe;
+  background: var(--color-primary-light, var(--color-text-accent));
+  border-color: var(--color-primary-light, var(--color-text-accent));
+  opacity: 0.9;
 }
 
 .btn-secondary {
-  background: white;
-  color: #6b7280;
-  border-color: #d1d5db;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: #9ca3af;
-  color: #374151;
+  border-color: var(--color-border-focus);
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
 }
 
 .btn-danger {
-  background: #ef4444;
+  background: var(--color-error);
   color: white;
-  border-color: #ef4444;
+  border-color: var(--color-error);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: var(--color-error-dark);
+  border-color: var(--color-error-dark);
 }
 
 /* Form Elements */
@@ -183,27 +183,29 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-text-primary);
   margin-bottom: 0.5rem;
 }
 
 .form-input {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--color-border);
   border-radius: 0.5rem;
   font-size: 0.875rem;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
   transition: border-color 0.2s ease;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #dda0dd;
-  box-shadow: 0 0 0 3px rgba(221, 160, 221, 0.1);
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring, rgba(99, 102, 241, 0.1));
 }
 
 .form-input.error {
-  border-color: #ef4444;
+  border-color: var(--color-error);
 }
 
 .form-textarea {
@@ -218,7 +220,7 @@
 
 .field-error {
   font-size: 0.75rem;
-  color: #ef4444;
+  color: var(--color-error);
   margin-bottom: 0.25rem;
 }
 
@@ -299,68 +301,7 @@
   }
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  .modal-container {
-    background: #1f2937;
-    color: white;
-  }
-
-  .modal-header {
-    border-color: #374151;
-  }
-
-  .modal-title {
-    color: white;
-  }
-
-  .modal-subtitle {
-    color: #d1d5db;
-  }
-
-  .modal-footer {
-    border-color: #374151;
-  }
-
-  .modal-close-button {
-    color: #d1d5db;
-  }
-
-  .modal-close-button:hover {
-    background: #374151;
-    color: #f3f4f6;
-  }
-
-  .form-label {
-    color: #f3f4f6;
-  }
-
-  .form-input {
-    background: #374151;
-    border-color: #4b5563;
-    color: white;
-  }
-
-  .form-input:focus {
-    border-color: #a78bfa;
-    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
-  }
-
-  .form-input::placeholder {
-    color: #6b7280;
-  }
-
-  .btn-secondary {
-    background: #374151;
-    border-color: #4b5563;
-    color: #d1d5db;
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    border-color: #6b7280;
-    color: #f3f4f6;
-  }
-}
+/* Dark Mode Support - Now handled by CSS variables in design-system.css */
 
 /* High Contrast Mode */
 @media (prefers-contrast: high) {

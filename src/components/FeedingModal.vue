@@ -430,8 +430,8 @@ async function handleSubmit() {
 }
 
 .preset-btn:hover {
-    background: #e9ecef;
-    border-color: #fff;
+    background: var(--color-surface-hover);
+    border-color: var(--color-surface-border-hover);
 }
 
 .preset-btn.active {
@@ -454,7 +454,7 @@ async function handleSubmit() {
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
-    color: #666;
+    color: var(--color-text-quaternary);
     text-decoration: none;
     transition: all 0.2s;
 }
@@ -489,8 +489,8 @@ async function handleSubmit() {
     flex-direction: column;
     gap: 1rem;
     padding: 1rem;
-    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
-    border: 1px solid #dda0dd;
+    background: var(--color-surface);
+    border: 1px solid var(--color-surface-border);
     border-radius: 0.75rem;
     margin: 1rem 0;
 }
@@ -507,9 +507,9 @@ async function handleSubmit() {
     align-items: center;
     gap: 0.5rem;
     padding: 1rem;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--color-border);
     border-radius: 0.75rem;
-    background: white;
+    background: var(--color-bg-primary);
     cursor: pointer;
     transition: all 0.2s ease;
     min-width: 8rem;
@@ -517,15 +517,15 @@ async function handleSubmit() {
 }
 
 .mode-btn:hover {
-    border-color: #dda0dd;
-    background: #faf5ff;
+    border-color: var(--color-surface-border-hover);
+    background: var(--color-surface-hover);
     transform: translateY(-1px);
 }
 
 .mode-btn.active {
-    border-color: #dda0dd;
-    background: #dda0dd;
-    color: white;
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-text-primary);
 }
 
 .mode-icon {
@@ -539,7 +539,7 @@ async function handleSubmit() {
 
 .help-text {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-quaternary);
     font-style: italic;
     margin-top: 0.5rem;
     text-align: center;
@@ -584,9 +584,9 @@ async function handleSubmit() {
     }
     
     .mode-btn.active {
-        background: #000;
-        border-color: #000;
-        color: white;
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: var(--color-text-primary);
     }
 }
 

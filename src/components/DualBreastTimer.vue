@@ -450,13 +450,13 @@ defineExpose({
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-quaternary);
   text-decoration: none;
   transition: all 0.2s;
 }
 
 .toggle-btn:hover {
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   text-decoration: underline;
 }
 
@@ -472,12 +472,12 @@ defineExpose({
 /* Advanced Options */
 .advanced-options {
   padding: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--color-surface-border);
 }
 
 .notes-counter {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-disabled);
   text-align: right;
   margin-top: 0.25rem;
 }
@@ -485,33 +485,33 @@ defineExpose({
 /* High Contrast Mode */
 @media (prefers-contrast: high) {
   .dual-breast-timer {
-    background: #000000;
-    color: white;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
   }
 
   .toggle-btn {
-    color: white;
+    color: var(--color-text-primary);
   }
 
   .toggle-btn:focus {
-    outline: 3px solid #ffff00;
-    background: #000000;
+    outline: 3px solid var(--color-focus);
+    background: var(--color-bg-primary);
   }
 
   .advanced-options {
-    border: 2px solid white;
-    background: #000000;
+    border: 2px solid var(--color-text-primary);
+    background: var(--color-bg-primary);
   }
 
   .advanced-options textarea {
-    border: 2px solid white;
-    background: #000000;
-    color: white;
+    border: 2px solid var(--color-text-primary);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
   }
 
   .advanced-options textarea:focus {
-    border: 3px solid #ffff00;
-    outline: 3px solid #ffff00;
+    border: 3px solid var(--color-focus);
+    outline: 3px solid var(--color-focus);
   }
 }
 

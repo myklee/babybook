@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme Performance Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background: var(--color-bg-primary, #1a1a2e);
+            color: var(--color-text-primary, #ffffff);
+            transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            background: #9c27b0;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.15s ease;
+        }
+
+        button:hover {
+            background: #7b1fa2;
+        }
+
+        .metrics {
+            background: var(--color-surface, rgba(255, 255, 255, 0.05));
+            border: 1px solid var(--color-surface-border, rgba(255, 255, 255, 0.1));
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .test-elements {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .test-element {
+            background: var(--color-surface, rgba(255, 255, 255, 0.05));
+            border: 1px solid var(--color-surface-border, rgba(255, 255, 255, 0.1));
+            border-radius: 0.5rem;
+            padding: 1rem;
+            transition: 
+                background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Light theme */
+        [data-theme="light"] {
+            --color-bg-primary: #ffffff;
+            --color-text-primary: #1e293b;
+            --color-surface: rgba(0, 0, 0, 0.05);
+            --color-surface-border: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Dark theme */
+        [data-theme="dark"] {
+            --color-bg-primary: #1a1a2e;
+            --color-text-primary: #ffffff;
+            --color-surface: rgba(255, 255, 255, 0.05);
+            --color-surface-border: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Auto theme */
+        @media (prefers-color-scheme: light) {
+            :root:not([data-theme]) {
+                --color-bg-primary: #ffffff;
+                --color-text-primary: #1e293b;
+                --color-surface: rgba(0, 0, 0, 0.05);
+                --color-surface-border: rgba(0, 0, 0, 0.1);
+            }
+        }
+
+        .performance-good { color: #22c55e; }
+        .performance-fair { color: #f59e0b; }
+        .performance-poor { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Theme Performance Test</h1>
+        
+        <div class="controls">
+            <button onclick="setTheme('light')">Light Theme</button>
+            <button onclick="setTheme('dark')">Dark Theme</button>
+            <button onclick="setTheme('auto')">Auto Theme</button>
+            <button onclick="runPerformanceTest()">Run Performance Test</button>
+            <button onclick="clearMetrics()">Clear Metrics</button>
+        </div>
+
+        <div class="metrics" id="metrics">
+            <h3>Performance Metrics</h3>
+            <div id="metrics-content">
+                <p>Click "Run Performance Test" to measure theme switching performance.</p>
+            </div>
+        </div>
+
+        <div class="test-elements">
+            <div class="test-element">
+                <h4>Test Element 1</h4>
+                <p>This element tests background and text color transitions.</p>
+            </div>
+            <div class="test-element">
+                <h4>Test Element 2</h4>
+                <p>Another element to test CSS variable updates.</p>
+            </div>
+            <div class="test-element">
+                <h4>Test Element 3</h4>
+                <p>More content to stress test the theme switching.</p>
+            </div>
+            <div class="test-element">
+                <h4>Test Element 4</h4>
+                <p>Additional element for comprehensive testing.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let performanceData = [];
+
+        function setTheme(theme) {
+            const root = document.documentElement;
+            
+            if (theme === 'auto') {
+                root.removeAttribute('data-theme');
+            } else {
+                root.setAttribute('data-theme', theme);
+            }
+        }
+
+        function measureThemeChange(theme) {
+            return new Promise((resolve) => {
+                const startTime = performance.now();
+                
+                // Add transitioning class to prevent flicker
+                document.documentElement.classList.add('theme-transitioning');
+                
+                requestAnimationFrame(() => {
+                    setTheme(theme);
+                    
+                    requestAnimationFrame(() => {
+                        const endTime = performance.now();
+                        const duration = endTime - startTime;
+                        
+                        // Remove transitioning class
+                        setTimeout(() => {
+                            document.documentElement.classList.remove('theme-transitioning');
+                        }, 50);
+                        
+                        resolve(duration);
+                    });
+                });
+            });
+        }
+
+        async function runPerformanceTest() {
+            const themes = ['light', 'dark', 'auto'];
+            const iterations = 5;
+            const results = {};
+
+            document.getElementById('metrics-content').innerHTML = '<p>Running performance tests...</p>';
+
+            for (const theme of themes) {
+                results[theme] = [];
+                
+                for (let i = 0; i < iterations; i++) {
+                    const duration = await measureThemeChange(theme);
+                    results[theme].push(duration);
+                    
+                    // Wait between tests
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+
+            // Calculate averages
+            const averages = {};
+            for (const [theme, measurements] of Object.entries(results)) {
+                const sum = measurements.reduce((a, b) => a + b, 0);
+                averages[theme] = sum / measurements.length;
+            }
+
+            displayResults(averages);
+            performanceData = results;
+        }
+
+        function displayResults(averages) {
+            const metricsContent = document.getElementById('metrics-content');
+            let html = '<h4>Average Theme Switch Times</h4>';
+            
+            for (const [theme, avgTime] of Object.entries(averages)) {
+                const performanceClass = getPerformanceClass(avgTime);
+                html += `
+                    <div class="metric-item">
+                        <span>${theme.charAt(0).toUpperCase() + theme.slice(1)} Theme:</span>
+                        <span class="metric-value ${performanceClass}">${avgTime.toFixed(2)}ms</span>
+                    </div>
+                `;
+            }
+
+            // Device info
+            html += '<h4>Device Information</h4>';
+            html += `
+                <div class="metric-item">
+                    <span>Screen:</span>
+                    <span class="metric-value">${screen.width}x${screen.height}</span>
+                </div>
+                <div class="metric-item">
+                    <span>Device Pixel Ratio:</span>
+                    <span class="metric-value">${window.devicePixelRatio}</span>
+                </div>
+                <div class="metric-item">
+                    <span>CPU Cores:</span>
+                    <span class="metric-value">${navigator.hardwareConcurrency}</span>
+                </div>
+            `;
+
+            metricsContent.innerHTML = html;
+        }
+
+        function getPerformanceClass(time) {
+            if (time <= 50) return 'performance-good';
+            if (time <= 100) return 'performance-fair';
+            return 'performance-poor';
+        }
+
+        function clearMetrics() {
+            document.getElementById('metrics-content').innerHTML = 
+                '<p>Click "Run Performance Test" to measure theme switching performance.</p>';
+            performanceData = [];
+        }
+
+        // Initialize with dark theme
+        setTheme('dark');
+    </script>
+</body>
+</html>

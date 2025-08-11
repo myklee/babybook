@@ -913,13 +913,13 @@ function getDayBreakdown(day: any) {
 
 <style scoped>
 .history-page {
-  background-color: #1a1a2e;
+  background-color: var(--color-bg-primary);
   min-height: 100vh;
-  color: white;
+  color: var(--color-text-primary);
 }
 
 .pumping-amount {
-  color: #8b5cf6;
+  color: var(--color-feeding-pump);
   margin-left: 0.5rem;
 }
 
@@ -931,8 +931,8 @@ function getDayBreakdown(day: any) {
 }
 
 .breast-amount {
-  color: var(--color-periwinkle);
-  background: rgba(139, 92, 246, 0.1);
+  color: var(--color-text-accent);
+  background: var(--color-surface-active);
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
   font-size: 0.75rem;
@@ -955,7 +955,7 @@ function getDayBreakdown(day: any) {
   row-gap: 1rem;
   margin-left: calc(-50vw + 50%);
   padding: 1rem 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--color-surface-border);
 }
 
 .baby-info {
@@ -984,7 +984,7 @@ function getDayBreakdown(day: any) {
 
 .baby-birthdate {
   font-size: 0.9rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   margin-top: 0.25rem;
   text-align: center;
 }
@@ -1002,7 +1002,7 @@ function getDayBreakdown(day: any) {
   height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--color-surface-border);
 }
 
 .page-header h2 {
@@ -1013,8 +1013,8 @@ function getDayBreakdown(day: any) {
 
 .back-btn {
   background: none;
-  border: 1px solid #666;
-  color: #ccc;
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-tertiary);
   padding: 0.5rem 1rem;
   border-radius: 8px;
   cursor: pointer;
@@ -1035,7 +1035,7 @@ function getDayBreakdown(day: any) {
 }
 
 .edit-baby-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-surface-hover);
 }
 
 .edit-baby-btn img {
@@ -1058,20 +1058,20 @@ function getDayBreakdown(day: any) {
   display: flex;
   gap: 1rem;
   padding: 1rem 0;
-  border-bottom: 1px solid #3a3a5e;
+  border-bottom: 1px solid var(--color-surface-border);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
 .timeline-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface-hover);
   border-radius: 8px;
   padding: 1rem;
   margin: 0 -1rem;
 }
 
 .item-icon-container {
-  background-color: #2c2c54;
+  background-color: var(--color-bg-tertiary);
   border-radius: 50%;
   width: 48px;
   height: 48px;
@@ -1107,12 +1107,12 @@ function getDayBreakdown(day: any) {
 
 .item-time {
   font-size: 0.8rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
 }
 
 .item-info {
   font-size: 1rem;
-  color: #c0c0ff;
+  color: var(--color-text-tertiary);
 }
 
 .font-bold {
@@ -1121,9 +1121,9 @@ function getDayBreakdown(day: any) {
 
 .item-notes {
   font-size: 0.9rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   margin-top: 0.5rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--color-surface-active);
   padding: 0.5rem;
   border-radius: 8px;
 }
@@ -1133,22 +1133,22 @@ function getDayBreakdown(day: any) {
   text-align: center;
   padding: 2rem;
   font-size: 1.1rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
 }
 
 /* Stats Section Styles */
 .stats-section {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
 }
 
 .stats-section h3 {
   margin: 0 0 1rem 0;
   font-size: 1.25rem;
-  color: #e0e0ff;
+  color: var(--color-text-secondary);
 }
 
 /* Cumulative Stats Section Styles */
@@ -1159,7 +1159,7 @@ function getDayBreakdown(day: any) {
 .cumulative-stats-section h3 {
   margin: 0 0 1rem 0;
   font-size: 1.25rem;
-  color: #e0e0ff;
+  color: var(--color-text-secondary);
 }
 
 .stats-grid {
@@ -1170,23 +1170,23 @@ function getDayBreakdown(day: any) {
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface-hover);
   border-radius: 8px;
   padding: 1rem;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
 }
 
 .stat-number {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #ffd700;
+  color: var(--color-warning);
   margin-bottom: 0.25rem;
 }
 
 .stat-label {
   font-size: 0.85rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1200,8 +1200,8 @@ function getDayBreakdown(day: any) {
 .detail-section h4 {
   margin: 0 0 0.5rem 0;
   font-size: 1rem;
-  color: #c0c0ff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--color-text-tertiary);
+  border-bottom: 1px solid var(--color-surface-border);
   padding-bottom: 0.25rem;
 }
 
@@ -1213,7 +1213,7 @@ function getDayBreakdown(day: any) {
 
 .detail-grid span {
   font-size: 0.9rem;
-  color: #d0d0ff;
+  color: var(--color-text-secondary);
 }
 
 /* Daily Feeding Summary Styles */
@@ -1225,7 +1225,7 @@ function getDayBreakdown(day: any) {
 .daily-feedings-section h3 {
   margin: 0 0 1rem 0;
   font-size: 1.25rem;
-  color: #e0e0ff;
+  color: var(--color-text-secondary);
 }
 
 .daily-header {
@@ -1237,20 +1237,20 @@ function getDayBreakdown(day: any) {
 
 .daily-date {
   font-size: 1.5rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
 }
 
 .daily-total {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #ffd700;
+  color: var(--color-warning);
 }
 
 .daily-breakdown {
   display: flex;
   gap: 0.5rem;
   font-size: 0.9rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
 }
 
 .feeding-type {
@@ -1260,7 +1260,7 @@ function getDayBreakdown(day: any) {
 
 .daily-count {
   font-size: 0.9rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
 }
 
 .daily-feedings-header {
@@ -1280,7 +1280,7 @@ function getDayBreakdown(day: any) {
 .toggle-text-right {
   font-size: 0.7rem;
   font-weight: bold;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   white-space: nowrap;
 }
 
@@ -1289,7 +1289,7 @@ function getDayBreakdown(day: any) {
   width: 50px;
   height: 24px;
   border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-surface-active);
 }
 
 .toggle-input {
@@ -1303,7 +1303,7 @@ function getDayBreakdown(day: any) {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--color-text-primary);
   transition: transform 0.2s;
 }
 
@@ -1313,11 +1313,11 @@ function getDayBreakdown(day: any) {
 
 /* Day View Timeline Styles */
 .day-view-timeline {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
 }
 
 .timeline-header {
@@ -1330,19 +1330,19 @@ function getDayBreakdown(day: any) {
 .timeline-title {
   font-size: 1.25rem;
   font-weight: bold;
-  color: #e0e0ff;
+  color: var(--color-text-secondary);
 }
 
 .timeline-total {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #ffd700;
+  color: var(--color-warning);
 }
 
 .timeline-container {
   position: relative;
   height: 40px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface-hover);
   border-radius: 8px;
   padding: 1rem 0;
 }
@@ -1372,11 +1372,11 @@ function getDayBreakdown(day: any) {
   top: 0;
   width: 2px;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--color-surface-border);
 }
 
 .current-hour .hour-line {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: var(--color-surface-border-hover);
 }
 
 .hour-label {
@@ -1384,7 +1384,7 @@ function getDayBreakdown(day: any) {
   top: -20px;
   left: 0;
   font-size: 0.7rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   white-space: nowrap;
   text-align: left;
   transform: translateX(0);
@@ -1401,22 +1401,22 @@ function getDayBreakdown(day: any) {
   transform: translateY(-50%);
   z-index: 10;
   cursor: pointer;
-  background: rgba(60, 60, 80, 0.85);
+  background: var(--color-bg-tertiary);
   border-radius: 50%;
   width: 22px;
   height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--color-surface-border);
 }
 
 .feeding-marker-breast {
-  background: rgba(245, 245, 220, 0.8);
+  background: var(--color-feeding-breast);
 }
 
 .feeding-marker-formula {
-  background: rgba(127, 255, 212, 0.8);
+  background: var(--color-feeding-formula);
 }
 
 .feeding-icon {
@@ -1432,7 +1432,7 @@ function getDayBreakdown(day: any) {
 
 .topup-display {
   font-size: 0.8rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
 }
 
 .baby-header {
@@ -1448,7 +1448,7 @@ function getDayBreakdown(day: any) {
   cursor: pointer;
   opacity: 0.7;
   transition: all 0.2s;
-  color: #333;
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
 }
@@ -1470,7 +1470,7 @@ function getDayBreakdown(day: any) {
   left: 0;
   width: 2px;
   height: 100%;
-  background-color: #ffd700;
+  background-color: var(--color-warning);
   z-index: 15;
 }
 
@@ -1484,26 +1484,26 @@ function getDayBreakdown(day: any) {
   transform: translateY(-50%);
   z-index: 10;
   cursor: pointer;
-  background: rgba(80, 60, 60, 0.85);
+  background: var(--color-bg-tertiary);
   border-radius: 50%;
   width: 22px;
   height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--color-surface-border);
 }
 
 .diaper-marker-pee {
-  background: rgba(255, 215, 0, 0.8);
+  background: var(--color-diaper-pee);
 }
 
 .diaper-marker-poop {
-  background: rgba(139, 69, 19, 0.8);
+  background: var(--color-diaper-poop);
 }
 
 .diaper-marker-both {
-  background: rgba(139, 69, 19, 0.8);
+  background: var(--color-diaper-poop);
 }
 
 .diaper-icon {
@@ -1534,7 +1534,7 @@ function getDayBreakdown(day: any) {
 .baby-selector-label {
   font-size: 0.9rem;
   font-weight: bold;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   white-space: nowrap;
 }
 
@@ -1564,7 +1564,7 @@ function getDayBreakdown(day: any) {
 }
 
 .baby-switch-btn.active {
-  border-color: #ffd700;
+  border-color: var(--color-warning);
   opacity: 1;
 }
 
@@ -1612,58 +1612,52 @@ function getDayBreakdown(day: any) {
 }
 
 .action-btn.breast {
-  background-color: #f5f5dc;
-  /* beige */
+  background-color: var(--color-feeding-breast);
 }
 
 .action-btn.nursing {
-  background-color: #dda0dd;
-  /* plum */
+  background-color: var(--color-feeding-nursing);
 }
 
 .action-btn.pump {
-  background-color: #9370db;
-  /* medium purple */
+  background-color: var(--color-feeding-pump);
 }
 
 .action-btn.formula {
-  background-color: #7fffd4;
-  /* aquamarine */
+  background-color: var(--color-feeding-formula);
 }
 
 .action-btn.solid {
-  background-color: #ffa500;
-  /* orange */
+  background-color: var(--color-feeding-solid);
 }
 
 .action-btn.poop {
-  background-color: saddlebrown;
-  color: white;
+  background-color: var(--color-diaper-poop);
+  color: var(--color-text-primary);
 }
 
 .action-btn.poop .icon {
   stroke-width: 0;
-  fill: white;
+  fill: var(--color-text-primary);
 }
 
 .action-btn.pee {
-  background-color: #ffd700;
-  /* gold */
+  background-color: var(--color-diaper-pee);
 }
 
 .action-btn.wake {
-  background-color: #05409e;
-  color: white;
+  background-color: var(--color-sleep-wake);
+  color: var(--color-text-primary);
 }
 
 .action-btn.sleep {
-  background-color: #090524;
-  color: white;
+  background-color: var(--color-sleep-sleep);
+  color: var(--color-text-primary);
 }
 
 .sleeping-banner {
-  background: #23234a;
-  color: #ffd700;
+  background: var(--color-bg-tertiary);
+  color: var(--color-warning);
   font-weight: bold;
   text-align: center;
   padding: 0.5rem 1rem;
@@ -1693,29 +1687,29 @@ function getDayBreakdown(day: any) {
 }
 
 .food-reaction.liked {
-  background: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 .food-reaction.disliked {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 .food-reaction.neutral {
-  background: rgba(156, 163, 175, 0.2);
-  color: #9ca3af;
+  background: var(--color-surface-active);
+  color: var(--color-text-quaternary);
 }
 
 .food-reaction.allergic_reaction {
-  background: rgba(239, 68, 68, 0.3);
-  color: #dc2626;
+  background: var(--color-error-bg);
+  color: var(--color-error-dark);
   font-weight: 700;
 }
 
 .times-tried {
   font-size: 0.9rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   margin-left: 0.25rem;
 }
 </style>

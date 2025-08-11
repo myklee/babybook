@@ -228,10 +228,10 @@ defineExpose({
 .timer-button {
   width: 100%;
   padding: 1rem 0.75rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--color-surface-border);
   border-radius: 0.75rem;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--color-periwinkle);
+  background-color: var(--color-surface);
+  color: var(--color-text-accent);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -247,42 +247,42 @@ defineExpose({
 }
 
 .timer-button:hover:not(.disabled) {
-  border-color: #9c27b0;
-  background: rgba(156, 39, 176, 0.1);
+  border-color: var(--color-primary);
+  background: var(--color-surface-hover);
 }
 
 .timer-button:focus {
   outline: none;
-  border-color: #9c27b0;
-  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .timer-button:active:not(.disabled) {
-  background: rgba(156, 39, 176, 0.15);
+  background: var(--color-surface-active);
 }
 
 /* State-based button styles - simplified */
 .timer-button.stopped {
-  border-color: #d1d5db;
-  background: white;
-  color: #374151;
+  border-color: var(--color-surface-border);
+  background: var(--color-surface);
+  color: var(--color-text-tertiary);
 }
 
 .timer-button.stopped:hover:not(.disabled) {
-  border-color: #9ca3af;
-  background: #f9fafb;
+  border-color: var(--color-surface-border-hover);
+  background: var(--color-surface-hover);
 }
 
 .timer-button.active {
-  border-color: #10b981;
-  background: #f0fdf4;
-  color: #065f46;
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success-dark);
 }
 
 .timer-button.paused {
-  border-color: #f59e0b;
-  background: #fffbeb;
-  color: #92400e;
+  border-color: var(--color-warning);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-dark);
 }
 
 .timer-button.disabled {
@@ -420,15 +420,15 @@ defineExpose({
 
 /* Simplified breast-specific styling */
 .breast-left .timer-button.active {
-  background: #eff6ff;
-  border-color: #3b82f6;
-  color: #1e40af;
+  background: var(--color-info-bg);
+  border-color: var(--color-info);
+  color: var(--color-info-dark);
 }
 
 .breast-right .timer-button.active {
-  background: #fdf2f8;
-  border-color: #ec4899;
-  color: #be185d;
+  background: var(--color-success-bg);
+  border-color: var(--color-success);
+  color: var(--color-success-dark);
 }
 
 /* Responsive Design */
@@ -463,21 +463,21 @@ defineExpose({
   }
   
   .timer-button.active {
-    background: #000;
-    color: white;
-    border-color: #000;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border-color: var(--color-text-primary);
   }
   
   .timer-button.paused {
-    background: #ffff00;
-    color: #000;
-    border-color: #000;
+    background: var(--color-focus);
+    color: var(--color-bg-primary);
+    border-color: var(--color-text-primary);
   }
   
   .timer-button.stopped {
-    background: #fff;
-    color: #000;
-    border-color: #000;
+    background: var(--color-text-primary);
+    color: var(--color-bg-primary);
+    border-color: var(--color-text-primary);
   }
 }
 
@@ -488,37 +488,7 @@ defineExpose({
   }
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  .timer-button {
-    background: #374151;
-    border-color: #4b5563;
-    color: white;
-  }
-  
-  .timer-button:hover:not(.disabled) {
-    background: #4b5563;
-    border-color: #6b7280;
-  }
-  
-  .timer-button.stopped {
-    background: #1f2937;
-    border-color: #374151;
-    color: #9ca3af;
-  }
-  
-  .timer-button.active {
-    background: #064e3b;
-    border-color: #10b981;
-    color: #a7f3d0;
-  }
-  
-  .timer-button.paused {
-    background: #78350f;
-    border-color: #f59e0b;
-    color: #fde68a;
-  }
-}
+/* Dark Mode Support - handled by design system variables */
 
 /* Print Styles */
 @media print {
@@ -527,9 +497,9 @@ defineExpose({
   }
   
   .timer-button {
-    border: 2px solid #000;
-    background: white;
-    color: black;
+    border: 2px solid var(--color-text-primary);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
   }
 }
 </style>

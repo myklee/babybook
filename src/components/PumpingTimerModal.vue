@@ -327,7 +327,7 @@ watch(
 .amount-summary {
   text-align: center;
   padding: 1rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--color-surface-border);
   margin-bottom: 1.5rem;
 }
 
@@ -347,9 +347,9 @@ watch(
 /* Amount Inputs */
 .amount-inputs {
   padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
 }
 
 .section-title {
@@ -374,7 +374,7 @@ watch(
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-text-tertiary);
   margin-bottom: 0.5rem;
   text-align: center;
 }
@@ -382,24 +382,24 @@ watch(
 .amount-input {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--form-input-border);
   border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--form-input-bg);
+  color: var(--form-input-text);
   font-size: 1rem;
   text-align: center;
   transition: all 0.2s ease;
 }
 
 .amount-input:focus {
-  outline: 3px solid var(--color-periwinkle);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
-  border-color: var(--color-periwinkle);
-  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--form-input-border-focus);
+  background: var(--form-input-bg-focus);
 }
 
 .amount-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--form-input-placeholder);
 }
 
 .total-amount {
@@ -423,7 +423,7 @@ watch(
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-tertiary);
   text-decoration: none;
   transition: all 0.2s;
 }
@@ -450,9 +450,9 @@ watch(
 /* Advanced Options */
 .advanced-options {
   padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
 }
 
 .form-group {
@@ -467,17 +467,17 @@ watch(
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-text-tertiary);
   margin-bottom: 0.5rem;
 }
 
 .notes-textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--form-input-border);
   border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--form-input-bg);
+  color: var(--form-input-text);
   font-size: 0.875rem;
   resize: vertical;
   min-height: 80px;
@@ -485,19 +485,19 @@ watch(
 }
 
 .notes-textarea:focus {
-  outline: 3px solid var(--color-periwinkle);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
-  border-color: var(--color-periwinkle);
-  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--form-input-border-focus);
+  background: var(--form-input-bg-focus);
 }
 
 .notes-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--form-input-placeholder);
 }
 
 .notes-counter {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-disabled);
   text-align: right;
   margin-top: 0.25rem;
 }
@@ -505,14 +505,14 @@ watch(
 /* Validation Messages */
 .validation-errors {
   padding: 1rem;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
   border-radius: 0.5rem;
 }
 
 .error-message {
   font-size: 0.875rem;
-  color: #fca5a5;
+  color: var(--color-error-light);
   margin-bottom: 0.25rem;
 }
 
@@ -522,14 +522,14 @@ watch(
 
 .validation-warnings {
   padding: 1rem;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
   border-radius: 0.5rem;
 }
 
 .warning-message {
   font-size: 0.875rem;
-  color: #fcd34d;
+  color: var(--color-warning-light);
   margin-bottom: 0.25rem;
 }
 

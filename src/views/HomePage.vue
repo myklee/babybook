@@ -580,10 +580,10 @@ function handleSleepClick() {
 
 <style scoped>
 .home-page {
-  background-color: #1a1a2e;
+  background-color: var(--color-bg-primary);
   min-height: 100vh;
   padding: 1rem;
-  color: white;
+  color: var(--color-text-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -640,8 +640,8 @@ function handleSleepClick() {
 }
 
 .baby-selector.selected {
-  background-color: black;
-  border-color: white;
+  background-color: var(--color-bg-secondary);
+  border-color: var(--color-text-primary);
 }
 
 .baby-photo {
@@ -678,7 +678,7 @@ function handleSleepClick() {
   cursor: pointer;
   opacity: 0.7;
   transition: all 0.2s;
-  color: white;
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
 }
@@ -710,7 +710,7 @@ function handleSleepClick() {
 
 .feeding-time {
   font-size: 0.75rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
 }
 
 .action-grid {
@@ -736,14 +736,14 @@ function handleSleepClick() {
   gap: clamp(0.33rem, 1.33vw, 0.67rem);
   height: clamp(67px, 17vw, 100px);
   width: clamp(80px, 20vw, 107px);
-  color: black;
+  color: var(--color-text-primary);
   transition: transform 0.2s ease;
   flex: 0 0 auto;
 }
 
 .action-btn:hover {
   transform: scale(1.05) translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .icon {
@@ -754,56 +754,56 @@ function handleSleepClick() {
 }
 
 .action-btn.breast {
-  background-color: #f5f5dc;
-  /* beige */
+  background-color: var(--color-feeding-breast);
+  color: var(--color-text-primary);
 }
 
 .action-btn.nursing {
-  background-color: #dda0dd;
-  /* plum */
+  background-color: var(--color-feeding-nursing);
+  color: var(--color-text-primary);
 }
 
 .action-btn.pump {
-  background-color: #9370db;
-  /* medium purple */
+  background-color: var(--color-feeding-pump);
+  color: var(--color-text-primary);
 }
 
 .action-btn.formula {
-  background-color: #7fffd4;
-  /* aquamarine */
+  background-color: var(--color-feeding-formula);
+  color: var(--color-text-primary);
 }
 
 .action-btn.solid {
-  background-color: #ff6b6b;
-  /* coral/red for solid foods */
+  background-color: var(--color-feeding-solid);
+  color: var(--color-text-primary);
 }
 
 .action-btn.poop {
-  background-color: saddlebrown;
-  color: white;
+  background-color: var(--color-diaper-poop);
+  color: var(--color-text-primary);
 }
 
 .action-btn.poop .icon {
   stroke-width: 0;
-  fill: white;
+  fill: var(--color-text-primary);
 }
 
 .action-btn.pee {
-  background-color: #ffd700;
-  /* gold */
+  background-color: var(--color-diaper-pee);
+  color: var(--color-text-primary);
 }
 
 .action-btn.wake,
 .action-btn.sleep {
-  color: white;
+  color: var(--color-text-primary);
 }
 
 .action-btn.wake {
-  background-color: #05409e;
+  background-color: var(--color-sleep-wake);
 }
 
 .action-btn.sleep {
-  background-color: #090524;
+  background-color: var(--color-sleep-sleep);
 }
 
 .action-btn.sleep .icon {
@@ -819,8 +819,8 @@ function handleSleepClick() {
 
 .btn-link {
   background: none;
-  border: 1px solid #4a4a7a;
-  color: #c0c0ff;
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-accent);
   text-decoration: none;
   cursor: pointer;
   font-size: 0.9rem;
@@ -830,9 +830,9 @@ function handleSleepClick() {
 }
 
 .btn-link:hover {
-  color: white;
-  background-color: #4a4a7a;
-  border-color: #6a6aff;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-surface-border-hover);
 }
 
 /* Auth section styling */
@@ -845,10 +845,10 @@ function handleSleepClick() {
 }
 
 .auth-container {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border-radius: 20px;
   padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
   max-width: 400px;
   width: 100%;
   text-align: center;
@@ -856,13 +856,13 @@ function handleSleepClick() {
 
 .auth-container h2 {
   margin: 0 0 1rem 0;
-  color: #e0e0ff;
+  color: var(--color-text-secondary);
   font-size: 1.75rem;
   font-weight: 600;
 }
 
 .auth-container p {
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   margin-bottom: 2rem;
   font-size: 1rem;
 }
@@ -880,7 +880,7 @@ function handleSleepClick() {
 .form-group label {
   display: block;
   margin-bottom: 0.75rem;
-  color: var(--color-periwinkle);
+  color: var(--form-label-text);
   font-weight: 500;
   font-size: 0.95rem;
 }
@@ -888,10 +888,10 @@ function handleSleepClick() {
 .form-group input {
   width: 100%;
   padding: 1rem 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--form-input-border);
   border-radius: 15px;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: white;
+  background-color: var(--form-input-bg);
+  color: var(--form-input-text);
   font-size: 1rem;
   transition: all 0.2s ease;
   box-sizing: border-box;
@@ -899,13 +899,13 @@ function handleSleepClick() {
 
 .form-group input:focus {
   outline: none;
-  border-color: #9c27b0;
-  background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+  border-color: var(--form-input-border-focus);
+  background-color: var(--form-input-bg-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .form-group input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--form-input-placeholder);
 }
 
 .form-group input:disabled {
@@ -918,15 +918,15 @@ function handleSleepClick() {
   border-radius: 12px;
   font-size: 0.9rem;
   text-align: center;
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error-border);
 }
 
 .success-message {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-  border-color: rgba(34, 197, 94, 0.2);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success-border);
 }
 
 .auth-buttons {
@@ -958,27 +958,27 @@ function handleSleepClick() {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #9c27b0, #7b1fa2);
-  color: white;
-  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  box-shadow: 0 4px 12px var(--btn-primary-shadow);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #8e24aa, #6a1b9a);
+  background: var(--btn-primary-bg-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(156, 39, 176, 0.4);
+  box-shadow: 0 6px 16px var(--btn-primary-shadow-hover);
 }
 
 .btn-secondary {
-  background: transparent;
-  color: var(--color-periwinkle);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 2px solid var(--btn-secondary-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--btn-secondary-bg-hover);
+  color: var(--btn-secondary-text-hover);
+  border-color: var(--btn-secondary-border-hover);
 }
 
 /* Responsive adjustments */
@@ -1024,24 +1024,24 @@ function handleSleepClick() {
 }
 
 .last-feeding-time {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-surface);
   border-radius: 12px;
   padding: 1rem 1.5rem;
   margin-bottom: 1.5rem;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--color-surface-border);
 }
 
 .time-label {
   font-size: 0.9rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   margin-right: 0.5rem;
 }
 
 .time-value {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #ffd700;
+  color: var(--color-warning);
 }
 
 .baby-next-feeding {
@@ -1053,13 +1053,13 @@ function handleSleepClick() {
 }
 
 .baby-next-feeding.upcoming {
-  background-color: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 .baby-next-feeding.overdue {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  background-color: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 .next-feeding-time {
@@ -1068,7 +1068,7 @@ function handleSleepClick() {
 
 .next-feeding-actual-time {
   font-size: 0.75rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   margin-left: 0.5rem;
 }
 

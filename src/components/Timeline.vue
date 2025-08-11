@@ -355,17 +355,6 @@ function hideSnackbar() {
 }
 </script>
 
-<style>
-:root {
-  --breast-color: #f5f5dc;
-  --formula-color: #7fffd4;
-  --pee-color: #ffd700;
-  --poop-color: saddlebrown;
-  --solid-food-color: #ff6b6b;
-  --pumping-color: #9370db;
-}
-</style>
-
 <style scoped>
 .timeline {
   margin-bottom: 2rem;
@@ -383,22 +372,22 @@ function hideSnackbar() {
 .timeline-title {
   font-size: 1.25rem;
   font-weight: bold;
-  color: #e0e0ff;
+  color: var(--color-text-secondary);
 }
 .timeline-breakdown {
   font-size: 0.8rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   margin-left: 0.5rem;
 }
 .timeline-total {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #ffd700;
+  color: var(--color-warning);
 }
 .timeline-container {
   position: relative;
   height: 60px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border-radius: 8px;
   padding: 1rem 0;
 }
@@ -430,14 +419,14 @@ function hideSnackbar() {
   top: 0;
   width: 2px;
   height: 100%;
-  background-color: var(--color-midnight);
+  background-color: var(--color-bg-secondary);
 }
 .hour-label {
   position: absolute;
   top: -20px;
   left: 0;
   font-size: 0.7rem;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   white-space: nowrap;
   text-align: left;
   transform: translateX(-50%);
@@ -458,34 +447,34 @@ function hideSnackbar() {
   border-radius: 50%;
   width: 16px;
   height: 16px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid var(--color-surface-border);
   transition: transform 0.2s ease;
 }
 .feeding-marker-breast {
-  background: var(--breast-color);
+  background: var(--color-feeding-breast);
 }
 .feeding-marker-nursing {
-  background: var(--breast-color);
-  border: 2px solid #dda0dd;
+  background: var(--color-feeding-breast);
+  border: 2px solid var(--color-feeding-nursing);
 }
 .feeding-marker-formula {
-  background: var(--formula-color);
+  background: var(--color-feeding-formula);
 }
 .diaper-marker-pee {
-  background: var(--pee-color);
+  background: var(--color-diaper-pee);
 }
 .diaper-marker-poop {
-  background: var(--poop-color);
+  background: var(--color-diaper-poop);
 }
 .diaper-marker-both {
-  background: linear-gradient(90deg, var(--pee-color) 50%, var(--poop-color) 50%);
+  background: linear-gradient(90deg, var(--color-diaper-pee) 50%, var(--color-diaper-poop) 50%);
 }
 .solid-food-marker {
-  background: var(--solid-food-color);
+  background: var(--color-feeding-solid);
 }
 .pumping-marker {
-  background: var(--pumping-color);
-  border: 2px solid #dda0dd;
+  background: var(--color-feeding-pump);
+  border: 2px solid var(--color-feeding-nursing);
 }
 .current-time-indicator {
   position: absolute;
@@ -493,7 +482,7 @@ function hideSnackbar() {
   left: 0;
   width: 2px;
   height: 100%;
-  background-color: #ffd700;
+  background-color: var(--color-warning);
   z-index: 15;
 }
 
@@ -504,7 +493,7 @@ function hideSnackbar() {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0,0,0,0.01);
+  background: var(--color-surface, rgba(0,0,0,0.01));
   z-index: 999;
 }
 
@@ -513,8 +502,8 @@ function hideSnackbar() {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-surface-border);
   border-radius: 12px;
   padding: 1rem;
   z-index: 1000;
@@ -550,26 +539,26 @@ function hideSnackbar() {
 
 .snackbar-title {
   font-weight: bold;
-  color: #ffffff;
+  color: var(--color-text-primary);
   font-size: 1rem;
   margin-bottom: 0.25rem;
 }
 
 .snackbar-time {
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
 }
 
 .snackbar-extra {
-  color: #c0c0c0;
+  color: var(--color-text-tertiary);
   font-size: 0.8rem;
 }
 
 .snackbar-close {
   background: none;
   border: none;
-  color: var(--color-periwinkle);
+  color: var(--color-text-accent);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0;
@@ -583,24 +572,24 @@ function hideSnackbar() {
 }
 
 .snackbar-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .snackbar.feeding {
-  border-left: 4px solid var(--formula-color);
+  border-left: 4px solid var(--color-feeding-formula);
 }
 
 .snackbar.diaper {
-  border-left: 4px solid var(--pee-color);
+  border-left: 4px solid var(--color-diaper-pee);
 }
 
 .snackbar.solid {
-  border-left: 4px solid var(--solid-food-color);
+  border-left: 4px solid var(--color-feeding-solid);
 }
 
 .snackbar.pumping {
-  border-left: 4px solid var(--pumping-color);
+  border-left: 4px solid var(--color-feeding-pump);
 }
 
 @keyframes slideUp {

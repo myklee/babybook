@@ -160,7 +160,7 @@ async function confirmDelete() {
   max-height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 3px solid var(--color-surface-border);
+  box-shadow: var(--shadow-lg);
 }
 </style>

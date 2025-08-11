@@ -177,17 +177,17 @@ async function handleSubmit() {
   display: block;
   font-weight: 500;
   margin-bottom: 0.5rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-text-tertiary);
 }
 
 .form-group select,
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--form-input-border);
   border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--form-input-bg);
+  color: var(--form-input-text);
   font-size: 1rem;
   transition: all 0.2s ease;
 }
@@ -195,9 +195,9 @@ async function handleSubmit() {
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--color-periwinkle);
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  border-color: var(--form-input-border-focus);
+  background: var(--form-input-bg-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .form-group textarea {
@@ -208,7 +208,7 @@ async function handleSubmit() {
 
 .form-group select::placeholder,
 .form-group textarea::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--form-input-placeholder);
 }
 
 /* Advanced Options Toggle */
@@ -226,7 +226,7 @@ async function handleSubmit() {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: #666;
+  color: var(--color-text-quaternary);
   text-decoration: none;
   transition: all 0.2s;
 }

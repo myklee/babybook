@@ -1,16 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Righteous&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Righteous&display=swap");
+
+/* Import Design System */
+@import "./styles/design-system.css";
 
 :root {
-  --color-pee: #fffc3a;
-  --color-formula: #7fffea;
-  --color-poo: #8d4a24;
-  --color-milk: #fffde8;
-  --color-lavendar: #b39ddb;
-  --color-midnight: #0d1b1e;
-  --color-raven: #23243a;
-  --color-prince: #21022b;
-  --color-periwinkle: #a0a0e0;
-
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -58,7 +51,8 @@ button {
   font-family: inherit;
   background-color: black;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color var(--transition-fast, 0.15s)
+    var(--transition-easing, ease);
 }
 
 button:hover {
@@ -136,7 +130,6 @@ body.ios .history-page {
   text-align: center;
 }
 
-
 .btn {
   padding: 1rem 1.5rem;
   border: none;
@@ -144,7 +137,10 @@ body.ios .history-page {
   color: white;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background var(--transition-fast, 0.15s)
+      var(--transition-easing, ease),
+    transform var(--transition-fast, 0.15s) var(--transition-easing, ease),
+    box-shadow var(--transition-fast, 0.15s) var(--transition-easing, ease);
   flex: 1;
   font-size: 1rem;
   text-transform: uppercase;
@@ -211,12 +207,15 @@ textarea {
   background-color: rgba(255, 255, 255, 0.05);
   color: var(--color-periwinkle);
   font-size: 1rem;
-  transition: all 0.2s ease;
+  transition: border-color var(--transition-fast, 0.15s)
+      var(--transition-easing, ease),
+    background-color var(--transition-fast, 0.15s)
+      var(--transition-easing, ease),
+    box-shadow var(--transition-fast, 0.15s) var(--transition-easing, ease);
   box-sizing: border-box;
-  border-radius: .75rem;
+  border-radius: 0.75rem;
   font-family: inherit;
 }
-
 
 .form-group {
   margin-bottom: 1rem;
@@ -229,8 +228,6 @@ label {
   font-weight: 500;
   font-size: 0.95rem;
 }
-
-
 
 input:focus {
   outline: none;
@@ -370,7 +367,6 @@ input[type="file"]::-webkit-file-upload-button:hover {
   box-shadow: none;
 }
 
-
 .preset-buttons {
   display: flex;
   gap: 0.5rem;
@@ -399,7 +395,6 @@ input[type="file"]::-webkit-file-upload-button:hover {
   border-color: #9c27b0;
 }
 
-
 /* Mobile-specific improvements for numeric inputs */
 input[type="number"] {
   -webkit-appearance: none;
@@ -416,7 +411,6 @@ input[type="number"]::-webkit-inner-spin-button {
 
 /* Improve touch targets on mobile */
 @media (max-width: 768px) {
-
   input,
   select,
   textarea {

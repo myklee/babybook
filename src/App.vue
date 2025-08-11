@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useBabyStore } from './stores/babyStore'
+import { useTheme } from './composables/useTheme'
 
 const store = useBabyStore()
 const lastRefreshTime = ref(0)
 const REFRESH_COOLDOWN = 5000 // 5 seconds
+
+// Initialize theme system
+const { } = useTheme()
 
 onMounted(async () => {
   console.log('App mounted, initializing...')
@@ -60,13 +64,18 @@ function handleVisibilityChange() {
 </template>
 
 <style>
+@import './styles/design-system.css';
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
+  color: var(--color-text-primary);
   margin: 0;
   padding: 0;
+  background-color: var(--color-bg-primary);
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 * {

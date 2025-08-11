@@ -30,7 +30,7 @@ const emit = defineEmits(['click'])
 }
 .icon-btn:hover {
   opacity: 1;
-  background: rgba(255,255,255,0.08);
+  background: var(--color-surface-hover);
 }
 .icon-btn-img {
   width: 1.5rem;
