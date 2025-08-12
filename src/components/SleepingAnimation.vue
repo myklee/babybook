@@ -179,6 +179,7 @@ watch(() => props.isSleeping, (newValue) => {
   width: 100%;
   height: 100%;
   background: var(--color-bg-secondary);
+  opacity: .75;
   border-radius: 50%;
   z-index: 1;
 }
