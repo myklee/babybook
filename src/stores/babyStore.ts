@@ -2122,11 +2122,7 @@ export const useBabyStore = defineStore("baby", () => {
   // Get baby settings with automatic creation if missing
   async function getBabySettingsWithDefaults(babyId: string): Promise<BabySettings> {
     const { 
-      withRetry, 
-      handleError, 
-      createErrorContext, 
-      ErrorCodes,
-      FeedingScheduleError
+      withRetry
     } = await import('../utils/errorHandling');
 
     let settings = getBabySettings(babyId);
@@ -2143,7 +2139,6 @@ export const useBabyStore = defineStore("baby", () => {
         });
         console.log(`Created default settings for baby ${babyId}`);
       } catch (error) {
-        const context = createErrorContext('getBabySettingsWithDefaults', babyId, currentUser.value?.id);
         
         // If we can't create settings, provide fallback defaults
         console.warn(`Failed to create default settings for baby ${babyId}, using fallback:`, error);

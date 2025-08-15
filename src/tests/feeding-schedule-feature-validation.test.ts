@@ -13,7 +13,6 @@
  * - 3.4: Statistics reflect current schedule configuration
  */
 
-import { createClient } from '@supabase/supabase-js'
 import {
   getFeedingTypesForSchedule,
   getScheduleRelevantFeedings,
@@ -96,7 +95,7 @@ export const testDatabaseMigrationAndDefaults = () => {
     }
   ]
   
-  return runTestGroup('Database Migration and Defaults', tests)
+  return runTestGroup(tests)
 }
 
 /**
@@ -176,7 +175,7 @@ export const testSettingsPersistence = () => {
         const babyId = 'test-baby-maintain'
         
         // Set initial settings
-        const initial = updateBabySettings(babyId, {
+        updateBabySettings(babyId, {
           feeding_interval_hours: 4,
           default_breast_amount: 150,
           include_solids_in_schedule: false
@@ -192,7 +191,7 @@ export const testSettingsPersistence = () => {
     }
   ]
   
-  return runTestGroup('Settings Persistence', tests)
+  return runTestGroup(tests)
 }
 
 /**
@@ -306,7 +305,7 @@ export const testFeedingScheduleCalculationsWithSettings = () => {
     }
   ]
   
-  return runTestGroup('Feeding Schedule Calculations', tests)
+  return runTestGroup(tests)
 }
 
 /**
@@ -481,7 +480,7 @@ export const testEndToEndFeatureValidation = () => {
     }
   ]
   
-  return runTestGroup('End-to-End Feature Validation', tests)
+  return runTestGroup(tests)
 }
 
 /**
@@ -551,13 +550,13 @@ export const testEdgeCasesAndErrorHandling = () => {
     }
   ]
   
-  return runTestGroup('Edge Cases and Error Handling', tests)
+  return runTestGroup(tests)
 }
 
 /**
  * Helper function to run a group of tests
  */
-const runTestGroup = (groupName: string, tests: Array<{ name: string; test: () => boolean }>) => {
+const runTestGroup = (tests: Array<{ name: string; test: () => boolean }>) => {
   const results = tests.map(test => ({
     name: test.name,
     passed: test.test()

@@ -15,26 +15,35 @@ export interface ErrorContext {
 }
 
 export class FeedingScheduleError extends Error {
+  code: string
+  context?: ErrorContext
+  originalError?: any
+
   constructor(
     message: string,
-    public code: string,
-    public context?: ErrorContext,
-    public originalError?: any
+    code: string,
+    context?: ErrorContext,
+    originalError?: any
   ) {
     super(message)
     this.name = 'FeedingScheduleError'
+    this.code = code
+    this.context = context
+    this.originalError = originalError
   }
 }
 
-export enum ErrorCodes {
-  SETTINGS_NOT_FOUND = 'SETTINGS_NOT_FOUND',
-  UPDATE_FAILED = 'UPDATE_FAILED',
-  INVALID_BABY_ID = 'INVALID_BABY_ID',
-  NETWORK_ERROR = 'NETWORK_ERROR',
-  AUTH_ERROR = 'AUTH_ERROR',
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR'
-}
+export const ErrorCodes = {
+  SETTINGS_NOT_FOUND: 'SETTINGS_NOT_FOUND',
+  UPDATE_FAILED: 'UPDATE_FAILED',
+  INVALID_BABY_ID: 'INVALID_BABY_ID',
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  AUTH_ERROR: 'AUTH_ERROR',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR'
+} as const
+
+export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes]
 
 /**
  * Retry a function with exponential backoff
@@ -106,7 +115,7 @@ export function normalizeError(error: any, context?: ErrorContext): FeedingSched
     return error
   }
 
-  let code = ErrorCodes.UNKNOWN_ERROR
+  let code: ErrorCode = ErrorCodes.UNKNOWN_ERROR
   let message = 'An unexpected error occurred'
 
   if (error?.code) {
