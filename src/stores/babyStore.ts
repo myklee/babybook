@@ -17,6 +17,14 @@ import type {
   UpdatePumpingSessionData,
   PumpingEvent
 } from "../types/pumping";
+import type {
+  AllFeedingType
+} from "../types/feedingSchedule";
+import {
+  getFeedingTypesForSchedule,
+  getScheduleRelevantFeedings,
+  calculateNextFeedingTime
+} from "../types/feedingSchedule";
 import { validatePumpingSession } from "../types/pumping";
 import { 
   validateDualTimerNursingSession,
@@ -875,6 +883,17 @@ export const useBabyStore = defineStore("baby", () => {
       }
 
       feedings.value.unshift(data);
+
+      // Check if this feeding type affects the schedule for this baby
+      const affectsSchedule = doesFeedingAffectSchedule(babyId, type as AllFeedingType);
+      if (affectsSchedule) {
+        console.log(`Feeding type "${type}" affects schedule for baby ${babyId}, schedule calculations will be updated`);
+        // Note: Schedule calculations are automatically updated when getNextFeedingTime() is called
+        // since it uses the current feedings data which now includes this new feeding
+      } else {
+        console.log(`Feeding type "${type}" does not affect schedule for baby ${babyId}, schedule remains unchanged`);
+      }
+
       return data;
     } catch (error) {
       console.error("Error in addFeeding:", error);
@@ -915,6 +934,15 @@ export const useBabyStore = defineStore("baby", () => {
       }
 
       feedings.value.unshift(data);
+
+      // Nursing sessions always affect the schedule (they are always schedule-relevant)
+      const affectsSchedule = doesFeedingAffectSchedule(babyId, "nursing");
+      if (affectsSchedule) {
+        console.log(`Nursing session affects schedule for baby ${babyId}, schedule calculations will be updated`);
+        // Note: Schedule calculations are automatically updated when getNextFeedingTime() is called
+        // since it uses the current feedings data which now includes this new nursing session
+      }
+
       return data;
     } catch (error) {
       console.error("Error in addNursingSession:", error);
@@ -978,6 +1006,14 @@ export const useBabyStore = defineStore("baby", () => {
       // Clear any active session for this baby after successful save
       if (sessionPersistence.getActiveSession(babyId)) {
         sessionPersistence.removeActiveSession(babyId);
+      }
+
+      // Nursing sessions always affect the schedule (they are always schedule-relevant)
+      const affectsSchedule = doesFeedingAffectSchedule(babyId, "nursing");
+      if (affectsSchedule) {
+        console.log(`Nursing session affects schedule for baby ${babyId}, schedule calculations will be updated`);
+        // Note: Schedule calculations are automatically updated when getNextFeedingTime() is called
+        // since it uses the current feedings data which now includes this new nursing session
       }
       
       return data as NursingSession;
@@ -1764,6 +1800,9 @@ export const useBabyStore = defineStore("baby", () => {
   ) {
     if (!currentUser.value) throw new Error("User not authenticated");
 
+    // Get the original feeding to check if it affects schedule
+    const originalFeeding = feedings.value.find((f) => f.id === id);
+    
     const { data, error } = await supabase
       .from("feedings")
       .update(updates)
@@ -1777,6 +1816,20 @@ export const useBabyStore = defineStore("baby", () => {
     const index = feedings.value.findIndex((f) => f.id === id);
     if (index !== -1) {
       feedings.value[index] = data;
+    }
+
+    // Check if this feeding type affects the schedule for this baby
+    if (originalFeeding) {
+      const originalAffectsSchedule = doesFeedingAffectSchedule(originalFeeding.baby_id, originalFeeding.type as AllFeedingType);
+      const updatedAffectsSchedule = doesFeedingAffectSchedule(data.baby_id, data.type as AllFeedingType);
+      
+      if (originalAffectsSchedule || updatedAffectsSchedule) {
+        console.log(`Feeding update affects schedule for baby ${data.baby_id}, schedule calculations will be updated`);
+        // Note: Schedule calculations are automatically updated when getNextFeedingTime() is called
+        // since it uses the current feedings data which now includes this updated feeding
+      } else {
+        console.log(`Feeding update does not affect schedule for baby ${data.baby_id}, schedule remains unchanged`);
+      }
     }
 
     return data;
@@ -1836,6 +1889,9 @@ export const useBabyStore = defineStore("baby", () => {
   async function deleteFeeding(id: string) {
     if (!currentUser.value) throw new Error("User not authenticated");
 
+    // Get the feeding before deletion to check if it affects schedule
+    const feedingToDelete = feedings.value.find((f) => f.id === id);
+
     const { error } = await supabase
       .from("feedings")
       .delete()
@@ -1847,6 +1903,18 @@ export const useBabyStore = defineStore("baby", () => {
     const index = feedings.value.findIndex((f) => f.id === id);
     if (index !== -1) {
       feedings.value.splice(index, 1);
+    }
+
+    // Check if the deleted feeding type affected the schedule for this baby
+    if (feedingToDelete) {
+      const affectedSchedule = doesFeedingAffectSchedule(feedingToDelete.baby_id, feedingToDelete.type as AllFeedingType);
+      if (affectedSchedule) {
+        console.log(`Deleted feeding affected schedule for baby ${feedingToDelete.baby_id}, schedule calculations will be updated`);
+        // Note: Schedule calculations are automatically updated when getNextFeedingTime() is called
+        // since it uses the current feedings data which no longer includes this deleted feeding
+      } else {
+        console.log(`Deleted feeding did not affect schedule for baby ${feedingToDelete.baby_id}, schedule remains unchanged`);
+      }
     }
 
     return true;
@@ -2028,11 +2096,12 @@ export const useBabyStore = defineStore("baby", () => {
       });
     }
 
-    const relevantFeedings = feedings.value.filter((feeding) => {
+    // Get schedule-relevant feedings for this baby
+    const scheduleRelevantFeedings = getScheduleRelevantFeedingsForBaby(babyId);
+    
+    const relevantFeedings = scheduleRelevantFeedings.filter((feeding) => {
       const feedingTimestamp = new Date(feeding.timestamp);
       return (
-        feeding.baby_id === babyId &&
-        (feeding.type === "breast" || feeding.type === "formula") &&
         feeding.amount != null &&
         feedingTimestamp >= eightAm
       );
@@ -2050,65 +2119,305 @@ export const useBabyStore = defineStore("baby", () => {
     return babySettings.value.find((s) => s.baby_id === babyId) || null;
   }
 
-  // Update baby settings
+  // Get baby settings with automatic creation if missing
+  async function getBabySettingsWithDefaults(babyId: string): Promise<BabySettings> {
+    const { 
+      withRetry, 
+      handleError, 
+      createErrorContext, 
+      ErrorCodes,
+      FeedingScheduleError
+    } = await import('../utils/errorHandling');
+
+    let settings = getBabySettings(babyId);
+    
+    if (!settings) {
+      console.log(`No settings found for baby ${babyId}, creating default settings...`);
+      
+      try {
+        settings = await withRetry(async () => {
+          return await createBabySettings(babyId);
+        }, {
+          maxAttempts: 2,
+          delay: 500
+        });
+        console.log(`Created default settings for baby ${babyId}`);
+      } catch (error) {
+        const context = createErrorContext('getBabySettingsWithDefaults', babyId, currentUser.value?.id);
+        
+        // If we can't create settings, provide fallback defaults
+        console.warn(`Failed to create default settings for baby ${babyId}, using fallback:`, error);
+        
+        const fallbackSettings: BabySettings = {
+          id: `fallback-${babyId}`,
+          baby_id: babyId,
+          feeding_interval_hours: 3,
+          default_breast_amount: 0,
+          default_formula_amount: 0,
+          include_solids_in_schedule: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        // Add to local state for consistency
+        babySettings.value.push(fallbackSettings);
+        
+        // Show warning to user
+        const { showWarning } = await import('../composables/useNotifications').then(m => m.useNotifications());
+        showWarning(
+          'Using Default Settings',
+          'Could not save custom settings. Using defaults until connection is restored.',
+          { duration: 6000 }
+        );
+        
+        return fallbackSettings;
+      }
+    }
+    
+    return settings!; // We know settings is not null at this point
+  }
+
+  // Update baby settings with enhanced error handling and retry
   async function updateBabySettings(
     babyId: string,
     updates: {
       feeding_interval_hours?: number;
       default_breast_amount?: number;
       default_formula_amount?: number;
+      include_solids_in_schedule?: boolean;
     },
   ) {
-    if (!currentUser.value) throw new Error("User not authenticated");
+    const { 
+      withRetry, 
+      handleError, 
+      createErrorContext, 
+      validateBabySettings,
+      ErrorCodes,
+      FeedingScheduleError
+    } = await import('../utils/errorHandling');
+    const { showSuccess } = await import('../composables/useNotifications').then(m => m.useNotifications());
 
-    const { data, error } = await supabase
-      .from("baby_settings")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("baby_id", babyId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Database update error:", error);
-      throw error;
+    if (!currentUser.value) {
+      throw new FeedingScheduleError(
+        "User not authenticated", 
+        ErrorCodes.AUTH_ERROR,
+        createErrorContext('updateBabySettings', babyId)
+      );
     }
 
-    // Update local state
-    const index = babySettings.value.findIndex((s) => s.baby_id === babyId);
-    if (index !== -1) {
-      babySettings.value[index] = data;
-    } else {
-      babySettings.value.push(data);
+    // Validate input
+    const validation = validateBabySettings(updates);
+    if (!validation.isValid) {
+      throw new FeedingScheduleError(
+        `Validation failed: ${validation.errors.join(', ')}`,
+        ErrorCodes.VALIDATION_ERROR,
+        createErrorContext('updateBabySettings', babyId, currentUser.value.id)
+      );
     }
 
-    return data;
+    try {
+      const result = await withRetry(async () => {
+        await ensureValidSession();
+
+        const { data, error } = await supabase
+          .from("baby_settings")
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("baby_id", babyId)
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        return data;
+      }, {
+        maxAttempts: 3,
+        delay: 1000,
+        shouldRetry: (error, attempt) => {
+          // Custom retry logic for settings updates
+          const errorCode = error?.code || '';
+          const errorMessage = error?.message?.toLowerCase() || '';
+          
+          // Don't retry validation or auth errors
+          if (errorCode === 'PGRST301' || errorCode.startsWith('23') || 
+              errorMessage.includes('auth') || errorMessage.includes('unauthorized')) {
+            return false;
+          }
+          
+          // Retry network errors and server errors
+          return attempt < 3 && (
+            errorMessage.includes('network') || 
+            errorMessage.includes('timeout') ||
+            errorCode.startsWith('5')
+          );
+        }
+      });
+
+      // Update local state
+      const index = babySettings.value.findIndex((s) => s.baby_id === babyId);
+      if (index !== -1) {
+        babySettings.value[index] = result;
+      } else {
+        babySettings.value.push(result);
+      }
+
+      // Show success notification
+      showSuccess(
+        'Settings Updated',
+        'Feeding schedule settings have been saved successfully.'
+      );
+
+      return result;
+    } catch (error) {
+      const context = createErrorContext('updateBabySettings', babyId, currentUser.value?.id);
+      throw handleError(error, context);
+    }
   }
 
-  // Create baby settings (called when adding a new baby)
+  // Create baby settings (called when adding a new baby) with enhanced error handling
   async function createBabySettings(babyId: string) {
-    if (!currentUser.value) throw new Error("User not authenticated");
+    const { 
+      handleError, 
+      createErrorContext, 
+      ErrorCodes,
+      FeedingScheduleError
+    } = await import('../utils/errorHandling');
 
-    const { data, error } = await supabase
-      .from("baby_settings")
-      .insert({
-        baby_id: babyId,
-        feeding_interval_hours: 3,
-        default_breast_amount: 0,
-        default_formula_amount: 0,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Database insert error:", error);
-      throw error;
+    if (!currentUser.value) {
+      throw new FeedingScheduleError(
+        "User not authenticated", 
+        ErrorCodes.AUTH_ERROR,
+        createErrorContext('createBabySettings', babyId)
+      );
     }
 
-    babySettings.value.push(data);
-    return data;
+    try {
+      await ensureValidSession();
+
+      const { data, error } = await supabase
+        .from("baby_settings")
+        .insert({
+          baby_id: babyId,
+          feeding_interval_hours: 3,
+          default_breast_amount: 0,
+          default_formula_amount: 0,
+          include_solids_in_schedule: false,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      babySettings.value.push(data);
+      return data;
+    } catch (error) {
+      const context = createErrorContext('createBabySettings', babyId, currentUser.value?.id);
+      throw handleError(error, context);
+    }
+  }
+
+  // Get next feeding time for a baby based on schedule settings
+  function getNextFeedingTime(babyId: string): Date | null {
+    const settings = getBabySettings(babyId);
+    if (!settings) return null;
+
+    const babyFeedings = feedings.value.filter((f) => f.baby_id === babyId);
+
+    return calculateNextFeedingTime(
+      babyFeedings,
+      settings.feeding_interval_hours,
+      settings.include_solids_in_schedule
+    );
+  }
+
+  // Get next feeding time for a baby with automatic settings creation
+  async function getNextFeedingTimeWithDefaults(babyId: string): Promise<Date | null> {
+    try {
+      const settings = await getBabySettingsWithDefaults(babyId);
+      const babyFeedings = feedings.value.filter((f) => f.baby_id === babyId);
+
+      return calculateNextFeedingTime(
+        babyFeedings,
+        settings.feeding_interval_hours,
+        settings.include_solids_in_schedule
+      );
+    } catch (error) {
+      console.error(`Error getting next feeding time for baby ${babyId}:`, error);
+      return null;
+    }
+  }
+
+  // Check if a feeding type affects the schedule for a specific baby
+  function doesFeedingAffectSchedule(
+    babyId: string,
+    feedingType: AllFeedingType
+  ): boolean {
+    const settings = getBabySettings(babyId);
+    if (!settings) return feedingType !== "solid"; // Default behavior
+
+    const relevantTypes = getFeedingTypesForSchedule(
+      settings.include_solids_in_schedule
+    );
+    return relevantTypes.includes(feedingType);
+  }
+
+  // Check if a feeding type affects the schedule with automatic settings creation
+  async function doesFeedingAffectScheduleWithDefaults(
+    babyId: string,
+    feedingType: AllFeedingType
+  ): Promise<boolean> {
+    try {
+      const settings = await getBabySettingsWithDefaults(babyId);
+      const relevantTypes = getFeedingTypesForSchedule(
+        settings.include_solids_in_schedule
+      );
+      return relevantTypes.includes(feedingType);
+    } catch (error) {
+      console.error(`Error checking feeding schedule impact for baby ${babyId}:`, error);
+      // Fall back to default behavior
+      return feedingType !== "solid";
+    }
+  }
+
+  // Get schedule-relevant feedings for a baby
+  function getScheduleRelevantFeedingsForBaby(babyId: string): Feeding[] {
+    const settings = getBabySettings(babyId);
+    if (!settings) {
+      // Default behavior: exclude solids
+      return getScheduleRelevantFeedings(
+        feedings.value.filter((f) => f.baby_id === babyId),
+        false
+      );
+    }
+
+    return getScheduleRelevantFeedings(
+      feedings.value.filter((f) => f.baby_id === babyId),
+      settings.include_solids_in_schedule
+    );
+  }
+
+  // Get schedule-relevant feedings for a baby with automatic settings creation
+  async function getScheduleRelevantFeedingsForBabyWithDefaults(babyId: string): Promise<Feeding[]> {
+    try {
+      const settings = await getBabySettingsWithDefaults(babyId);
+      return getScheduleRelevantFeedings(
+        feedings.value.filter((f) => f.baby_id === babyId),
+        settings.include_solids_in_schedule
+      );
+    } catch (error) {
+      console.error(`Error getting schedule-relevant feedings for baby ${babyId}:`, error);
+      // Fall back to default behavior: exclude solids
+      return getScheduleRelevantFeedings(
+        feedings.value.filter((f) => f.baby_id === babyId),
+        false
+      );
+    }
   }
 
   // Start a new sleep session (no end time)
@@ -2175,12 +2484,22 @@ export const useBabyStore = defineStore("baby", () => {
 
       if (existingFood) {
         // Increment times_tried and update last_tried_date
-        return await updateSolidFood(existingFood.id, {
+        const updatedFood = await updateSolidFood(existingFood.id, {
           times_tried: existingFood.times_tried + 1,
           last_tried_date: new Date().toISOString(),
           notes: notes || existingFood.notes,
           reaction: reaction || existingFood.reaction,
         });
+
+        // Check if solid foods affect the schedule for this baby
+        const affectsSchedule = doesFeedingAffectSchedule(babyId, "solid");
+        if (affectsSchedule) {
+          console.log(`Solid food affects schedule for baby ${babyId}, schedule calculations will be updated`);
+        } else {
+          console.log(`Solid food does not affect schedule for baby ${babyId} (setting disabled), schedule remains unchanged`);
+        }
+
+        return updatedFood;
       }
 
       // Create new solid food entry
@@ -2208,6 +2527,17 @@ export const useBabyStore = defineStore("baby", () => {
       }
 
       solidFoods.value.unshift(data);
+
+      // Check if solid foods affect the schedule for this baby
+      const affectsSchedule = doesFeedingAffectSchedule(babyId, "solid");
+      if (affectsSchedule) {
+        console.log(`Solid food affects schedule for baby ${babyId}, schedule calculations will be updated`);
+        // Note: Schedule calculations are automatically updated when getNextFeedingTime() is called
+        // However, solid foods are tracked separately and don't create feeding records
+      } else {
+        console.log(`Solid food does not affect schedule for baby ${babyId} (setting disabled), schedule remains unchanged`);
+      }
+
       return data;
     } catch (error) {
       console.error("Error in addSolidFood:", error);
@@ -2669,8 +2999,15 @@ export const useBabyStore = defineStore("baby", () => {
     getTodaysFeedingsTotal,
     loadData,
     getBabySettings,
+    getBabySettingsWithDefaults,
     updateBabySettings,
     createBabySettings,
+    getNextFeedingTime,
+    getNextFeedingTimeWithDefaults,
+    doesFeedingAffectSchedule,
+    doesFeedingAffectScheduleWithDefaults,
+    getScheduleRelevantFeedingsForBaby,
+    getScheduleRelevantFeedingsForBabyWithDefaults,
     startSleepSession,
     endSleepSession,
     isBabySleeping,

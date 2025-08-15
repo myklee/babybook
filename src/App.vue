@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useBabyStore } from './stores/babyStore'
 import { useTheme } from './composables/useTheme'
+import NotificationContainer from './components/NotificationContainer.vue'
 
 const store = useBabyStore()
 const lastRefreshTime = ref(0)
@@ -60,6 +61,7 @@ function handleVisibilityChange() {
 <template>
   <div id="app">
     <router-view />
+    <NotificationContainer />
   </div>
 </template>
 

@@ -220,9 +220,17 @@ const cumulativeStats = computed(() => {
     }
   }
 
-  // Calculate totals for the 7-day period
-  const totalAmount = last7DaysFeedings.reduce((sum, f) => sum + (f.amount || 0) + ((f as any).topup_amount || 0), 0)
-  const totalFeeds = last7DaysFeedings.length
+  // Get schedule-relevant feedings for analytics
+  const scheduleRelevantFeedings = store.getScheduleRelevantFeedingsForBaby(selectedBaby.value.id)
+  const now = new Date()
+  const last7DaysScheduleFeedings = scheduleRelevantFeedings.filter(f => {
+    const feedingDate = new Date(f.timestamp)
+    return feedingDate >= sevenDaysAgo && feedingDate <= now
+  })
+
+  // Calculate totals for the 7-day period (only schedule-relevant feedings)
+  const totalAmount = last7DaysScheduleFeedings.reduce((sum, f) => sum + (f.amount || 0) + ((f as any).topup_amount || 0), 0)
+  const totalFeeds = last7DaysScheduleFeedings.length
   const totalPoops = last7DaysDiapers.filter(d => d.type === 'poop' || d.type === 'both').length
 
   // Calculate averages over 7 days
@@ -244,7 +252,8 @@ const cumulativeStats = computed(() => {
 const dailyFeedings = computed(() => {
   if (!selectedBaby.value) return []
 
-  const feedings = store.getBabyFeedings(selectedBaby.value.id)
+  // Get schedule-relevant feedings for daily summary
+  const feedings = store.getScheduleRelevantFeedingsForBaby(selectedBaby.value.id)
 
   // Group feedings by day using configurable window
   const dailyMap = new Map<string, { date: string; windowStart: string; windowEnd: string; total: number; count: number; breast: number; formula: number }>()

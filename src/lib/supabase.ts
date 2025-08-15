@@ -158,6 +158,7 @@ export interface Database {
           feeding_interval_hours: number;
           default_breast_amount: number;
           default_formula_amount: number;
+          include_solids_in_schedule: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -167,6 +168,7 @@ export interface Database {
           feeding_interval_hours?: number;
           default_breast_amount?: number;
           default_formula_amount?: number;
+          include_solids_in_schedule?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -176,6 +178,7 @@ export interface Database {
           feeding_interval_hours?: number;
           default_breast_amount?: number;
           default_formula_amount?: number;
+          include_solids_in_schedule?: boolean;
           created_at?: string;
           updated_at?: string;
         };

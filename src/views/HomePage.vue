@@ -5,6 +5,7 @@ import { useBabyStore } from '../stores/babyStore'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
 import SolidFoodModal from '../components/SolidFoodModal.vue'
+import BabySettingsModal from '../components/BabySettingsModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 import IconButton from '../components/IconButton.vue'
 import SleepingAnimation from '../components/SleepingAnimation.vue'
@@ -17,6 +18,7 @@ import spoonIcon from '../assets/icons/spoon.svg'
 import historyIcon from '../assets/icons/history.svg'
 import addBabyIcon from '../assets/icons/add-baby.svg'
 import userRoundIcon from '../assets/icons/circle-user-round.svg'
+import settingsIcon from '../assets/icons/settings-2.svg'
 import { format } from 'date-fns'
 
 const store = useBabyStore()
@@ -29,6 +31,7 @@ const showDiaperModal = ref(false)
 const showNursingTimerModal = ref(false)
 const showPumpingTimerModal = ref(false)
 const showSolidFoodModal = ref(false)
+const showBabySettingsModal = ref(false)
 const feedingType = ref<'breast' | 'formula'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
 
@@ -93,6 +96,12 @@ function openFeedingModal(type: 'breast' | 'formula') {
 function openSolidFoodModal() {
   if (!selectedBaby.value) return
   showSolidFoodModal.value = true
+}
+
+// Open baby settings modal
+function openBabySettingsModal() {
+  if (!selectedBaby.value) return
+  showBabySettingsModal.value = true
 }
 
 // Open nursing timer modal
@@ -310,29 +319,13 @@ function getFeedingIcon(type: string | undefined) {
   return breastIcon // default
 }
 
-// Get next feeding time based on baby settings (including solid foods)
+// Get next feeding time based on baby settings (respects schedule configuration)
 function getNextFeedingTime(babyId: string) {
   try {
-    const settings = store.getBabySettings(babyId)
-    if (!settings || settings.feeding_interval_hours <= 0) return null
+    // Use the store's getNextFeedingTime method which respects schedule settings
+    const nextFeedingTime = store.getNextFeedingTime(babyId)
+    if (!nextFeedingTime) return null
 
-    const feedings = store.getBabyFeedings(babyId)
-    const solidFoods = store.getBabySolidFoods(babyId)
-    
-    // Combine feedings and solid foods with their timestamps
-    const allFeedingEvents = [
-      ...feedings.map(f => ({ timestamp: f.timestamp })),
-      ...solidFoods.map(sf => ({ timestamp: sf.last_tried_date }))
-    ]
-    
-    if (allFeedingEvents.length === 0) return null
-
-    // Sort by most recent
-    allFeedingEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    
-    const lastEvent = allFeedingEvents[0]
-    const lastEventTime = new Date(lastEvent.timestamp)
-    const nextFeedingTime = new Date(lastEventTime.getTime() + (settings.feeding_interval_hours * 60 * 60 * 1000))
     const now = new Date()
 
     if (nextFeedingTime <= now) {
@@ -407,7 +400,15 @@ function handleSleepClick() {
             <div class="baby-name-container">
               <span class="baby-name">{{ baby.name }}</span>
               <div class="baby-actions">
-                <button class="history-icon-btn" @click.stop="goToBabyHistory(baby)">
+                <button 
+                  v-if="selectedBaby?.id === baby.id" 
+                  class="settings-icon-btn" 
+                  title="Baby Settings" 
+                  @click.stop="openBabySettingsModal()"
+                >
+                  <img :src="settingsIcon" alt="Baby Settings" class="settings-icon" />
+                </button>
+                <button class="history-icon-btn" title="View History" @click.stop="goToBabyHistory(baby)">
                   <img :src="historyIcon" alt="View History" class="history-icon" />
                 </button>
               </div>
@@ -577,6 +578,14 @@ function handleSleepClick() {
 
     <SolidFoodModal v-if="showSolidFoodModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
       @close="showSolidFoodModal = false" @saved="showSolidFoodModal = false" />
+
+    <BabySettingsModal 
+      v-if="showBabySettingsModal && selectedBaby"
+      :baby-id="selectedBaby.id"
+      :baby-name="selectedBaby.name"
+      @close="showBabySettingsModal = false"
+      @saved="showBabySettingsModal = false"
+    />
   </div>
 </template>
 
@@ -584,7 +593,6 @@ function handleSleepClick() {
 .home-page {
   background-color: var(--color-bg-primary);
   min-height: 100vh;
-  padding: 1rem;
   color: var(--color-text-primary);
   display: flex;
   flex-direction: column;
@@ -596,7 +604,6 @@ function handleSleepClick() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 1rem;
 }
 
 .header {
@@ -605,6 +612,7 @@ function handleSleepClick() {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  padding:1rem;
 }
 
 .header-spacer {
@@ -682,7 +690,8 @@ function handleSleepClick() {
   gap: 0.5rem;
 }
 
-.history-icon-btn {
+.history-icon-btn,
+.settings-icon-btn {
   background: none;
   border: none;
   padding: 0;
@@ -695,11 +704,13 @@ function handleSleepClick() {
   align-items: center;
 }
 
-.history-icon-btn:hover {
+.history-icon-btn:hover,
+.settings-icon-btn:hover {
   opacity: 1;
 }
 
-.history-icon {
+.history-icon,
+.settings-icon {
   width: clamp(0.875rem, 2.5vw, 1.25rem);
   height: clamp(0.875rem, 2.5vw, 1.25rem);
   filter: brightness(0) invert(1);
@@ -1010,10 +1021,6 @@ function handleSleepClick() {
     padding: 0.5rem;
   }
 
-  .app-content {
-    padding: 0 0.5rem;
-  }
-
   .baby-selectors {
     gap: 0.5rem;
   }
@@ -1029,13 +1036,6 @@ function handleSleepClick() {
 }
 
 @media (min-width: 768px) {
-  .home-page {
-    padding: 2rem;
-  }
-
-  .app-content {
-    padding: 0 2rem;
-  }
 
   .baby-selectors {
     gap: 1.5rem;

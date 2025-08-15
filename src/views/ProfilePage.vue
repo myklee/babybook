@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
 import IconButton from '../components/IconButton.vue'
 import EditBabyModal from '../components/EditBabyModal.vue'
+import BabySettingsModal from '../components/BabySettingsModal.vue'
 import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import arrowBigLeftIcon from '../assets/icons/arrow-big-left.svg'
 import addBabyIcon from '../assets/icons/add-baby.svg'
 import pencilIcon from '../assets/icons/lucide_pencil.svg'
+import settingsIcon from '../assets/icons/settings-2.svg'
 
 const router = useRouter()
 const store = useBabyStore()
@@ -21,7 +23,9 @@ const confirmPassword = ref('')
 const isUpdatingEmail = ref(false)
 const isUpdatingPassword = ref(false)
 const showEditBabyModal = ref(false)
+const showBabySettingsModal = ref(false)
 const editingBaby = ref<any>(null)
+const settingsBaby = ref<any>(null)
 const isUpdatingMeasurementUnit = ref(false)
 
 onMounted(() => {
@@ -43,6 +47,16 @@ function openEditBabyModal(baby: any) {
 function onModalSaved() {
   showEditBabyModal.value = false
   editingBaby.value = null
+}
+
+function openBabySettingsModal(baby: any) {
+  settingsBaby.value = baby
+  showBabySettingsModal.value = true
+}
+
+function onSettingsSaved() {
+  showBabySettingsModal.value = false
+  settingsBaby.value = null
 }
 
 async function addBaby() {
@@ -277,6 +291,12 @@ async function signOut() {
               </div>
               <div class="baby-actions">
                 <IconButton
+                  :icon="settingsIcon"
+                  alt="Baby Settings"
+                  title="Baby Settings"
+                  @click="openBabySettingsModal(baby)"
+                />
+                <IconButton
                   :icon="pencilIcon"
                   alt="Edit Baby"
                   title="Edit Baby"
@@ -304,6 +324,14 @@ async function signOut() {
       :baby="editingBaby"
       @close="showEditBabyModal = false"
       @saved="onModalSaved"
+    />
+
+    <BabySettingsModal 
+      v-if="showBabySettingsModal && settingsBaby"
+      :baby-id="settingsBaby.id"
+      :baby-name="settingsBaby.name"
+      @close="showBabySettingsModal = false"
+      @saved="onSettingsSaved"
     />
   </div>
 </template>
