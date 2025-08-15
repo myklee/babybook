@@ -94,29 +94,14 @@ function setupModal() {
   document.addEventListener("keydown", handleKeydown, true);
   document.addEventListener("keydown", trapFocus, true);
 
-  // Focus the modal or first focusable element after next tick
+  // Focus the modal container instead of first input to prevent unwanted keyboard activation
   nextTick(() => {
     try {
-      if (contentRef.value) {
-        // Try to find the first focusable element
-        const firstFocusable = contentRef.value.querySelector(
-          'input, select, textarea, button, [tabindex]:not([tabindex="-1"])'
-        ) as HTMLElement;
-
-        if (firstFocusable && typeof firstFocusable.focus === "function") {
-          firstFocusable.focus();
-        } else if (modalRef.value) {
-          modalRef.value.focus();
-        }
-      } else if (modalRef.value) {
+      if (modalRef.value) {
         modalRef.value.focus();
       }
     } catch (error) {
       console.warn("Could not focus modal element:", error);
-      // Fallback to modal focus
-      if (modalRef.value) {
-        modalRef.value.focus();
-      }
     }
   });
 }
