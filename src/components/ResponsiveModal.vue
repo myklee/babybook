@@ -49,6 +49,21 @@ function handleKeydown(event: KeyboardEvent) {
         emit("close");
       }
       break;
+    case "Enter":
+      // If Enter is pressed and we're not in a textarea or input, trigger save button
+      const target = event.target as HTMLElement;
+      if (target && !['TEXTAREA', 'INPUT'].includes(target.tagName)) {
+        const modal = modalRef.value;
+        if (modal) {
+          const saveButton = modal.querySelector('.btn-save:not(:disabled)') as HTMLButtonElement;
+          if (saveButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            saveButton.click();
+          }
+        }
+      }
+      break;
   }
 }
 

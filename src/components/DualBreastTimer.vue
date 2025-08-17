@@ -376,6 +376,7 @@ defineExpose({
         type="button"
         class="btn btn-save"
         @click="handleSave"
+        @keydown.enter="handleSave"
         :disabled="isSaving"
         :aria-label="isSaving ? 'Saving session...' : 'Save session'"
       >

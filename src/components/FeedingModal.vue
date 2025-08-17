@@ -397,6 +397,7 @@ async function handleSubmit() {
                     class="btn btn-save"
                     :class="{ 'btn-loading': isSaving }"
                     @click="handleSubmit"
+                    @keydown.enter="handleSubmit"
                     :disabled="isSaving"
                 >
                     {{ isSaving ? "Saving..." : "Save" }}

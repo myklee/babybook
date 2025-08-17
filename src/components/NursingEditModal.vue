@@ -727,6 +727,7 @@ watch([startDate, endDate], () => {
           class="btn btn-save"
           :class="{ 'btn-loading': isSaving }"
           @click="handleSave"
+          @keydown.enter="handleSave"
           :disabled="!isValid || isSaving || isDeleting"
         >
           {{ isSaving ? "Saving..." : "Save Changes" }}
