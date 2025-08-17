@@ -763,19 +763,19 @@ function getDayBreakdown(day: any) {
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-number">{{ cumulativeStats.avgAmountPerFeed }}ml</div>
-            <div class="stat-label">Avg per feed</div>
+            <div class="stat-label">Per feed</div>
           </div>
           <div class="stat-card">
             <div class="stat-number">{{ cumulativeStats.avgAmountPerDay }}ml</div>
-            <div class="stat-label">Avg per day</div>
+            <div class="stat-label">Per day</div>
           </div>
           <div class="stat-card">
             <div class="stat-number">{{ cumulativeStats.avgFeedsPerDay }}</div>
-            <div class="stat-label">Avg feeds/day</div>
+            <div class="stat-label">Feeds per day</div>
           </div>
           <div class="stat-card">
             <div class="stat-number">{{ cumulativeStats.avgPoopsPerDay }}</div>
-            <div class="stat-label">Avg poops/day</div>
+            <div class="stat-label">Poops per day</div>
           </div>
         </div>
       </div>
@@ -1172,16 +1172,19 @@ function getDayBreakdown(day: any) {
 }
 
 .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  display: flex;
   gap: 1rem;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 1.5rem;
+  overflow: scroll;
 }
 
 .stat-card {
   background: var(--color-surface-hover);
   border-radius: 8px;
-  padding: 1rem;
+  flex-grow: 1;
+  padding: 1rem 0;  
   text-align: center;
   border: 1px solid var(--color-surface-border);
 }
@@ -1588,6 +1591,8 @@ function getDayBreakdown(day: any) {
 .action-buttons {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.5rem;
 }
 
