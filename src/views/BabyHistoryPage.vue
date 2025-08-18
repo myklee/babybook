@@ -81,6 +81,9 @@ const editingPumpingSession = ref<any>(null)
 
 const showSettingsModal = ref(false)
 
+// Timeline collapse state
+const isTimelineCollapsed = ref(false)
+
 // Modal state for feeding and diaper actions
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
@@ -797,77 +800,91 @@ function getDayBreakdown(day: any) {
 
       </div>
 
-      <ul class="history-timeline">
-        <li v-if="combinedHistory.length === 0" class="empty-state">
-          No activities recorded yet for {{ selectedBaby.name }}.
-        </li>
-        <li v-for="item in combinedHistory" :key="`${item.event_type}-${item.id}`" class="timeline-item"
-          @click="openEditModal(item, item.event_type)">
-          <div class="item-icon-container">
-            <img :src="getIcon(item)" class="item-icon" />
-          </div>
-          <div class="item-details">
-            <div class="item-header">
-              <span class="item-type">{{ item.event_type }}</span>
-              <span class="item-time">{{ formatTimestamp(item.event_time) }}</span>
-            </div>
-            <div class="item-info">
-              <!-- Feeding Info -->
-              <span v-if="item.event_type === 'feeding'">
-                {{ item.feeding_type === 'breast' ? 'Breast' : item.feeding_type === 'nursing' ? 'Nursing' : item.feeding_type === 'formula' ? 'Formula' : 'Solid' }}: 
-                <span v-if="item.feeding_type === 'nursing' && item.start_time && item.end_time" class="font-bold">
-                  {{ ((new Date(item.end_time).getTime() - new Date(item.start_time).getTime()) / 60000).toFixed(0) }} min
-                </span>
-                <span v-else-if="item.feeding_type === 'nursing' && item.start_time" class="font-bold">
-                  Ongoing
-                </span>
-                <span v-else class="font-bold">{{ item.amount }}ml</span>
-                <span v-if="item.topup_amount && item.topup_amount > 0" class="topup-display">
-                  + <span class="font-bold">{{ item.topup_amount }}ml formula</span>
-                </span>
-              </span>
-              <!-- Diaper Info -->
-              <span v-if="item.event_type === 'diaper'">
-                Diaper: <span class="font-bold">{{ item.diaper_type }}</span>
-              </span>
-              <!-- Sleep Info -->
-              <span v-if="item.event_type === 'sleep' && item.end_time">
-                Slept for <span class="font-bold">{{ ((new Date(item.end_time).getTime() - new
-                  Date(item.start_time!).getTime()) / 60000).toFixed(0) }} minutes</span>
-              </span>
-              <!-- Solid Food Info -->
-              <span v-if="item.event_type === 'solid'">
-                <span class="font-bold">{{ item.food_name }}</span>
-                <span v-if="item.times_tried && item.times_tried > 1" class="times-tried">
-                  ({{ item.times_tried }}x)
-                </span>
-                <div class="solid-food-details">
-                  <span v-if="item.reaction" class="food-reaction" :class="item.reaction">{{ item.reaction }}</span>
+      <!-- History Timeline Section -->
+      <div class="history-timeline-section">
+        <div class="section-header" @click="isTimelineCollapsed = !isTimelineCollapsed">
+          <h3>Full Activity History</h3>
+          <button class="collapse-toggle" :class="{ collapsed: isTimelineCollapsed }">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div v-show="!isTimelineCollapsed" class="timeline-content">
+          <ul class="history-timeline">
+            <li v-if="combinedHistory.length === 0" class="empty-state">
+              No activities recorded yet for {{ selectedBaby.name }}.
+            </li>
+            <li v-for="item in combinedHistory" :key="`${item.event_type}-${item.id}`" class="timeline-item"
+              @click="openEditModal(item, item.event_type)">
+              <div class="item-icon-container">
+                <img :src="getIcon(item)" class="item-icon" />
+              </div>
+              <div class="item-details">
+                <div class="item-header">
+                  <span class="item-type">{{ item.event_type }}</span>
+                  <span class="item-time">{{ formatTimestamp(item.event_time) }}</span>
                 </div>
-              </span>
-              <!-- Pumping Info -->
-              <span v-if="item.event_type === 'pumping'">
-                Pumping: 
-                <span class="font-bold">{{ Math.floor((item.total_duration || 0) / 60) }} min</span>
-                <span v-if="item.total_amount && item.total_amount > 0" class="pumping-amount">
-                  - <span class="font-bold">{{ item.total_amount }}ml</span>
-                </span>
-                <div v-if="(item.left_amount && item.left_amount > 0) || (item.right_amount && item.right_amount > 0)" class="pumping-breakdown">
-                  <span v-if="item.left_amount && item.left_amount > 0" class="breast-amount">
-                    L: {{ item.left_amount }}ml
+                <div class="item-info">
+                  <!-- Feeding Info -->
+                  <span v-if="item.event_type === 'feeding'">
+                    {{ item.feeding_type === 'breast' ? 'Breast' : item.feeding_type === 'nursing' ? 'Nursing' : item.feeding_type === 'formula' ? 'Formula' : 'Solid' }}: 
+                    <span v-if="item.feeding_type === 'nursing' && item.start_time && item.end_time" class="font-bold">
+                      {{ ((new Date(item.end_time).getTime() - new Date(item.start_time).getTime()) / 60000).toFixed(0) }} min
+                    </span>
+                    <span v-else-if="item.feeding_type === 'nursing' && item.start_time" class="font-bold">
+                      Ongoing
+                    </span>
+                    <span v-else class="font-bold">{{ item.amount }}ml</span>
+                    <span v-if="item.topup_amount && item.topup_amount > 0" class="topup-display">
+                      + <span class="font-bold">{{ item.topup_amount }}ml formula</span>
+                    </span>
                   </span>
-                  <span v-if="item.right_amount && item.right_amount > 0" class="breast-amount">
-                    R: {{ item.right_amount }}ml
+                  <!-- Diaper Info -->
+                  <span v-if="item.event_type === 'diaper'">
+                    Diaper: <span class="font-bold">{{ item.diaper_type }}</span>
+                  </span>
+                  <!-- Sleep Info -->
+                  <span v-if="item.event_type === 'sleep' && item.end_time">
+                    Slept for <span class="font-bold">{{ ((new Date(item.end_time).getTime() - new
+                      Date(item.start_time!).getTime()) / 60000).toFixed(0) }} minutes</span>
+                  </span>
+                  <!-- Solid Food Info -->
+                  <span v-if="item.event_type === 'solid'">
+                    <span class="font-bold">{{ item.food_name }}</span>
+                    <span v-if="item.times_tried && item.times_tried > 1" class="times-tried">
+                      ({{ item.times_tried }}x)
+                    </span>
+                    <div class="solid-food-details">
+                      <span v-if="item.reaction" class="food-reaction" :class="item.reaction">{{ item.reaction }}</span>
+                    </div>
+                  </span>
+                  <!-- Pumping Info -->
+                  <span v-if="item.event_type === 'pumping'">
+                    Pumping: 
+                    <span class="font-bold">{{ Math.floor((item.total_duration || 0) / 60) }} min</span>
+                    <span v-if="item.total_amount && item.total_amount > 0" class="pumping-amount">
+                      - <span class="font-bold">{{ item.total_amount }}ml</span>
+                    </span>
+                    <div v-if="(item.left_amount && item.left_amount > 0) || (item.right_amount && item.right_amount > 0)" class="pumping-breakdown">
+                      <span v-if="item.left_amount && item.left_amount > 0" class="breast-amount">
+                        L: {{ item.left_amount }}ml
+                      </span>
+                      <span v-if="item.right_amount && item.right_amount > 0" class="breast-amount">
+                        R: {{ item.right_amount }}ml
+                      </span>
+                    </div>
                   </span>
                 </div>
-              </span>
-            </div>
-            <div v-if="item.notes" class="item-notes">
-              {{ item.notes }}
-            </div>
-          </div>
-        </li>
-      </ul>
+                <div v-if="item.notes" class="item-notes">
+                  {{ item.notes }}
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
     <div v-else class="loading-state">
       <p>Loading baby's history...</p>
@@ -1725,5 +1742,75 @@ function getDayBreakdown(day: any) {
   font-size: 0.9rem;
   color: var(--color-text-accent);
   margin-left: 0.25rem;
+}
+
+/* History Timeline Section Styles */
+.history-timeline-section {
+  margin-bottom: 2rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--color-surface-border);
+  margin-bottom: 1rem;
+}
+
+.section-header:hover {
+  background-color: var(--color-surface-hover);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0 -1rem 1rem -1rem;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--color-text-secondary);
+}
+
+.collapse-toggle {
+  background: none;
+  border: none;
+  color: var(--color-text-accent);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapse-toggle:hover {
+  background-color: var(--color-surface-active);
+  color: var(--color-text-primary);
+}
+
+.collapse-toggle svg {
+  transition: transform 0.2s ease;
+}
+
+.collapse-toggle.collapsed svg {
+  transform: rotate(-90deg);
+}
+
+.timeline-content {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
 }
 </style>
