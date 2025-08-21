@@ -77,7 +77,14 @@
           <div class="snackbar-time">{{ snackbar.time }}</div>
           <div v-if="snackbar.details" class="snackbar-extra">{{ snackbar.details }}</div>
         </div>
-        <button class="snackbar-close" @click="hideSnackbar">×</button>
+        <div class="snackbar-actions">
+          <button class="snackbar-edit" @click="editEvent" title="Edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M11.5 2.5L13.5 4.5L5 13H3V11L11.5 2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="snackbar-close" @click="hideSnackbar">×</button>
+        </div>
       </div>
     </div>
   </div>
@@ -141,6 +148,9 @@ interface Props {
 
 interface Emits {
   (e: 'edit-pumping', pumpingSession: PumpingEvent): void
+  (e: 'edit-feeding', feedingEvent: Event): void
+  (e: 'edit-diaper', diaperEvent: DiaperEvent): void
+  (e: 'edit-solid-food', solidFoodEvent: SolidFoodEvent): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -275,7 +285,8 @@ const snackbar = reactive({
   title: '',
   time: '',
   details: '',
-  icon: ''
+  icon: '',
+  eventData: null as Event | DiaperEvent | SolidFoodEvent | PumpingEvent | null
 })
 
 function showFeedingDetails(event: Event) {
@@ -307,6 +318,7 @@ function showFeedingDetails(event: Event) {
   snackbar.time = timeString
   snackbar.details = amountDetails
   snackbar.icon = getFeedingIcon(event)
+  snackbar.eventData = event
 }
 
 function showDiaperDetails(diaper: DiaperEvent) {
@@ -325,6 +337,7 @@ function showDiaperDetails(diaper: DiaperEvent) {
   snackbar.time = timeString
   snackbar.details = diaper.type === 'both' ? 'Pee and poop' : diaper.type === 'pee' ? 'Wet diaper' : 'Dirty diaper'
   snackbar.icon = getDiaperIcon(diaper)
+  snackbar.eventData = diaper
 }
 
 function showSolidFoodDetails(solidFood: SolidFoodEvent) {
@@ -343,6 +356,7 @@ function showSolidFoodDetails(solidFood: SolidFoodEvent) {
   snackbar.time = timeString
   snackbar.details = solidFood.reaction ? `Reaction: ${solidFood.reaction}` : 'No reaction recorded'
   snackbar.icon = spoonIcon
+  snackbar.eventData = solidFood
 }
 
 function showPumpingDetails(pumping: PumpingEvent) {
@@ -350,8 +364,30 @@ function showPumpingDetails(pumping: PumpingEvent) {
   emit('edit-pumping', pumping)
 }
 
+function editEvent() {
+  if (!snackbar.eventData) return
+  
+  switch (snackbar.type) {
+    case 'feeding':
+      emit('edit-feeding', snackbar.eventData as Event)
+      break
+    case 'diaper':
+      emit('edit-diaper', snackbar.eventData as DiaperEvent)
+      break
+    case 'solid':
+      emit('edit-solid-food', snackbar.eventData as SolidFoodEvent)
+      break
+    case 'pumping':
+      emit('edit-pumping', snackbar.eventData as PumpingEvent)
+      break
+  }
+  
+  hideSnackbar()
+}
+
 function hideSnackbar() {
   snackbar.show = false
+  snackbar.eventData = null
 }
 </script>
 
@@ -537,6 +573,12 @@ function hideSnackbar() {
   flex: 1;
 }
 
+.snackbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .snackbar-title {
   font-weight: bold;
   color: var(--color-text-primary);
@@ -555,11 +597,11 @@ function hideSnackbar() {
   font-size: 0.8rem;
 }
 
+.snackbar-edit,
 .snackbar-close {
   background: none;
   border: none;
   color: var(--color-text-accent);
-  font-size: 1.5rem;
   cursor: pointer;
   padding: 0;
   width: 24px;
@@ -571,6 +613,15 @@ function hideSnackbar() {
   transition: all 0.2s ease;
 }
 
+.snackbar-edit {
+  font-size: 1rem;
+}
+
+.snackbar-close {
+  font-size: 1.5rem;
+}
+
+.snackbar-edit:hover,
 .snackbar-close:hover {
   background: var(--color-surface-hover);
   color: var(--color-text-primary);

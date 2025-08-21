@@ -471,6 +471,53 @@ function handleTimelinePumpingEdit(pumpingEvent: any) {
   showPumpingEditModal.value = true
 }
 
+function handleTimelineFeedingEdit(feedingEvent: any) {
+  // Convert the timeline feeding event to the format expected by EditRecord
+  const feedingRecord = {
+    id: feedingEvent.id,
+    timestamp: feedingEvent.timestamp,
+    type: feedingEvent.type,
+    amount: feedingEvent.amount,
+    topup_amount: feedingEvent.topup_amount,
+    notes: null // Timeline events don't have notes in the current structure
+  }
+  
+  editingRecord.value = feedingRecord
+  editingType.value = 'feeding'
+  showEditModal.value = true
+}
+
+function handleTimelineDiaperEdit(diaperEvent: any) {
+  // Convert the timeline diaper event to the format expected by EditRecord
+  const diaperRecord = {
+    id: diaperEvent.id,
+    timestamp: diaperEvent.timestamp,
+    type: diaperEvent.type === 'pee' ? 'wet' : diaperEvent.type === 'poop' ? 'dirty' : diaperEvent.type,
+    notes: null // Timeline events don't have notes in the current structure
+  }
+  
+  editingRecord.value = diaperRecord
+  editingType.value = 'diaper'
+  showEditModal.value = true
+}
+
+function handleTimelineSolidFoodEdit(solidFoodEvent: any) {
+  // Convert the timeline solid food event to the format expected by SolidFoodEditModal
+  const solidFoodRecord = {
+    id: solidFoodEvent.id,
+    food_name: solidFoodEvent.food_name,
+    food_category: null, // Not available in timeline event
+    reaction: solidFoodEvent.reaction,
+    notes: null, // Not available in timeline event
+    times_tried: 1, // Default value
+    first_tried_date: solidFoodEvent.timestamp,
+    last_tried_date: solidFoodEvent.timestamp
+  }
+  
+  editingSolidFood.value = solidFoodRecord
+  showSolidFoodEditModal.value = true
+}
+
 function closeEditModal() {
   showEditModal.value = false
   editingRecord.value = null
@@ -796,7 +843,10 @@ function getDayBreakdown(day: any) {
           :use8amWindow="use8amWindow" :showCurrentTimeIndicator="false"
           :totalLabel="`${Math.round(day.total)}ml total`" :windowStart="getTimelineWindowStart(day.windowStart)"
           :windowEnd="getTimelineWindowEnd(day.windowEnd)"
-          @edit-pumping="handleTimelinePumpingEdit" />
+          @edit-pumping="handleTimelinePumpingEdit"
+          @edit-feeding="handleTimelineFeedingEdit"
+          @edit-diaper="handleTimelineDiaperEdit"
+          @edit-solid-food="handleTimelineSolidFoodEdit" />
 
       </div>
 
