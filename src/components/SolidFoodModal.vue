@@ -68,14 +68,14 @@ const allPreviouslyTriedFoods = computed((): PreviouslyTriedFood[] => {
 })
 
 // Computed properties
-const visibleCategories = computed(() => {
+const visibleCategories = computed((): (FoodCategory | 'previously_tried')[] => {
   const categories = Object.keys(filteredSuggestions.value).filter(
     (category) => filteredSuggestions.value[category as FoodCategory].length > 0
   ) as FoodCategory[]
   
   // Add 'previously_tried' category if there are previously tried foods
   if (previouslyTriedFoods.value.length > 0) {
-    return ['previously_tried' as FoodCategory, ...categories]
+    return ['previously_tried', ...categories]
   }
   
   return categories
