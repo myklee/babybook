@@ -84,6 +84,9 @@ const showSettingsModal = ref(false)
 // Timeline collapse state
 const isTimelineCollapsed = ref(false)
 
+// Solid foods collapse state
+const isSolidFoodsCollapsed = ref(false)
+
 // Modal state for feeding and diaper actions
 const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
@@ -302,6 +305,22 @@ const dailyFeedings = computed(() => {
   return Array.from(dailyMap.values())
     .sort((a, b) => new Date(b.windowStart).getTime() - new Date(a.windowStart).getTime())
     .slice(0, 7) // Show last 7 days
+})
+
+// Solid foods summary
+const solidFoodsSummary = computed(() => {
+  if (!selectedBaby.value) return []
+
+  const solidFoods = store.getBabySolidFoods(selectedBaby.value.id)
+  
+  // Sort by times tried (descending) and then by food name
+  return solidFoods
+    .sort((a, b) => {
+      if (b.times_tried !== a.times_tried) {
+        return b.times_tried - a.times_tried
+      }
+      return a.food_name.localeCompare(b.food_name)
+    })
 })
 
 function getIcon(item: HistoryEvent) {
@@ -849,7 +868,44 @@ function getDayBreakdown(day: any) {
           @edit-solid-food="handleTimelineSolidFoodEdit" />
 
       </div>
-
+ <!-- Solid Foods Grid Section -->
+ <div v-if="solidFoodsSummary.length > 0" class="solid-foods-section">
+        <div class="section-header" @click="isSolidFoodsCollapsed = !isSolidFoodsCollapsed">
+          <h3>Solid Foods Tried</h3>
+          <button class="collapse-toggle" :class="{ collapsed: isSolidFoodsCollapsed }">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div v-show="!isSolidFoodsCollapsed" class="solid-foods-content">
+          <div class="solid-foods-grid">
+            <div 
+              v-for="food in solidFoodsSummary" 
+              :key="food.id" 
+              class="solid-food-card"
+              :class="{ 'has-reaction': food.reaction }"
+              @click="openSolidFoodEditModal(food)"
+            >
+              <div class="food-header">
+                <h4 class="food-name">{{ food.food_name }}</h4>
+                <div class="food-count">{{ food.times_tried }}x</div>
+              </div>
+              <div v-if="food.food_category" class="food-category">{{ food.food_category }}</div>
+              <div v-if="food.reaction" class="food-reaction" :class="food.reaction">
+                {{ food.reaction }}
+              </div>
+              <div class="food-dates">
+                <div class="first-tried">First: {{ formatDate(food.first_tried_date) }}</div>
+                <div v-if="food.last_tried_date !== food.first_tried_date" class="last-tried">
+                  Last: {{ formatDate(food.last_tried_date) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <!-- History Timeline Section -->
       <div class="history-timeline-section">
         <div class="section-header" @click="isTimelineCollapsed = !isTimelineCollapsed">
@@ -935,6 +991,8 @@ function getDayBreakdown(day: any) {
           </ul>
         </div>
       </div>
+
+     
     </div>
     <div v-else class="loading-state">
       <p>Loading baby's history...</p>
@@ -1862,5 +1920,120 @@ function getDayBreakdown(day: any) {
     opacity: 1;
     max-height: 1000px;
   }
+}
+
+/* Solid Foods Section Styles */
+.solid-foods-section {
+  margin-bottom: 2rem;
+}
+
+.solid-foods-content {
+  animation: slideDown 0.3s ease-out;
+}
+
+.solid-foods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.solid-food-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.solid-food-card:hover {
+  background: var(--color-surface-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.solid-food-card.has-reaction {
+  border-left: 4px solid var(--color-feeding-solid);
+}
+
+.food-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.food-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--color-text-primary);
+  margin: 0;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.food-count {
+  background: var(--color-feeding-solid);
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+}
+
+.food-category {
+  font-size: 0.875rem;
+  color: var(--color-text-accent);
+  margin-bottom: 0.5rem;
+  text-transform: capitalize;
+}
+
+.food-reaction {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: inline-block;
+}
+
+.food-reaction.liked {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.food-reaction.disliked {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.food-reaction.neutral {
+  background: var(--color-surface-active);
+  color: var(--color-text-quaternary);
+}
+
+.food-reaction.allergic_reaction {
+  background: var(--color-error-bg);
+  color: var(--color-error-dark);
+  font-weight: 700;
+}
+
+.food-dates {
+  font-size: 0.8rem;
+  color: var(--color-text-accent);
+  line-height: 1.4;
+}
+
+.first-tried,
+.last-tried {
+  margin-bottom: 0.125rem;
+}
+
+.last-tried {
+  opacity: 0.8;
 }
 </style>

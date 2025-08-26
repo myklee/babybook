@@ -7,6 +7,12 @@ import ResponsiveModal from './ResponsiveModal.vue'
 import { categoryNames, searchSuggestedFoods } from "../lib/suggestedFoods"
 import type { SuggestedFood, FoodCategory } from "../lib/suggestedFoods"
 
+// Extended interface for previously tried foods
+interface PreviouslyTriedFood extends SuggestedFood {
+  isPreviouslyTried?: boolean
+  tryCount?: number
+}
+
 interface Props {
   babyId: string
   babyName: string
@@ -47,12 +53,32 @@ const filteredSuggestions = ref<Record<FoodCategory, SuggestedFood[]>>({
   indian: [],
   korean: []
 })
+const previouslyTriedFoods = ref<PreviouslyTriedFood[]>([])
+
+// Get previously tried foods for this baby
+const allPreviouslyTriedFoods = computed((): PreviouslyTriedFood[] => {
+  const triedFoods = store.getBabySolidFoods(props.babyId)
+  return triedFoods.map(food => ({
+    name: food.food_name,
+    category: food.food_category as FoodCategory,
+    commonAge: 'Previously tried',
+    isPreviouslyTried: true,
+    tryCount: food.times_tried
+  }))
+})
 
 // Computed properties
 const visibleCategories = computed(() => {
-  return Object.keys(filteredSuggestions.value).filter(
+  const categories = Object.keys(filteredSuggestions.value).filter(
     (category) => filteredSuggestions.value[category as FoodCategory].length > 0
   ) as FoodCategory[]
+  
+  // Add 'previously_tried' category if there are previously tried foods
+  if (previouslyTriedFoods.value.length > 0) {
+    return ['previously_tried' as FoodCategory, ...categories]
+  }
+  
+  return categories
 })
 
 const canSave = computed(() => {
@@ -98,14 +124,33 @@ onUnmounted(() => {
 
 // Functions
 function filterSuggestions() {
-  if (!searchQuery.value || searchQuery.value.length < 2) {
+  if (!searchQuery.value || searchQuery.value.length < 1) {
     showSuggestions.value = false
+    previouslyTriedFoods.value = []
     return
   }
 
-  const results = searchSuggestedFoods(searchQuery.value)
+  const query = searchQuery.value.toLowerCase().trim()
 
-  // Group results by category
+  // Filter previously tried foods (case-insensitive)
+  const triedMatches = allPreviouslyTriedFoods.value.filter(food =>
+    food.name.toLowerCase().includes(query)
+  )
+  previouslyTriedFoods.value = triedMatches
+
+  // Filter suggested foods (only if query is 2+ characters for performance)
+  let suggestedResults: SuggestedFood[] = []
+  if (query.length >= 2) {
+    suggestedResults = searchSuggestedFoods(searchQuery.value)
+    
+    // Remove suggested foods that are already in previously tried foods to avoid duplicates
+    const triedFoodNames = new Set(allPreviouslyTriedFoods.value.map(f => f.name.toLowerCase()))
+    suggestedResults = suggestedResults.filter(food => 
+      !triedFoodNames.has(food.name.toLowerCase())
+    )
+  }
+
+  // Group suggested results by category
   const grouped: Record<FoodCategory, SuggestedFood[]> = {
     western_traditional: [],
     chinese: [],
@@ -114,12 +159,12 @@ function filterSuggestions() {
     korean: []
   }
 
-  results.forEach((food) => {
+  suggestedResults.forEach((food) => {
     grouped[food.category].push(food)
   })
 
   filteredSuggestions.value = grouped
-  showSuggestions.value = results.length > 0
+  showSuggestions.value = triedMatches.length > 0 || suggestedResults.length > 0
 }
 
 function selectFood(food: SuggestedFood) {
@@ -127,6 +172,12 @@ function selectFood(food: SuggestedFood) {
   searchQuery.value = food.name
   customFoodName.value = ''
   showSuggestions.value = false
+  
+  // If it's a previously tried food, we might want to pre-fill some data
+  if ((food as any).isPreviouslyTried) {
+    // Could pre-fill reaction or notes based on previous entries if desired
+    console.log(`Selected previously tried food: ${food.name} (tried ${(food as any).tryCount} times)`)
+  }
 }
 
 function clearSelection() {
@@ -134,6 +185,38 @@ function clearSelection() {
   searchQuery.value = ''
   customFoodName.value = ''
   showSuggestions.value = false
+  previouslyTriedFoods.value = []
+}
+
+function showAllPreviouslyTried() {
+  // Show all previously tried foods when input is focused (even if empty)
+  if (allPreviouslyTriedFoods.value.length > 0) {
+    previouslyTriedFoods.value = allPreviouslyTriedFoods.value
+    showSuggestions.value = true
+  }
+  // Also run normal filtering if there's a query
+  if (searchQuery.value) {
+    filterSuggestions()
+  }
+}
+
+let hideTimeout: ReturnType<typeof setTimeout> | null = null
+
+function hideSuggestionsDelayed() {
+  // Delay hiding to allow clicking on suggestions
+  hideTimeout = setTimeout(() => {
+    showSuggestions.value = false
+    previouslyTriedFoods.value = []
+  }, 150)
+}
+
+// Clear timeout when selecting a food
+function selectFoodAndClearTimeout(food: SuggestedFood | PreviouslyTriedFood) {
+  if (hideTimeout) {
+    clearTimeout(hideTimeout)
+    hideTimeout = null
+  }
+  selectFood(food)
 }
 
 function hasFoodBeenTried(foodName: string): boolean {
@@ -201,18 +284,41 @@ async function handleSave() {
             placeholder="Search foods or enter custom food name..."
             class="search-input"
             @input="filterSuggestions"
-            @focus="filterSuggestions"
+            @focus="showAllPreviouslyTried"
+            @blur="hideSuggestionsDelayed"
           />
           
           <!-- Food Suggestions -->
-          <div v-if="showSuggestions && visibleCategories.length > 0" class="suggestions-container">
+          <div v-if="showSuggestions && (previouslyTriedFoods.length > 0 || visibleCategories.length > 0)" class="suggestions-container">
             <div class="suggestions-header">
-              <span>Suggested foods:</span>
+              <span>{{ previouslyTriedFoods.length > 0 ? 'Previously tried & suggested foods:' : 'Suggested foods:' }}</span>
               <button type="button" @click="showSuggestions = false" class="close-suggestions">×</button>
             </div>
             
+            <!-- Previously Tried Foods Section -->
+            <div v-if="previouslyTriedFoods.length > 0" class="suggestion-category previously-tried">
+              <h4>🍽️ Previously Tried</h4>
+              <div class="suggestions-grid">
+                <div
+                  v-for="food in previouslyTriedFoods"
+                  :key="food.name"
+                  @mousedown="selectFoodAndClearTimeout(food)"
+                  class="suggestion-item previously-tried-item"
+                >
+                  <div class="food-name">{{ food.name }}</div>
+                  <div class="food-meta">
+                    <span class="food-age">{{ food.commonAge }}</span>
+                    <span class="try-count">
+                      ({{ (food as any).tryCount }}x)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Suggested Foods Sections -->
             <div
-              v-for="category in visibleCategories"
+              v-for="category in visibleCategories.filter(c => c !== 'previously_tried')"
               :key="category"
               class="suggestion-category"
             >
@@ -221,7 +327,7 @@ async function handleSave() {
                 <div
                   v-for="food in filteredSuggestions[category]"
                   :key="food.name"
-                  @click="selectFood(food)"
+                  @mousedown="selectFoodAndClearTimeout(food)"
                   class="suggestion-item"
                   :class="{ 'already-tried': hasFoodBeenTried(food.name) }"
                 >
@@ -413,6 +519,37 @@ async function handleSave() {
 .suggestion-item.already-tried {
   background: rgba(0, 123, 255, 0.1);
   border-color: rgba(0, 123, 255, 0.3);
+}
+
+.suggestion-category.previously-tried {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.suggestion-category.previously-tried h4 {
+  color: #4caf50;
+  font-size: 0.875rem;
+}
+
+.previously-tried-item {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.previously-tried-item:hover {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.2);
+  transform: translateY(-1px);
+}
+
+.previously-tried-item .food-name {
+  color: #4caf50;
+}
+
+.previously-tried-item .try-count {
+  color: #4caf50;
+  font-weight: 600;
 }
 
 .food-name {

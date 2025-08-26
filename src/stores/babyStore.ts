@@ -2252,12 +2252,67 @@ export const useBabyStore = defineStore("baby", () => {
         }
       });
 
+      // Check if include_solids_in_schedule setting changed
+      const oldSettings = babySettings.value.find((s) => s.baby_id === babyId);
+      const solidSettingChanged = updates.include_solids_in_schedule !== undefined && 
+                                  oldSettings && 
+                                  oldSettings.include_solids_in_schedule !== updates.include_solids_in_schedule;
+
       // Update local state
       const index = babySettings.value.findIndex((s) => s.baby_id === babyId);
       if (index !== -1) {
         babySettings.value[index] = result;
       } else {
         babySettings.value.push(result);
+      }
+
+      // Handle solid foods feeding records when setting changes
+      if (solidSettingChanged) {
+        try {
+          if (result.include_solids_in_schedule) {
+            // Setting enabled: create feeding records for existing solid foods
+            console.log(`Solid foods inclusion enabled for baby ${babyId}, creating feeding records for existing solid foods`);
+            const babySolidFoods = solidFoods.value.filter(sf => sf.baby_id === babyId);
+            
+            for (const solidFood of babySolidFoods) {
+              const feedingData = {
+                baby_id: babyId,
+                timestamp: solidFood.last_tried_date,
+                amount: null,
+                type: "solid" as const,
+                notes: solidFood.notes,
+                user_id: currentUser.value!.id,
+                start_time: null,
+                end_time: null,
+              };
+
+              const { data: feedingRecord, error: feedingError } = await supabase
+                .from("feedings")
+                .insert(feedingData)
+                .select()
+                .single();
+
+              if (!feedingError && feedingRecord) {
+                feedings.value.unshift(feedingRecord);
+              }
+            }
+          } else {
+            // Setting disabled: remove solid food feeding records
+            console.log(`Solid foods inclusion disabled for baby ${babyId}, removing solid food feeding records`);
+            const solidFeedingsToRemove = feedings.value.filter(f => f.baby_id === babyId && f.type === 'solid');
+            
+            for (const feeding of solidFeedingsToRemove) {
+              await supabase.from("feedings").delete().eq("id", feeding.id);
+              const feedingIndex = feedings.value.findIndex(f => f.id === feeding.id);
+              if (feedingIndex !== -1) {
+                feedings.value.splice(feedingIndex, 1);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error updating solid food feeding records:", error);
+          // Don't throw here - the settings were still updated successfully
+        }
       }
 
       // Show success notification
@@ -2489,7 +2544,38 @@ export const useBabyStore = defineStore("baby", () => {
         // Check if solid foods affect the schedule for this baby
         const affectsSchedule = doesFeedingAffectSchedule(babyId, "solid");
         if (affectsSchedule) {
-          console.log(`Solid food affects schedule for baby ${babyId}, schedule calculations will be updated`);
+          console.log(`Solid food affects schedule for baby ${babyId}, creating feeding record for schedule tracking`);
+          
+          // Create a feeding record for schedule tracking
+          try {
+            const feedingData = {
+              baby_id: babyId,
+              timestamp: updatedFood.last_tried_date,
+              amount: null, // Solid foods don't have amounts in ml
+              type: "solid" as const,
+              notes: notes || null,
+              user_id: currentUser.value!.id,
+              start_time: null,
+              end_time: null,
+            };
+
+            const { data: feedingRecord, error: feedingError } = await supabase
+              .from("feedings")
+              .insert(feedingData)
+              .select()
+              .single();
+
+            if (feedingError) {
+              console.error("Error creating feeding record for solid food:", feedingError);
+              // Don't throw here - the solid food was still updated successfully
+            } else {
+              feedings.value.unshift(feedingRecord);
+              console.log("Created feeding record for solid food to track in schedule");
+            }
+          } catch (feedingRecordError) {
+            console.error("Error creating feeding record for solid food:", feedingRecordError);
+            // Don't throw here - the solid food was still updated successfully
+          }
         } else {
           console.log(`Solid food does not affect schedule for baby ${babyId} (setting disabled), schedule remains unchanged`);
         }
@@ -2526,9 +2612,38 @@ export const useBabyStore = defineStore("baby", () => {
       // Check if solid foods affect the schedule for this baby
       const affectsSchedule = doesFeedingAffectSchedule(babyId, "solid");
       if (affectsSchedule) {
-        console.log(`Solid food affects schedule for baby ${babyId}, schedule calculations will be updated`);
-        // Note: Schedule calculations are automatically updated when getNextFeedingTime() is called
-        // However, solid foods are tracked separately and don't create feeding records
+        console.log(`Solid food affects schedule for baby ${babyId}, creating feeding record for schedule tracking`);
+        
+        // Create a feeding record for schedule tracking
+        try {
+          const feedingData = {
+            baby_id: babyId,
+            timestamp: data.last_tried_date,
+            amount: null, // Solid foods don't have amounts in ml
+            type: "solid" as const,
+            notes: notes || null,
+            user_id: currentUser.value!.id,
+            start_time: null,
+            end_time: null,
+          };
+
+          const { data: feedingRecord, error: feedingError } = await supabase
+            .from("feedings")
+            .insert(feedingData)
+            .select()
+            .single();
+
+          if (feedingError) {
+            console.error("Error creating feeding record for solid food:", feedingError);
+            // Don't throw here - the solid food was still created successfully
+          } else {
+            feedings.value.unshift(feedingRecord);
+            console.log("Created feeding record for solid food to track in schedule");
+          }
+        } catch (feedingRecordError) {
+          console.error("Error creating feeding record for solid food:", feedingRecordError);
+          // Don't throw here - the solid food was still created successfully
+        }
       } else {
         console.log(`Solid food does not affect schedule for baby ${babyId} (setting disabled), schedule remains unchanged`);
       }

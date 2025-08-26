@@ -263,27 +263,21 @@ async function addBaby() {
   }
 }
 
-// Get last feeding time for a specific baby (including solid foods)
+// Get last feeding time for a specific baby (respects schedule configuration)
 function getLastFeedingTime(babyId: string) {
   try {
-    const feedings = store.getBabyFeedings(babyId)
-    const solidFoods = store.getBabySolidFoods(babyId)
+    // Get schedule-relevant feedings which respects the solid foods inclusion setting
+    const scheduleRelevantFeedings = store.getScheduleRelevantFeedingsForBaby(babyId)
     
-    // Combine feedings and solid foods with their timestamps
-    const allFeedingEvents = [
-      ...feedings.map(f => ({ ...f, event_time: f.timestamp, event_type: 'feeding' })),
-      ...solidFoods.map(sf => ({ ...sf, event_time: sf.last_tried_date, event_type: 'solid', type: 'solid' }))
-    ]
-    
-    if (allFeedingEvents.length === 0) return null
+    if (scheduleRelevantFeedings.length === 0) return null
 
     // Sort by most recent
-    allFeedingEvents.sort((a, b) => new Date(b.event_time).getTime() - new Date(a.event_time).getTime())
+    scheduleRelevantFeedings.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     
-    const lastEvent = allFeedingEvents[0]
-    const lastEventTime = new Date(lastEvent.event_time)
+    const lastFeeding = scheduleRelevantFeedings[0]
+    const lastFeedingTime = new Date(lastFeeding.timestamp)
     const now = new Date()
-    const diffMs = now.getTime() - lastEventTime.getTime()
+    const diffMs = now.getTime() - lastFeedingTime.getTime()
 
     const hours = Math.floor(diffMs / (1000 * 60 * 60))
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
@@ -297,7 +291,7 @@ function getLastFeedingTime(babyId: string) {
 
     return {
       time: timeString,
-      type: lastEvent.type
+      type: lastFeeding.type
     }
   } catch (error) {
     console.error('Error getting last feeding time:', error)
