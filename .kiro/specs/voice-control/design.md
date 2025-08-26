@@ -1,121 +1,90 @@
-# Voice Control - Design Document
+# Simple Voice Control - Design Document
 
 ## Overview
 
-This feature adds voice control capabilities to the baby tracking app using the Web Speech API. Parents can use simple voice commands to record activities hands-free, with visual feedback and error handling.
+Minimal voice control for logging basic baby activities using Web Speech API. Focus on three core actions: feeding, diaper, and sleep tracking with one-tap activation for near hands-free operation.
 
 ## Architecture
 
-### Browser API Integration
+### Technology Stack
 
-**Web Speech API:**
+- **Web Speech API** for voice recognition
+- **One-tap activation** with 10-second listening window
+- **Auto-timeout** to preserve battery
+- **Local processing** only (no cloud services)
+- **Web-compatible** approach (no always-listening due to browser limitations)
 
-- Use `SpeechRecognition` for voice input
-- Implement continuous listening mode
-- Handle browser compatibility (Chrome, Safari, Firefox)
-- Graceful fallback when not supported
+### Voice Commands
 
-### Voice Command Processing
-
-**Command Parser:**
-
-- Pattern matching for common phrases
-- Extract amounts, types, and food names from speech
-- Support natural language variations
-- Case-insensitive command recognition
+- "Log feeding" → Record feeding event
+- "Log diaper" → Record diaper change
+- "Start sleep" → Begin sleep timer
+- "End sleep" → Stop sleep timer
 
 ## Components and Interfaces
 
 ### New Components
 
-**VoiceControlButton.vue:**
+**VoiceButton.vue:**
 
-- Floating action button with microphone icon
-- Visual states: idle, listening, processing, error
-- Pulse animation when listening
-- Accessibility support for screen readers
+- Large, accessible microphone button
+- One-tap to start 10-second listening window
+- Pulsing animation when listening for commands
+- Simple success/error states
 
-**VoiceCommandProcessor.ts:**
+**useVoiceControl.ts (Composable):**
 
-- Parse voice input into actionable commands
-- Map commands to app functions
-- Handle command parameters (amounts, types)
-- Provide command suggestions and help
+- Web Speech API integration
+- Command parsing (4 simple commands)
+- 10-second listening window with auto-timeout
+- Integration with baby store actions
 
-### Modified Components
+### Integration Points
 
 **HomePage.vue:**
 
-- Add voice control button to main interface
-- Integrate voice commands with existing action buttons
-- Show voice feedback messages
+- Add large voice button component
+- Show listening status and confirmation messages
 
-**Modal Components:**
+**BabyStore.ts:**
 
-- Auto-populate fields based on voice input
-- Support voice-triggered modal opening
-- Voice confirmation for saving actions
+- Use existing methods (addFeeding, addDiaper, etc.)
+- No new voice-specific methods needed
 
-## Data Models
+## User Interface
 
-### Voice Command Interface
+### Voice Button
 
-```typescript
-interface VoiceCommand {
-  action: "feeding" | "diaper" | "sleep" | "solid" | "cancel";
-  type?: "breast" | "formula" | "pee" | "poop" | "nursing";
-  amount?: number;
-  foodName?: string;
-  confidence: number;
-}
+- **Location:** Prominent position on home page
+- **Interaction:** Single tap starts 10-second listening
+- **States:** Idle (gray), Listening (blue pulse with countdown), Success (green), Error (red)
+- **Size:** Large touch target for easy access
+
+### Feedback
+
+- **Visual:** Button color changes + brief text message
+- **No audio feedback** (keep it simple)
+
+## Command Processing
+
+### Simple Command Processing
+
+```javascript
+const commands = {
+  "log feeding": () => store.addFeeding(babyId),
+  "log diaper": () => store.addDiaper(babyId),
+  "start sleep": () => store.startSleep(babyId),
+  "end sleep": () => store.endSleep(babyId),
+};
+
+// Single-stage processing:
+// 1. Tap button to start listening
+// 2. Say command within 10 seconds
+// 3. Auto-stop after timeout or successful command
 ```
 
-### Voice State Management
+### Error Handling
 
-```typescript
-interface VoiceState {
-  isListening: boolean;
-  isProcessing: boolean;
-  lastCommand?: string;
-  error?: string;
-  isSupported: boolean;
-}
-```
-
-## Error Handling
-
-### Browser Compatibility
-
-- Check for Web Speech API support
-- Show helpful message if not supported
-- Graceful degradation to touch-only interface
-
-### Voice Recognition Errors
-
-- Handle network connectivity issues
-- Manage microphone permission requests
-- Provide clear error messages for failed recognition
-- Offer alternative input methods
-
-## Testing Strategy
-
-### Unit Tests
-
-- Test command parsing logic
-- Test voice state management
-- Test browser API integration
-- Mock speech recognition for testing
-
-### Integration Tests
-
-- Test voice commands trigger correct actions
-- Test modal auto-population
-- Test error handling flows
-- Test accessibility features
-
-### User Acceptance Tests
-
-- Parent can record feeding with voice
-- Voice commands work in noisy environments
-- Visual feedback is clear and helpful
-- Commands work with natural speech patterns
+- **Unrecognized command:** Show "Try again" message
+- **No microphone:** Hide voice button
+- **Browser unsupported:** Hide voice button
