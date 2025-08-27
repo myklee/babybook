@@ -33,16 +33,16 @@ const measureThemeChange = (callback: () => void) => {
 }
 
 // Reactive theme state
-const currentTheme = ref<Theme>('auto')
+const currentTheme = ref<Theme>('dark')
 
-// Get theme from localStorage or default to 'auto'
+// Get theme from localStorage or default to 'dark'
 const getStoredTheme = (): Theme => {
-  if (typeof window === 'undefined') return 'auto'
+  if (typeof window === 'undefined') return 'dark'
   
   const stored = localStorage.getItem('theme') as Theme
   return stored && ['light', 'dark', 'high-contrast', 'auto'].includes(stored) 
     ? stored 
-    : 'auto'
+    : 'dark'
 }
 
 // Apply theme to document with performance optimizations
