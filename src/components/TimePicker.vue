@@ -51,7 +51,6 @@
     <div v-if="showValidation && validationMessage" class="validation-error">
         {{ validationMessage }}
     </div>
-    </div>
 </template>
 
 <script setup lang="ts">
