@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimePicker UX Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+        }
+        .test-title {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .test-description {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+        .current-value {
+            color: white;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>TimePicker UX Improvements Test</h1>
+        
+        <div class="test-section">
+            <div class="test-title">Test 1: Clear and Re-enter Values</div>
+            <div class="test-description">
+                Try clearing the hour or minute fields completely and entering new values. 
+                Validation should only show after you blur (click away) from the field.
+            </div>
+            <div id="app1"></div>
+            <div class="current-value" id="value1">Current value: Loading...</div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">Test 2: Validation Behavior</div>
+            <div class="test-description">
+                Enter invalid values (like 25 for hour or 70 for minutes) and see validation 
+                errors appear only after losing focus.
+            </div>
+            <div id="app2"></div>
+            <div class="current-value" id="value2">Current value: Loading...</div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">Test 3: Focus and Selection</div>
+            <div class="test-description">
+                Click on any input field - the entire value should be selected for easy replacement.
+            </div>
+            <div id="app3"></div>
+            <div class="current-value" id="value3">Current value: Loading...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createApp, ref } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+        
+        // Mock TimePicker component for testing
+        const TimePicker = {
+            props: {
+                modelValue: {
+                    type: Object,
+                    required: true
+                }
+            },
+            emits: ['update:modelValue'],
+            setup(props, { emit }) {
+                const showValidation = ref(false);
+                const hourTouched = ref(false);
+                const minuteTouched = ref(false);
+
+                const displayHour = computed(() => {
+                    if (!props.modelValue.hour || props.modelValue.hour === '') return '';
+                    let h = Number(props.modelValue.hour);
+                    if (isNaN(h)) return '';
+                    if (h === 0) return "12";
+                    if (h > 12) return String(h - 12);
+                    return String(h);
+                });
+
+                const displayMinute = computed(() => {
+                    if (!props.modelValue.minute || props.modelValue.minute === '') return '';
+                    return props.modelValue.minute;
+                });
+
+                const isValidHour = computed(() => {
+                    if (!props.modelValue.hour || props.modelValue.hour === '') return false;
+                    const h = Number(props.modelValue.hour);
+                    return !isNaN(h) && h >= 0 && h <= 23;
+                });
+
+                const isValidMinute = computed(() => {
+                    if (!props.modelValue.minute || props.modelValue.minute === '') return false;
+                    const m = Number(props.modelValue.minute);
+                    return !isNaN(m) && m >= 0 && m <= 59;
+                });
+
+                const validationMessage = computed(() => {
+                    if (!showValidation.value) return '';
+                    const errors = [];
+                    if (hourTouched.value && !isValidHour.value) {
+                        errors.push('Hour must be between 1-12');
+                    }
+                    if (minuteTouched.value && !isValidMinute.value) {
+                        errors.push('Minutes must be between 0-59');
+                    }
+                    return errors.join(', ');
+                });
+
+                return {
+                    showValidation,
+                    hourTouched,
+                    minuteTouched,
+                    displayHour,
+                    displayMinute,
+                    isValidHour,
+                    isValidMinute,
+                    validationMessage
+                }
+            },
+            template: `
+                <div class="time-picker">
+                    <div class="time-inputs-container">
+                        <input
+                            type="text"
+                            :value="displayHour"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            class="time-input"
+                            :class="{ 'has-error': showValidation && !isValidHour }"
+                            placeholder="HH"
+                            @input="onHourInput"
+                            @blur="onHourBlur"
+                            @focus="onHourFocus"
+                            @click="onHourFocus"
+                        />
+                        <span class="time-separator">:</span>
+                        <input
+                            type="text"
+                            :value="displayMinute"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            class="time-input"
+                            :class="{ 'has-error': showValidation && !isValidMinute }"
+                            placeholder="MM"
+                            @input="onMinuteInput"
+                            @blur="onMinuteBlur"
+                            @focus="onMinuteFocus"
+                            @click="onMinuteFocus"
+                        />
+                    </div>
+                    <div class="ampm-group">
+                        <button
+                            type="button"
+                            :class="{ active: modelValue.ampm === 'AM' }"
+                            @click="setAMPM('AM')"
+                        >
+                            AM
+                        </button>
+                        <button
+                            type="button"
+                            :class="{ active: modelValue.ampm === 'PM' }"
+                            @click="setAMPM('PM')"
+                        >
+                            PM
+                        </button>
+                    </div>
+                    <div v-if="showValidation && validationMessage" class="validation-error">
+                        {{ validationMessage }}
+                    </div>
+                </div>
+            `,
+            methods: {
+                onHourInput(e) {
+                    const input = e.target;
+                    const value = input.value;
+                    
+                    if (value === '') {
+                        this.$emit("update:modelValue", {
+                            hour: '',
+                            minute: this.modelValue.minute,
+                            ampm: this.modelValue.ampm,
+                        });
+                        return;
+                    }
+                    
+                    const numericValue = value.replace(/[^0-9]/g, '');
+                    if (numericValue !== value) {
+                        input.value = numericValue;
+                    }
+                    
+                    const h = Number(numericValue);
+                    if (!isNaN(h) && h >= 1 && h <= 12) {
+                        const ampm = this.modelValue.ampm || "AM";
+                        const hour24 = ampm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
+                        this.$emit("update:modelValue", {
+                            hour: String(hour24),
+                            minute: this.modelValue.minute,
+                            ampm,
+                        });
+                    } else {
+                        this.$emit("update:modelValue", {
+                            hour: numericValue,
+                            minute: this.modelValue.minute,
+                            ampm: this.modelValue.ampm,
+                        });
+                    }
+                },
+                onMinuteInput(e) {
+                    const input = e.target;
+                    const value = input.value;
+                    
+                    if (value === '') {
+                        this.$emit("update:modelValue", {
+                            hour: this.modelValue.hour,
+                            minute: '',
+                            ampm: this.modelValue.ampm,
+                        });
+                        return;
+                    }
+                    
+                    const numericValue = value.replace(/[^0-9]/g, '');
+                    if (numericValue !== value) {
+                        input.value = numericValue;
+                    }
+                    
+                    const limitedValue = numericValue.slice(0, 2);
+                    this.$emit("update:modelValue", {
+                        hour: this.modelValue.hour,
+                        minute: limitedValue,
+                        ampm: this.modelValue.ampm,
+                    });
+                },
+                onHourFocus(e) {
+                    const input = e.target;
+                    setTimeout(() => input.select(), 0);
+                },
+                onMinuteFocus(e) {
+                    const input = e.target;
+                    setTimeout(() => input.select(), 0);
+                },
+                onHourBlur() {
+                    this.hourTouched = true;
+                    this.showValidation = true;
+                },
+                onMinuteBlur() {
+                    this.minuteTouched = true;
+                    this.showValidation = true;
+                },
+                setAMPM(ampm) {
+                    let h = Number(this.modelValue.hour);
+                    if (isNaN(h) || this.modelValue.hour === '') {
+                        this.$emit("update:modelValue", {
+                            hour: this.modelValue.hour,
+                            minute: this.modelValue.minute,
+                            ampm,
+                        });
+                        return;
+                    }
+                    
+                    if (ampm === "AM" && h >= 12) h = h - 12;
+                    if (ampm === "PM" && h < 12) h = h + 12;
+                    
+                    this.$emit("update:modelValue", {
+                        hour: String(h),
+                        minute: this.modelValue.minute,
+                        ampm,
+                    });
+                }
+            }
+        }
+
+        // Test apps
+        createApp({
+            components: { TimePicker },
+            setup() {
+                const time1 = ref({ hour: '9', minute: '30', ampm: 'AM' });
+                const time2 = ref({ hour: '', minute: '', ampm: 'AM' });
+                const time3 = ref({ hour: '14', minute: '45', ampm: 'PM' });
+                
+                return { time1, time2, time3 }
+            },
+            template: '<TimePicker v-model="time1" />',
+            watch: {
+                time1: {
+                    handler(newVal) {
+                        document.getElementById('value1').textContent = 
+                            `Current value: ${JSON.stringify(newVal)}`;
+                    },
+                    immediate: true,
+                    deep: true
+                }
+            }
+        }).mount('#app1');
+
+        createApp({
+            components: { TimePicker },
+            setup() {
+                const time = ref({ hour: '', minute: '', ampm: 'AM' });
+                return { time }
+            },
+            template: '<TimePicker v-model="time" />',
+            watch: {
+                time: {
+                    handler(newVal) {
+                        document.getElementById('value2').textContent = 
+                            `Current value: ${JSON.stringify(newVal)}`;
+                    },
+                    immediate: true,
+                    deep: true
+                }
+            }
+        }).mount('#app2');
+
+        createApp({
+            components: { TimePicker },
+            setup() {
+                const time = ref({ hour: '14', minute: '45', ampm: 'PM' });
+                return { time }
+            },
+            template: '<TimePicker v-model="time" />',
+            watch: {
+                time: {
+                    handler(newVal) {
+                        document.getElementById('value3').textContent = 
+                            `Current value: ${JSON.stringify(newVal)}`;
+                    },
+                    immediate: true,
+                    deep: true
+                }
+            }
+        }).mount('#app3');
+    </script>
+
+    <style>
+        .time-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .time-inputs-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .time-input {
+            width: 4rem;
+            height: 4rem;
+            text-align: center;
+            font-size: 2rem !important;
+            padding: 0.25em 0.5em;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.05);
+            color: white;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .time-input:focus {
+            outline: none;
+            border-color: #9c27b0;
+            background-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+        }
+
+        .time-input.has-error {
+            border-color: #f44336;
+            background-color: rgba(244, 67, 54, 0.1);
+        }
+
+        .time-input.has-error:focus {
+            border-color: #f44336;
+            box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.2);
+        }
+
+        .time-separator {
+            font-size: 2rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .ampm-group {
+            display: flex;
+            gap: 0.25rem;
+            margin-left: 0.5rem;
+        }
+
+        .ampm-group button {
+            background: rgba(255, 255, 255, 0.05);
+            color: #b39ddb;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 0.5em 0.75em;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .ampm-group button:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .ampm-group button.active {
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+            color: #fff;
+            font-weight: bold;
+            border-color: #9c27b0;
+            box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+        }
+
+        .validation-error {
+            font-size: 0.875rem;
+            color: #f44336;
+            margin-top: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background-color: rgba(244, 67, 54, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid #f44336;
+        }
+    </style>
+</body>
+</html>
