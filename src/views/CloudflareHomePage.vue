@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useCloudflareStore } from '../stores/cloudflareStore'
-import { format } from 'date-fns'
 import CloudflareFeedingModal from '../components/CloudflareFeedingModal.vue'
-import DiaperModal from '../components/DiaperModal.vue'
-import SolidFoodModal from '../components/SolidFoodModal.vue'
+// Note: Using simple modals for Cloudflare version to avoid Supabase dependencies
+// import DiaperModal from '../components/DiaperModal.vue'
+// import SolidFoodModal from '../components/SolidFoodModal.vue'
 import IconButton from '../components/IconButton.vue'
 import SleepingAnimation from '../components/SleepingAnimation.vue'
 import breastIcon from '../assets/icons/lucide-lab_bottle-baby.svg'
@@ -13,7 +13,7 @@ import spoonIcon from '../assets/icons/spoon.svg'
 import historyIcon from '../assets/icons/history.svg'
 import addBabyIcon from '../assets/icons/add-baby.svg'
 import userRoundIcon from '../assets/icons/circle-user-round.svg'
-import settingsIcon from '../assets/icons/settings-2.svg'
+
 
 const store = useCloudflareStore()
 
@@ -29,14 +29,18 @@ const diaperType = ref<'wet' | 'dirty' | 'both'>('wet')
 
 // Forms
 const babyForm = ref({ name: '', birthdate: '' })
+const diaperForm = ref({
+  type: 'wet' as 'wet' | 'dirty' | 'both',
+  timestamp: new Date().toISOString().slice(0, 16)
+})
+const solidFoodForm = ref({
+  food: '',
+  timestamp: new Date().toISOString().slice(0, 16)
+})
 const feedingForm = ref({ 
   type: 'breast' as 'breast' | 'formula' | 'solid', 
   amount: null as number | null, 
   timestamp: new Date().toISOString().slice(0, 16) 
-})
-const diaperForm = ref({
-  type: 'wet' as 'wet' | 'dirty' | 'both',
-  timestamp: new Date().toISOString().slice(0, 16)
 })
 const sleepForm = ref({
   start_time: new Date().toISOString().slice(0, 16),
@@ -140,6 +144,26 @@ async function handleAddDiaperChange() {
   }
 }
 
+async function handleAddSolidFood() {
+  if (!selectedBaby.value) return
+  
+  try {
+    await store.addFeeding({
+      baby_id: selectedBaby.value.id,
+      type: 'solid',
+      amount: undefined,
+      timestamp: solidFoodForm.value.timestamp
+    })
+    showSolidFoodModal.value = false
+    solidFoodForm.value = {
+      food: '',
+      timestamp: new Date().toISOString().slice(0, 16)
+    }
+  } catch (error) {
+    console.error('Failed to add solid food:', error)
+  }
+}
+
 async function handleAddSleepSession() {
   if (!selectedBaby.value) return
   
@@ -160,28 +184,6 @@ async function handleAddSleepSession() {
 }
 
 // Utility functions
-function getAgeString(birthdate: string) {
-  const birth = new Date(birthdate)
-  const now = new Date()
-  const diffTime = Math.abs(now.getTime() - birth.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  
-  if (diffDays < 30) {
-    return `${diffDays} days old`
-  } else if (diffDays < 365) {
-    const months = Math.floor(diffDays / 30)
-    return `${months} month${months > 1 ? 's' : ''} old`
-  } else {
-    const years = Math.floor(diffDays / 365)
-    const remainingMonths = Math.floor((diffDays % 365) / 30)
-    return `${years} year${years > 1 ? 's' : ''} ${remainingMonths} month${remainingMonths > 1 ? 's' : ''} old`
-  }
-}
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString()
-}
-
 function formatTime(dateString: string) {
   return new Date(dateString).toLocaleString()
 }
@@ -357,11 +359,72 @@ function getFeedingIcon(type: string | undefined) {
       @saved="handleFeedingSaved"
     />
 
-    <DiaperModal v-if="showDiaperModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
-      :diaperType="diaperType" @close="showDiaperModal = false" />
+    <!-- Simple Diaper Modal for Cloudflare version -->
+    <div v-if="showDiaperModal" class="modal-overlay" @click="showDiaperModal = false">
+      <div class="modal" @click.stop>
+        <h2>Add Diaper Change</h2>
+        <form @submit.prevent="handleAddDiaperChange" class="modal-form">
+          <div class="form-group">
+            <label>Type</label>
+            <select v-model="diaperForm.type">
+              <option value="wet">Wet</option>
+              <option value="dirty">Dirty</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Time</label>
+            <input
+              v-model="diaperForm.timestamp"
+              type="datetime-local"
+              required
+            />
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="showDiaperModal = false" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Add Diaper Change
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
-    <SolidFoodModal v-if="showSolidFoodModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
-      @close="showSolidFoodModal = false" @saved="showSolidFoodModal = false" />
+    <!-- Simple Solid Food Modal for Cloudflare version -->
+    <div v-if="showSolidFoodModal" class="modal-overlay" @click="showSolidFoodModal = false">
+      <div class="modal" @click.stop>
+        <h2>Add Solid Food</h2>
+        <form @submit.prevent="handleAddSolidFood" class="modal-form">
+          <div class="form-group">
+            <label>Food</label>
+            <input
+              v-model="solidFoodForm.food"
+              type="text"
+              required
+              placeholder="What did they eat?"
+            />
+          </div>
+          <div class="form-group">
+            <label>Time</label>
+            <input
+              v-model="solidFoodForm.timestamp"
+              type="datetime-local"
+              required
+            />
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="showSolidFoodModal = false" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Add Solid Food
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Add Sleep Modal -->
     <div v-if="showSleepModal" class="modal-overlay" @click="showSleepModal = false">
@@ -753,7 +816,8 @@ function getFeedingIcon(type: string | undefined) {
   color: var(--color-text-secondary);
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   padding: 0.75rem;
   border: 1px solid var(--color-surface-border);
   border-radius: 0.5rem;
@@ -762,7 +826,8 @@ function getFeedingIcon(type: string | undefined) {
   font-size: 1rem;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: var(--color-text-primary);
 }

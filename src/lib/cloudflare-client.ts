@@ -11,6 +11,7 @@ export interface Baby {
   name: string;
   birthdate: string;
   user_id: string;
+  image_url?: string;
 }
 
 export interface Feeding {
