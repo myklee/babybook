@@ -1,0 +1,11 @@
+name = "baby-tracker-api"
+main = "src/index-simple.js"
+compatibility_date = "2025-09-15"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "baby-tracker-db"
+database_id = "e17a0467-cd63-49ea-adab-e6c74f8a1776"
+
+[vars]
+JWT_SECRET = "your-super-secret-jwt-key-change-this-in-production"

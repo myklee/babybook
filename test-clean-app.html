@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clean Baby Tracker</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-900">Baby Tracker</h1>
+                <div v-if="user" class="flex items-center gap-4">
+                    <span class="text-sm text-gray-600">{{ user.email }}</span>
+                    <button @click="logout" class="text-sm text-red-600 hover:text-red-700">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loading -->
+        <div v-if="loading" class="flex justify-center items-center py-12">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+
+        <!-- Error -->
+        <div v-if="error" class="max-w-4xl mx-auto px-4 py-4">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p class="text-red-800">{{ error }}</p>
+            </div>
+        </div>
+
+        <!-- Auth Forms -->
+        <div v-if="!user && !loading" class="max-w-md mx-auto px-4 py-12">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-6 text-center">
+                    {{ showLogin ? 'Login' : 'Create Account' }}
+                </h2>
+                
+                <form @submit.prevent="handleAuth" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input
+                            v-model="authForm.email"
+                            type="email"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input
+                            v-model="authForm.password"
+                            type="password"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+                    
+                    <button
+                        type="submit"
+                        :disabled="loading"
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    >
+                        {{ showLogin ? 'Login' : 'Create Account' }}
+                    </button>
+                </form>
+                
+                <p class="text-center mt-4 text-sm text-gray-600">
+                    {{ showLogin ? "Don't have an account?" : "Already have an account?" }}
+                    <button
+                        @click="showLogin = !showLogin"
+                        class="text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                        {{ showLogin ? 'Sign up' : 'Login' }}
+                    </button>
+                </p>
+            </div>
+        </div>
+
+        <!-- Main App -->
+        <main v-if="user && !loading" class="max-w-4xl mx-auto px-4 py-6">
+            <!-- No Babies State -->
+            <div v-if="babies.length === 0" class="text-center py-12">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Welcome to Baby Tracker!</h2>
+                <p class="text-gray-600 mb-6">Let's start by adding your baby.</p>
+                <button
+                    @click="showAddBaby = true"
+                    class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+                >
+                    Add Baby
+                </button>
+            </div>
+
+            <!-- Baby Dashboard -->
+            <div v-else>
+                <!-- Babies Overview -->
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold text-gray-900">Your Babies</h2>
+                        <button
+                            @click="showAddBaby = true"
+                            class="text-sm bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700"
+                        >
+                            Add Baby
+                        </button>
+                    </div>
+                    
+                    <!-- Baby Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div
+                            v-for="baby in babies"
+                            :key="baby.id"
+                            @click="selectedBabyId = baby.id"
+                            :class="[
+                                'border-2 rounded-lg p-4 cursor-pointer transition-all',
+                                selectedBabyId === baby.id 
+                                    ? 'border-blue-500 bg-blue-50' 
+                                    : 'border-gray-200 hover:border-gray-300'
+                            ]"
+                        >
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ baby.name }}</h3>
+                                    <p class="text-gray-600 text-sm">Born {{ formatDate(baby.birthdate) }}</p>
+                                    <p class="text-gray-500 text-xs mt-1">{{ getAgeString(baby.birthdate) }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm text-gray-600">
+                                        {{ getBabyStats(baby.id).feedings }} feedings
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        {{ getBabyStats(baby.id).diapers }} diapers
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        {{ getBabyStats(baby.id).sleeps }} sleeps
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="selectedBabyId === baby.id" class="mt-2 text-blue-600 text-sm font-medium">
+                                ✓ Selected
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Selected Baby Info -->
+                    <div v-if="selectedBaby" class="border-t pt-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                            Tracking for {{ selectedBaby.name }}
+                        </h3>
+                        <p class="text-gray-600">
+                            Born {{ formatDate(selectedBaby.birthdate) }} • {{ getAgeString(selectedBaby.birthdate) }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Quick Actions (only show when baby is selected) -->
+                <div v-if="selectedBaby" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <button
+                        @click="showFeedingForm = true"
+                        class="bg-green-50 border border-green-200 rounded-lg p-4 text-left hover:bg-green-100"
+                    >
+                        <div class="text-green-800 font-medium">Add Feeding</div>
+                        <div class="text-green-600 text-sm">Record a feeding for {{ selectedBaby.name }}</div>
+                    </button>
+                    
+                    <button
+                        @click="showDiaperForm = true"
+                        class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left hover:bg-yellow-100"
+                    >
+                        <div class="text-yellow-800 font-medium">Add Diaper Change</div>
+                        <div class="text-yellow-600 text-sm">Log a diaper change for {{ selectedBaby.name }}</div>
+                    </button>
+                    
+                    <button
+                        @click="showSleepForm = true"
+                        class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left hover:bg-blue-100"
+                    >
+                        <div class="text-blue-800 font-medium">Add Sleep</div>
+                        <div class="text-blue-600 text-sm">Track sleep time for {{ selectedBaby.name }}</div>
+                    </button>
+                </div>
+                
+                <!-- No Baby Selected Message -->
+                <div v-if="!selectedBaby" class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6 text-center">
+                    <p class="text-gray-600">Select a baby above to start tracking activities</p>
+                </div>
+
+                <!-- Recent Activity -->
+                <div v-if="selectedBaby" class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        Recent Activity for {{ selectedBaby.name }}
+                    </h3>
+                    
+                    <div v-if="selectedBabyActivity.length === 0" class="text-gray-500 text-center py-8">
+                        No activity yet for {{ selectedBaby.name }}. Add your first feeding, diaper change, or sleep session above!
+                    </div>
+                    
+                    <div v-else class="space-y-3">
+                        <div
+                            v-for="activity in selectedBabyActivity"
+                            :key="activity.id"
+                            class="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0"
+                        >
+                            <div>
+                                <span class="font-medium">{{ activity.type }}</span>
+                                <span class="text-gray-600 ml-2">{{ activity.details }}</span>
+                            </div>
+                            <span class="text-sm text-gray-500">{{ formatTime(activity.timestamp) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Add Baby Modal -->
+        <div v-if="showAddBaby" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Add Baby</h2>
+                    
+                    <form @submit.prevent="handleAddBaby" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Baby's Name</label>
+                            <input
+                                v-model="babyForm.name"
+                                type="text"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Birth Date</label>
+                            <input
+                                v-model="babyForm.birthdate"
+                                type="date"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                        </div>
+                        
+                        <div class="flex justify-end gap-3 pt-4">
+                            <button
+                                type="button"
+                                @click="showAddBaby = false"
+                                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                            >
+                                Add Baby
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Feeding Modal -->
+        <div v-if="showFeedingForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Add Feeding</h2>
+                    
+                    <form @submit.prevent="handleAddFeeding" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                            <select
+                                v-model="feedingForm.type"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="breast">Breast</option>
+                                <option value="formula">Formula</option>
+                                <option value="solid">Solid Food</option>
+                            </select>
+                        </div>
+                        
+                        <div v-if="feedingForm.type === 'formula'">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Amount (ml)</label>
+                            <input
+                                v-model.number="feedingForm.amount"
+                                type="number"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                            <input
+                                v-model="feedingForm.timestamp"
+                                type="datetime-local"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                        </div>
+                        
+                        <div class="flex justify-end gap-3 pt-4">
+                            <button
+                                type="button"
+                                @click="showFeedingForm = false"
+                                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                            >
+                                Add Feeding
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        // Simple API client
+        const API_BASE = 'https://baby-tracker-api.babybook.workers.dev';
+
+        class API {
+            constructor() {
+                this.token = localStorage.getItem('baby-tracker-token');
+                this.user = JSON.parse(localStorage.getItem('baby-tracker-user') || 'null');
+            }
+
+            async request(endpoint, options = {}) {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+
+                if (this.token) {
+                    headers.Authorization = `Bearer ${this.token}`;
+                }
+
+                console.log(`Making request to: ${API_BASE}${endpoint}`, { options, headers });
+
+                try {
+                    const response = await fetch(`${API_BASE}${endpoint}`, {
+                        ...options,
+                        headers
+                    });
+
+                    console.log('Response status:', response.status);
+
+                    if (!response.ok) {
+                        const error = await response.text();
+                        console.error('API Error:', response.status, error);
+                        throw new Error(`API Error: ${response.status} ${error}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    return data;
+                } catch (error) {
+                    console.error('Request failed:', error);
+                    throw error;
+                }
+            }
+
+            async login(email, password) {
+                const data = await this.request('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+                
+                this.token = data.access_token;
+                this.user = data.user;
+                localStorage.setItem('baby-tracker-token', this.token);
+                localStorage.setItem('baby-tracker-user', JSON.stringify(this.user));
+                return this.user;
+            }
+
+            async register(email, password) {
+                const data = await this.request('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+                
+                this.token = data.access_token;
+                this.user = data.user;
+                localStorage.setItem('baby-tracker-token', this.token);
+                localStorage.setItem('baby-tracker-user', JSON.stringify(this.user));
+                return this.user;
+            }
+
+            logout() {
+                this.token = null;
+                this.user = null;
+                localStorage.removeItem('baby-tracker-token');
+                localStorage.removeItem('baby-tracker-user');
+            }
+
+            async getBabies() {
+                return this.request('/api/babies');
+            }
+
+            async createBaby(name, birthdate) {
+                return this.request('/api/babies', {
+                    method: 'POST',
+                    body: JSON.stringify({ name, birthdate })
+                });
+            }
+
+            async getFeedings() {
+                return this.request('/api/feedings');
+            }
+
+            async createFeeding(feeding) {
+                console.log('Creating feeding:', feeding);
+                try {
+                    const result = await this.request('/api/feedings', {
+                        method: 'POST',
+                        body: JSON.stringify(feeding)
+                    });
+                    console.log('Feeding created:', result);
+                    return result;
+                } catch (error) {
+                    console.error('Failed to create feeding:', error);
+                    throw error;
+                }
+            }
+
+            async getDiaperChanges() {
+                return this.request('/api/diaper_changes');
+            }
+
+            async getSleepSessions() {
+                return this.request('/api/sleep_sessions');
+            }
+        }
+
+        const api = new API();
+
+        createApp({
+            setup() {
+                const user = ref(api.user);
+                const babies = ref([]);
+                const feedings = ref([]);
+                const diaperChanges = ref([]);
+                const sleepSessions = ref([]);
+                const loading = ref(false);
+                const error = ref(null);
+                const selectedBabyId = ref(null);
+
+                const showLogin = ref(true);
+                const showAddBaby = ref(false);
+                const showFeedingForm = ref(false);
+
+                const authForm = ref({ email: '', password: '' });
+                const babyForm = ref({ name: '', birthdate: '' });
+                const feedingForm = ref({ 
+                    type: 'breast', 
+                    amount: null, 
+                    timestamp: new Date().toISOString().slice(0, 16) 
+                });
+
+                const selectedBaby = computed(() => {
+                    if (!selectedBabyId.value) return null;
+                    return babies.value.find(b => b.id === selectedBabyId.value) || null;
+                });
+
+                const selectedBabyActivity = computed(() => {
+                    if (!selectedBaby.value) return [];
+                    
+                    const activities = [];
+                    
+                    // Add feedings
+                    feedings.value
+                        .filter(f => f.baby_id === selectedBaby.value.id)
+                        .forEach(f => {
+                            activities.push({
+                                id: f.id,
+                                type: 'Feeding',
+                                details: `${f.type}${f.amount ? ` - ${f.amount}ml` : ''}${f.topup_amount ? ` + ${f.topup_amount}ml topup` : ''}`,
+                                timestamp: f.timestamp
+                            });
+                        });
+                    
+                    // Add diaper changes
+                    diaperChanges.value
+                        .filter(d => d.baby_id === selectedBaby.value.id)
+                        .forEach(d => {
+                            activities.push({
+                                id: d.id,
+                                type: 'Diaper',
+                                details: d.type,
+                                timestamp: d.timestamp
+                            });
+                        });
+                    
+                    // Add sleep sessions
+                    sleepSessions.value
+                        .filter(s => s.baby_id === selectedBaby.value.id)
+                        .forEach(s => {
+                            activities.push({
+                                id: s.id,
+                                type: 'Sleep',
+                                details: s.end_time ? 'Completed' : 'In progress',
+                                timestamp: s.start_time
+                            });
+                        });
+                    
+                    return activities
+                        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                        .slice(0, 20);
+                });
+
+                async function handleAuth() {
+                    try {
+                        loading.value = true;
+                        error.value = null;
+                        
+                        if (showLogin.value) {
+                            user.value = await api.login(authForm.value.email, authForm.value.password);
+                        } else {
+                            user.value = await api.register(authForm.value.email, authForm.value.password);
+                        }
+                        
+                        await loadData();
+                        authForm.value = { email: '', password: '' };
+                    } catch (err) {
+                        error.value = err.message;
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                async function logout() {
+                    api.logout();
+                    user.value = null;
+                    babies.value = [];
+                    feedings.value = [];
+                }
+
+                async function loadData() {
+                    try {
+                        loading.value = true;
+                        const [babiesData, feedingsData, diaperData, sleepData] = await Promise.all([
+                            api.getBabies(),
+                            api.getFeedings(),
+                            api.getDiaperChanges(),
+                            api.getSleepSessions()
+                        ]);
+                        babies.value = babiesData;
+                        feedings.value = feedingsData;
+                        diaperChanges.value = diaperData;
+                        sleepSessions.value = sleepData;
+                        
+                        // Auto-select first baby if none selected
+                        if (babies.value.length > 0 && !selectedBabyId.value) {
+                            selectedBabyId.value = babies.value[0].id;
+                        }
+                    } catch (err) {
+                        error.value = err.message;
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                async function handleAddBaby() {
+                    try {
+                        const baby = await api.createBaby(babyForm.value.name, babyForm.value.birthdate);
+                        babies.value.push(baby);
+                        showAddBaby.value = false;
+                        babyForm.value = { name: '', birthdate: '' };
+                    } catch (err) {
+                        error.value = err.message;
+                    }
+                }
+
+                async function handleAddFeeding() {
+                    try {
+                        const feeding = await api.createFeeding({
+                            baby_id: selectedBaby.value.id,
+                            type: feedingForm.value.type,
+                            amount: feedingForm.value.amount,
+                            timestamp: feedingForm.value.timestamp
+                        });
+                        feedings.value.unshift(feeding);
+                        showFeedingForm.value = false;
+                        feedingForm.value = { 
+                            type: 'breast', 
+                            amount: null, 
+                            timestamp: new Date().toISOString().slice(0, 16) 
+                        };
+                    } catch (err) {
+                        error.value = err.message;
+                    }
+                }
+
+                function getBabyStats(babyId) {
+                    return {
+                        feedings: feedings.value.filter(f => f.baby_id === babyId).length,
+                        diapers: diaperChanges.value.filter(d => d.baby_id === babyId).length,
+                        sleeps: sleepSessions.value.filter(s => s.baby_id === babyId).length
+                    };
+                }
+
+                function getAgeString(birthdate) {
+                    const birth = new Date(birthdate);
+                    const now = new Date();
+                    const diffTime = Math.abs(now - birth);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays < 30) {
+                        return `${diffDays} days old`;
+                    } else if (diffDays < 365) {
+                        const months = Math.floor(diffDays / 30);
+                        return `${months} month${months > 1 ? 's' : ''} old`;
+                    } else {
+                        const years = Math.floor(diffDays / 365);
+                        const remainingMonths = Math.floor((diffDays % 365) / 30);
+                        return `${years} year${years > 1 ? 's' : ''} ${remainingMonths} month${remainingMonths > 1 ? 's' : ''} old`;
+                    }
+                }
+
+                function formatDate(dateString) {
+                    return new Date(dateString).toLocaleDateString();
+                }
+
+                function formatTime(dateString) {
+                    return new Date(dateString).toLocaleString();
+                }
+
+                onMounted(() => {
+                    if (user.value) {
+                        loadData();
+                    }
+                });
+
+                return {
+                    user,
+                    babies,
+                    feedings,
+                    diaperChanges,
+                    sleepSessions,
+                    loading,
+                    error,
+                    selectedBabyId,
+                    showLogin,
+                    showAddBaby,
+                    showFeedingForm,
+                    authForm,
+                    babyForm,
+                    feedingForm,
+                    selectedBaby,
+                    selectedBabyActivity,
+                    handleAuth,
+                    logout,
+                    handleAddBaby,
+                    handleAddFeeding,
+                    getBabyStats,
+                    getAgeString,
+                    formatDate,
+                    formatTime
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

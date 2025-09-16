@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Cloudflare Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        .success { color: #4caf50; font-weight: bold; }
+        .error { color: #f44336; font-weight: bold; }
+        .warning { color: #ff9800; font-weight: bold; }
+        button {
+            padding: 12px 20px;
+            margin: 8px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.4);
+        }
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 4px solid #9c27b0;
+        }
+        input {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        h1 { text-align: center; margin-bottom: 30px; }
+        h3 { color: #e1bee7; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Complete Cloudflare Migration Test</h1>
+    
+    <div class="test-section">
+        <h3>1. Worker Connection Test</h3>
+        <button onclick="testWorkerConnection()">Test Worker</button>
+        <div id="worker-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. User Registration Test</h3>
+        <input type="email" id="reg-email" placeholder="test@example.com" value="test@example.com">
+        <input type="password" id="reg-password" placeholder="password123" value="password123">
+        <button onclick="testUserRegistration()">Register User</button>
+        <div id="register-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. User Login Test</h3>
+        <input type="email" id="login-email" placeholder="test@example.com" value="test@example.com">
+        <input type="password" id="login-password" placeholder="password123" value="password123">
+        <button onclick="testUserLogin()">Login User</button>
+        <div id="login-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Database Operations Test</h3>
+        <button onclick="testDatabaseOperations()">Test CRUD Operations</button>
+        <div id="database-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>5. Complete App Simulation</h3>
+        <button onclick="simulateAppUsage()">Simulate Baby App Usage</button>
+        <div id="simulation-result"></div>
+    </div>
+
+    <script>
+        const WORKER_URL = 'https://baby-tracker-api.babybook.workers.dev';
+        let authToken = null;
+        
+        async function testWorkerConnection() {
+            const resultDiv = document.getElementById('worker-result');
+            resultDiv.innerHTML = 'Testing worker connection...';
+            
+            try {
+                const response = await fetch(WORKER_URL);
+                
+                if (response.status === 404) {
+                    resultDiv.innerHTML = `<div class="success">✅ Worker is responding! (404 expected for root path)</div>`;
+                } else {
+                    const text = await response.text();
+                    resultDiv.innerHTML = `<div class="success">✅ Worker response:</div><pre>${text}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Connection failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function testUserRegistration() {
+            const resultDiv = document.getElementById('register-result');
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            
+            resultDiv.innerHTML = 'Registering user...';
+            
+            try {
+                const response = await fetch(`${WORKER_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    authToken = data.access_token;
+                    resultDiv.innerHTML = `<div class="success">✅ User registered successfully!</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="warning">⚠️ Registration response:</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Registration failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function testUserLogin() {
+            const resultDiv = document.getElementById('login-result');
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            resultDiv.innerHTML = 'Logging in...';
+            
+            try {
+                const response = await fetch(`${WORKER_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    authToken = data.access_token;
+                    resultDiv.innerHTML = `<div class="success">✅ Login successful!</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="warning">⚠️ Login response:</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Login failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function testDatabaseOperations() {
+            const resultDiv = document.getElementById('database-result');
+            
+            if (!authToken) {
+                resultDiv.innerHTML = '<div class="error">❌ Please login first to test database operations</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = 'Testing database operations...';
+            
+            try {
+                // Test 1: Create a baby
+                const createBabyResponse = await fetch(`${WORKER_URL}/api/babies`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        name: 'Test Baby',
+                        birthdate: '2024-01-01'
+                    })
+                });
+                
+                const babyData = await createBabyResponse.json();
+                
+                // Test 2: Get babies
+                const getBabiesResponse = await fetch(`${WORKER_URL}/api/babies`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const babiesData = await getBabiesResponse.json();
+                
+                let results = '';
+                results += `<div class="success">✅ Create Baby: ${createBabyResponse.status}</div>`;
+                results += `<pre>${JSON.stringify(babyData, null, 2)}</pre>`;
+                results += `<div class="success">✅ Get Babies: ${getBabiesResponse.status}</div>`;
+                results += `<pre>${JSON.stringify(babiesData, null, 2)}</pre>`;
+                
+                resultDiv.innerHTML = results;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Database test failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function simulateAppUsage() {
+            const resultDiv = document.getElementById('simulation-result');
+            
+            if (!authToken) {
+                resultDiv.innerHTML = '<div class="error">❌ Please login first to simulate app usage</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = 'Simulating complete baby app usage...';
+            
+            try {
+                let results = '<div class="success">🍼 Simulating Baby Tracking App Usage</div>';
+                
+                // 1. Create a baby
+                const babyResponse = await fetch(`${WORKER_URL}/api/babies`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        name: 'Emma',
+                        birthdate: '2024-01-15'
+                    })
+                });
+                
+                const baby = await babyResponse.json();
+                results += `<div class="success">✅ Created baby: ${baby.name}</div>`;
+                
+                // 2. Add a feeding
+                const feedingResponse = await fetch(`${WORKER_URL}/api/feedings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        baby_id: baby.id,
+                        type: 'breast',
+                        amount: 120,
+                        notes: 'Good feeding session',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                const feeding = await feedingResponse.json();
+                results += `<div class="success">✅ Added feeding: ${feeding.type} - ${feeding.amount}ml</div>`;
+                
+                // 3. Add solid food
+                const solidFoodResponse = await fetch(`${WORKER_URL}/api/solid-foods`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        baby_id: baby.id,
+                        food_name: 'Banana puree',
+                        food_category: 'western_traditional',
+                        reaction: 'liked',
+                        notes: 'First time trying banana'
+                    })
+                });
+                
+                const solidFood = await solidFoodResponse.json();
+                results += `<div class="success">✅ Added solid food: ${solidFood.food_name} - ${solidFood.reaction}</div>`;
+                
+                // 4. Get all data
+                const allBabies = await fetch(`${WORKER_URL}/api/babies`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                }).then(r => r.json());
+                
+                const allFeedings = await fetch(`${WORKER_URL}/api/feedings?baby_id=${baby.id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                }).then(r => r.json());
+                
+                const allSolidFoods = await fetch(`${WORKER_URL}/api/solid-foods?baby_id=${baby.id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                }).then(r => r.json());
+                
+                results += `<div class="success">📊 Summary:</div>`;
+                results += `<pre>Babies: ${allBabies.length}
+Feedings: ${allFeedings.length}
+Solid Foods: ${allSolidFoods.length}</pre>`;
+                
+                results += `<div class="success">🎉 Complete app simulation successful!</div>`;
+                results += `<div class="success">💰 Your Cloudflare setup is working and ready to save you $35/month!</div>`;
+                
+                resultDiv.innerHTML = results;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Simulation failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-test on load
+        window.onload = () => {
+            testWorkerConnection();
+        };
+    </script>
+</body>
+</html>

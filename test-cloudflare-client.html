@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Cloudflare Client</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Cloudflare Client Test</h1>
+    
+    <div class="test-section">
+        <h3>Environment Check</h3>
+        <div id="env-check">Checking environment...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>Authentication Test</h3>
+        <div>
+            <input type="email" id="email" placeholder="Email" value="test@example.com">
+            <input type="password" id="password" placeholder="Password" value="password123">
+        </div>
+        <button onclick="testRegister()">Test Register</button>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="testGetUser()">Test Get User</button>
+        <button onclick="testLogout()">Test Logout</button>
+        <div id="auth-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>API Test</h3>
+        <button onclick="testGetBabies()">Test Get Babies</button>
+        <button onclick="testCreateBaby()">Test Create Baby</button>
+        <div id="api-results"></div>
+    </div>
+
+    <script type="module">
+        // Simple Cloudflare client for testing
+        class TestCloudflareClient {
+            constructor(baseUrl) {
+                this.baseUrl = baseUrl;
+                this.token = localStorage.getItem('test-token');
+                this.user = JSON.parse(localStorage.getItem('test-user') || 'null');
+            }
+
+            saveAuth(token, user) {
+                this.token = token;
+                this.user = user;
+                localStorage.setItem('test-token', token);
+                localStorage.setItem('test-user', JSON.stringify(user));
+            }
+
+            clearAuth() {
+                this.token = null;
+                this.user = null;
+                localStorage.removeItem('test-token');
+                localStorage.removeItem('test-user');
+            }
+
+            async request(endpoint, options = {}) {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+
+                if (this.token) {
+                    headers.Authorization = `Bearer ${this.token}`;
+                }
+
+                const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                    ...options,
+                    headers
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(`API Error: ${response.status} ${error}`);
+                }
+
+                return response.json();
+            }
+
+            auth = {
+                signUp: async ({ email, password }) => {
+                    try {
+                        const result = await fetch(`${this.baseUrl}/auth/register`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, password })
+                        });
+
+                        if (!result.ok) {
+                            const error = await result.json();
+                            return { data: null, error };
+                        }
+
+                        const data = await result.json();
+                        this.saveAuth(data.access_token, data.user);
+                        return { data: { user: data.user }, error: null };
+                    } catch (error) {
+                        return { data: null, error };
+                    }
+                },
+
+                signInWithPassword: async ({ email, password }) => {
+                    try {
+                        const result = await fetch(`${this.baseUrl}/auth/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, password })
+                        });
+
+                        if (!result.ok) {
+                            const error = await result.json();
+                            return { data: null, error };
+                        }
+
+                        const data = await result.json();
+                        this.saveAuth(data.access_token, data.user);
+                        return { data: { user: data.user }, error: null };
+                    } catch (error) {
+                        return { data: null, error };
+                    }
+                },
+
+                getUser: async () => {
+                    if (!this.token) {
+                        return { data: { user: null }, error: null };
+                    }
+
+                    try {
+                        const data = await this.request('/auth/user');
+                        return { data: { user: data.user }, error: null };
+                    } catch (error) {
+                        this.clearAuth();
+                        return { data: { user: null }, error };
+                    }
+                },
+
+                signOut: async () => {
+                    this.clearAuth();
+                    return { error: null };
+                }
+            };
+
+            from(table) {
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            then: async (resolve) => {
+                                try {
+                                    const data = await this.request(`/api/${table}`);
+                                    resolve({ data, error: null });
+                                } catch (error) {
+                                    resolve({ data: null, error });
+                                }
+                            }
+                        })
+                    }),
+                    insert: async (values) => {
+                        try {
+                            const data = await this.request(`/api/${table}`, {
+                                method: 'POST',
+                                body: JSON.stringify(values)
+                            });
+                            return { data, error: null };
+                        } catch (error) {
+                            return { data: null, error };
+                        }
+                    }
+                };
+            }
+        }
+
+        // Initialize client
+        const client = new TestCloudflareClient('https://baby-tracker-api.babybook.workers.dev');
+        
+        // Make client available globally for button clicks
+        window.client = client;
+
+        // Environment check
+        document.getElementById('env-check').innerHTML = `
+            <div>✅ Cloudflare Worker URL: ${client.baseUrl}</div>
+            <div>✅ Client initialized</div>
+            <div>Current user: ${client.user ? client.user.email : 'None'}</div>
+        `;
+
+        // Test functions
+        window.testRegister = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const result = await client.auth.signUp({ email, password });
+                document.getElementById('auth-results').innerHTML = `
+                    <div class="${result.error ? 'error' : 'success'}">
+                        <h4>Register Result:</h4>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('auth-results').innerHTML = `
+                    <div class="error">
+                        <h4>Register Error:</h4>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        };
+
+        window.testLogin = async () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const result = await client.auth.signInWithPassword({ email, password });
+                document.getElementById('auth-results').innerHTML = `
+                    <div class="${result.error ? 'error' : 'success'}">
+                        <h4>Login Result:</h4>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('auth-results').innerHTML = `
+                    <div class="error">
+                        <h4>Login Error:</h4>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        };
+
+        window.testGetUser = async () => {
+            try {
+                const result = await client.auth.getUser();
+                document.getElementById('auth-results').innerHTML = `
+                    <div class="${result.error ? 'error' : 'success'}">
+                        <h4>Get User Result:</h4>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('auth-results').innerHTML = `
+                    <div class="error">
+                        <h4>Get User Error:</h4>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        };
+
+        window.testLogout = async () => {
+            try {
+                const result = await client.auth.signOut();
+                document.getElementById('auth-results').innerHTML = `
+                    <div class="success">
+                        <h4>Logout Result:</h4>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('auth-results').innerHTML = `
+                    <div class="error">
+                        <h4>Logout Error:</h4>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        };
+
+        window.testGetBabies = async () => {
+            try {
+                const result = await new Promise(resolve => {
+                    client.from('babies').select().eq('user_id', 'test').then(resolve);
+                });
+                document.getElementById('api-results').innerHTML = `
+                    <div class="${result.error ? 'error' : 'success'}">
+                        <h4>Get Babies Result:</h4>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('api-results').innerHTML = `
+                    <div class="error">
+                        <h4>Get Babies Error:</h4>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        };
+
+        window.testCreateBaby = async () => {
+            try {
+                const result = await client.from('babies').insert({
+                    name: 'Test Baby',
+                    birthdate: new Date().toISOString()
+                });
+                document.getElementById('api-results').innerHTML = `
+                    <div class="${result.error ? 'error' : 'success'}">
+                        <h4>Create Baby Result:</h4>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('api-results').innerHTML = `
+                    <div class="error">
+                        <h4>Create Baby Error:</h4>
+                        <pre>${error.message}</pre>
+                    </div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>
