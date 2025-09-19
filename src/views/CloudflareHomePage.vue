@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useCloudflareStore } from '../stores/cloudflareStore'
+import { useRouter } from 'vue-router'
 import CloudflareFeedingModal from '../components/CloudflareFeedingModal.vue'
 // Note: Using simple modals for Cloudflare version to avoid Supabase dependencies
 // import DiaperModal from '../components/DiaperModal.vue'
@@ -16,6 +17,7 @@ import userRoundIcon from '../assets/icons/circle-user-round.svg'
 
 
 const store = useCloudflareStore()
+const router = useRouter()
 
 // State
 const selectedBaby = ref<any>(null)
@@ -99,14 +101,17 @@ function addBaby() {
 }
 
 function goToProfile() {
-  // For now, just logout since we don't have a profile page in Cloudflare version
-  store.logout()
+  router.push('/profile')
 }
 
 function handleSleepClick() {
   if (!selectedBaby.value) return
   // For now, just open sleep modal - we'd need to implement sleep tracking in the store
   openSleepModal()
+}
+
+function goToBabyHistory(baby: any) {
+  router.push(`/baby/${baby.id}`)
 }
 
 // Form handlers
@@ -252,7 +257,7 @@ function getFeedingIcon(type: string | undefined) {
             <div class="baby-name-container">
               <span class="baby-name">{{ baby.name }}</span>
               <div class="baby-actions">
-                <button class="history-icon-btn" title="View History" @click.stop="">
+                <button class="history-icon-btn" title="View History" @click.stop="goToBabyHistory(baby)">
                   <img :src="historyIcon" alt="View History" class="history-icon" />
                 </button>
               </div>

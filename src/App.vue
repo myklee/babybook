@@ -4,7 +4,6 @@ import { useCloudflareStore } from './stores/cloudflareStore'
 import { useTheme } from './composables/useTheme'
 import NotificationContainer from './components/NotificationContainer.vue'
 import AuthForm from './components/AuthForm.vue'
-import CloudflareHomePage from './views/CloudflareHomePage.vue'
 
 const store = useCloudflareStore()
 const lastRefreshTime = ref(0)
@@ -91,8 +90,8 @@ onUnmounted(() => {
     <!-- Auth Form -->
     <AuthForm v-if="!store.user && !store.loading" />
 
-    <!-- Main App -->
-    <CloudflareHomePage v-if="store.user && !store.loading" />
+    <!-- Main App with Router -->
+    <router-view v-if="store.user && !store.loading" />
 
     <NotificationContainer />
   </div>

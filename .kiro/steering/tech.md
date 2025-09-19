@@ -29,7 +29,7 @@
 
 - `@vueuse/core` - Vue composition utilities
 - `date-fns` - Date manipulation
-- `vue-router` - Client-side routing (disabled in Cloudflare version)
+- `vue-router` - Client-side routing
 
 ## Common Commands
 
