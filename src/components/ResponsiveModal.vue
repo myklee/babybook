@@ -334,8 +334,9 @@ defineExpose({
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 1rem;
+  min-height: 60px; /* Ensure minimum height for buttons */
 }
 
 /* Transitions */
@@ -374,6 +375,15 @@ defineExpose({
     height: 100vh;
     width: 100vw;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Ensure content area doesn't push footer off screen */
+  .modal-content {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 2rem; /* Extra space before footer */
   }
 
   .modal-header {
@@ -390,6 +400,29 @@ defineExpose({
 
   .modal-footer {
     padding: 1rem;
+    position: sticky;
+    bottom: 0;
+    background: var(--color-bg-primary);
+    border-top: 1px solid var(--color-surface-border);
+    z-index: 10;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Ensure button groups stack properly on mobile */
+  .modal-footer .btn-group,
+  .modal-footer .btn-group-end,
+  .modal-footer .btn-group-split {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  /* Make individual buttons full width on mobile for better touch targets */
+  .modal-footer .btn {
+    width: 100%;
+    min-height: 48px; /* Minimum touch target size */
+    padding: 1rem;
+    font-size: 1rem;
   }
 
   .modal-close-button {

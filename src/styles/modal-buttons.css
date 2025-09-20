@@ -204,7 +204,8 @@
   .btn {
     padding: var(--btn-padding-mobile);
     min-width: 80px;
-    font-size: 0.8125rem;
+    min-height: 48px; /* Ensure minimum touch target size */
+    font-size: 1rem; /* Larger font for better readability */
   }
 
   .btn-group,
@@ -212,10 +213,25 @@
   .btn-group-end {
     flex-wrap: wrap;
     gap: 0.75rem;
+    width: 100%;
   }
 
   .btn-group-split {
     justify-content: space-between;
+    flex-direction: column;
+  }
+
+  .btn-group-end {
+    flex-direction: column;
+  }
+
+  /* Ensure buttons are always visible and accessible */
+  .btn-group .btn,
+  .btn-group-split .btn,
+  .btn-group-end .btn {
+    flex: 1;
+    width: 100%;
+    max-width: none;
   }
 }
 
