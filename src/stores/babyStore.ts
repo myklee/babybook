@@ -2521,6 +2521,7 @@ export const useBabyStore = defineStore("baby", () => {
     foodCategory: SolidFood["food_category"],
     notes?: string,
     reaction?: SolidFood["reaction"],
+    timestamp?: Date,
   ) {
     try {
       await ensureValidSession();
@@ -2534,9 +2535,10 @@ export const useBabyStore = defineStore("baby", () => {
 
       if (existingFood) {
         // Increment times_tried and update last_tried_date
+        const tryDate = timestamp ? timestamp.toISOString() : new Date().toISOString();
         const updatedFood = await updateSolidFood(existingFood.id, {
           times_tried: existingFood.times_tried + 1,
-          last_tried_date: new Date().toISOString(),
+          last_tried_date: tryDate,
           notes: notes || existingFood.notes,
           reaction: reaction || existingFood.reaction,
         });
@@ -2584,14 +2586,15 @@ export const useBabyStore = defineStore("baby", () => {
       }
 
       // Create new solid food entry
+      const tryDate = timestamp ? timestamp.toISOString() : new Date().toISOString();
       const solidFoodData = {
         baby_id: babyId,
         user_id: currentUser.value!.id,
         food_name: foodName,
         food_category: foodCategory,
         times_tried: 1,
-        first_tried_date: new Date().toISOString(),
-        last_tried_date: new Date().toISOString(),
+        first_tried_date: tryDate,
+        last_tried_date: tryDate,
         notes: notes || null,
         reaction: reaction || null,
       };
