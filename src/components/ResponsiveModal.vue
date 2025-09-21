@@ -102,8 +102,11 @@ function setupModal() {
   // Store the previously focused element
   previousActiveElement = document.activeElement as HTMLElement;
 
-  // Lock body scroll
+  // Lock body scroll and prevent mobile viewport issues
   document.body.style.overflow = "hidden";
+  document.body.style.position = "fixed";
+  document.body.style.width = "100%";
+  document.body.style.height = "100%";
 
   // Add event listeners
   document.addEventListener("keydown", handleKeydown, true);
@@ -123,8 +126,11 @@ function setupModal() {
 
 // Cleanup modal when closed
 function cleanupModal() {
-  // Restore body scroll
+  // Restore body scroll and positioning
   document.body.style.overflow = "";
+  document.body.style.position = "";
+  document.body.style.width = "";
+  document.body.style.height = "";
 
   // Remove event listeners
   document.removeEventListener("keydown", handleKeydown, true);
@@ -372,6 +378,8 @@ defineExpose({
     padding: 0;
     align-items: stretch;
     justify-content: stretch;
+    height: 100vh;
+    height: 100dvh; /* Use dynamic viewport height for better mobile support */
   }
 
   .modal-container {
@@ -379,21 +387,17 @@ defineExpose({
     max-width: none !important;
     max-height: none;
     height: 100vh;
+    height: 100dvh; /* Use dynamic viewport height */
     width: 100vw;
     margin: 0;
     display: flex;
     flex-direction: column;
-  }
-
-  /* Ensure content area doesn't push footer off screen */
-  .modal-content {
-    flex: 1;
-    overflow-y: auto;
-    padding-bottom: 2rem; /* Extra space before footer */
+    overflow: hidden;
   }
 
   .modal-header {
     padding: 1rem;
+    flex-shrink: 0;
   }
 
   .modal-title {
@@ -401,18 +405,27 @@ defineExpose({
   }
 
   .modal-content {
-    padding: 1rem 1.5rem;
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 1.5rem 1rem 1.5rem;
+    /* Use CSS custom properties for precise height calculation */
+    --header-height: 80px;
+    --footer-height: 120px;
+    max-height: calc(100vh - var(--header-height) - var(--footer-height));
+    max-height: calc(100dvh - var(--header-height) - var(--footer-height));
+    min-height: 0; /* Allow flex shrinking */
   }
 
   .modal-footer {
     padding: 1rem;
-    position: sticky;
-    bottom: 0;
+    flex-shrink: 0;
     background: var(--color-bg-primary);
     border-top: 1px solid var(--color-surface-border);
-    z-index: 10;
     flex-direction: column;
     gap: 0.75rem;
+    position: relative; /* Remove sticky positioning */
+    bottom: auto;
+    z-index: auto;
   }
 
   /* Ensure button groups stack properly on mobile */
