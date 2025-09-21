@@ -325,17 +325,23 @@ defineExpose({
   flex: 1;
   overflow-y: auto;
   padding: 0 2rem;
+  padding-bottom:100px;
 }
 
 /* Footer */
 .modal-footer {
   padding: 1rem;
   border-top: 1px solid var(--color-surface-border);
+  background-color: var(--color-bg-primary);
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1rem;
+  position: absolute;
+  bottom:0;
+  left:0;
+  right:0;
   min-height: 60px; /* Ensure minimum height for buttons */
 }
 
