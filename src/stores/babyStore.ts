@@ -36,6 +36,13 @@ import {
   type SessionRecoveryData
 } from "../composables/useNursingSessionPersistence";
 import type { MeasurementUnit } from "../lib/measurements";
+import type { 
+  UserFoodItem, 
+  SolidFoodEvent, 
+  UpdateUserFoodItemData,
+  FoodSearchResult
+} from "../types/solidFood";
+import { validateFoodItem } from "../types/solidFood";
 
 type Baby = Database["public"]["Tables"]["babies"]["Row"] & {
   image_url?: string | null;
@@ -54,6 +61,10 @@ export const useBabyStore = defineStore("baby", () => {
   const babySettings = ref<BabySettings[]>([]);
   const solidFoods = ref<SolidFood[]>([]);
   const pumpingSessions = ref<PumpingSession[]>([]);
+  
+  // New solid food improvement state
+  const userFoodItems = ref<UserFoodItem[]>([]);
+  const solidFoodEvents = ref<SolidFoodEvent[]>([]);
   const isLoading = ref(false);
   const currentUser = ref<any>(null);
   const isDataLoading = ref(false); // Guard to prevent multiple simultaneous loads
@@ -122,6 +133,8 @@ export const useBabyStore = defineStore("baby", () => {
         sleepSessions.value = [];
         solidFoods.value = [];
         pumpingSessions.value = [];
+        userFoodItems.value = [];
+        solidFoodEvents.value = [];
         
         // Clear active sessions if no user
         sessionPersistence.clearAllData();
@@ -141,6 +154,8 @@ export const useBabyStore = defineStore("baby", () => {
         sleepSessions.value = [];
         solidFoods.value = [];
         pumpingSessions.value = [];
+        userFoodItems.value = [];
+        solidFoodEvents.value = [];
         sessionPersistence.clearAllData();
         return;
       }
@@ -215,6 +230,8 @@ export const useBabyStore = defineStore("baby", () => {
             sleepSessions.value = [];
             solidFoods.value = [];
             pumpingSessions.value = [];
+            userFoodItems.value = [];
+            solidFoodEvents.value = [];
             measurementUnit.value = 'metric'; // Reset to default
             // Clear active sessions on sign out
             sessionPersistence.clearAllData();
@@ -553,6 +570,85 @@ export const useBabyStore = defineStore("baby", () => {
         pumpingSessions.value = [];
       }
 
+      // Load user food items (non-blocking)
+      console.log("Loading user food items...");
+      try {
+        const userFoodItemsPromise = supabase
+          .from("user_food_items")
+          .select("*")
+          .eq("user_id", currentUser.value.id)
+          .order("name", { ascending: true });
+
+        const userFoodItemsResult = (await Promise.race([
+          userFoodItemsPromise,
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("User food items loading timeout")),
+              10000,
+            ),
+          ),
+        ])) as any;
+
+        if (userFoodItemsResult.error) {
+          console.error("Error loading user food items:", userFoodItemsResult.error);
+          if (
+            userFoodItemsResult.error.message.includes(
+              'relation "user_food_items" does not exist',
+            )
+          ) {
+            console.log("User food items table does not exist, skipping...");
+            userFoodItems.value = [];
+          } else {
+            throw userFoodItemsResult.error;
+          }
+        } else {
+          userFoodItems.value = userFoodItemsResult.data || [];
+          console.log("Loaded user food items:", userFoodItems.value.length);
+        }
+      } catch (userFoodItemsTableError) {
+        console.error("User food items table error:", userFoodItemsTableError);
+        userFoodItems.value = [];
+      }
+
+      // Load solid food events (non-blocking)
+      console.log("Loading solid food events...");
+      try {
+        const solidFoodEventsPromise = supabase
+          .from("solid_food_events")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        const solidFoodEventsResult = (await Promise.race([
+          solidFoodEventsPromise,
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Solid food events loading timeout")),
+              10000,
+            ),
+          ),
+        ])) as any;
+
+        if (solidFoodEventsResult.error) {
+          console.error("Error loading solid food events:", solidFoodEventsResult.error);
+          if (
+            solidFoodEventsResult.error.message.includes(
+              'relation "solid_food_events" does not exist',
+            )
+          ) {
+            console.log("Solid food events table does not exist, skipping...");
+            solidFoodEvents.value = [];
+          } else {
+            throw solidFoodEventsResult.error;
+          }
+        } else {
+          solidFoodEvents.value = solidFoodEventsResult.data || [];
+          console.log("Loaded solid food events:", solidFoodEvents.value.length);
+        }
+      } catch (solidFoodEventsTableError) {
+        console.error("Solid food events table error:", solidFoodEventsTableError);
+        solidFoodEvents.value = [];
+      }
+
       console.log("Data loading complete");
     } catch (error: any) {
       if (error?.message?.includes('timeout')) {
@@ -578,6 +674,8 @@ export const useBabyStore = defineStore("baby", () => {
             sleepSessions.value = [];
             solidFoods.value = [];
             pumpingSessions.value = [];
+            userFoodItems.value = [];
+            solidFoodEvents.value = [];
             babySettings.value = [];
           } else if (data.session) {
             console.log("Session refreshed successfully");
@@ -826,7 +924,7 @@ export const useBabyStore = defineStore("baby", () => {
       const sessionResult = (await Promise.race([
         sessionPromise,
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Session check timeout")), 3000),
+          setTimeout(() => reject(new Error("Session check timeout")), 10000),
         ),
       ])) as any;
 
@@ -839,10 +937,15 @@ export const useBabyStore = defineStore("baby", () => {
       }
     } catch (error) {
       console.error("Session validation error:", error);
-      // If session check times out, try to load user anyway
-      await loadUser();
+      // If session check times out or fails, continue if we have a current user
       if (!currentUser.value) {
-        throw new Error("Session validation failed. Please sign in again.");
+        console.log("No current user, trying to load user...");
+        await loadUser();
+        if (!currentUser.value) {
+          throw new Error("Session validation failed. Please sign in again.");
+        }
+      } else {
+        console.log("Session check failed but current user exists, continuing...");
       }
     }
   }
@@ -1918,6 +2021,427 @@ export const useBabyStore = defineStore("baby", () => {
     }
 
     return true;
+  }
+
+  // Create a solid food event with multiple foods
+  async function createSolidFoodEvent(
+    babyId: string,
+    foodItemIds: string[],
+    timestamp?: Date,
+    notes?: string,
+    _reaction?: "liked" | "disliked" | "neutral" | "allergic_reaction" | null
+  ) {
+    try {
+      await ensureValidSession();
+
+      // Validate input
+      if (!foodItemIds || foodItemIds.length === 0) {
+        throw new Error("At least one food item must be selected");
+      }
+
+      // Verify all food items belong to the current user
+      const { data: foodItems, error: foodError } = await supabase
+        .from("user_food_items")
+        .select("*")
+        .in("id", foodItemIds)
+        .eq("user_id", currentUser.value!.id);
+
+      if (foodError) {
+        console.error("Error verifying food items:", foodError);
+        throw foodError;
+      }
+
+      if (!foodItems || foodItems.length !== foodItemIds.length) {
+        throw new Error("Some food items not found or don't belong to user");
+      }
+
+      // Start transaction by creating the feeding record first
+      const feedingData = {
+        baby_id: babyId,
+        timestamp: timestamp ? timestamp.toISOString() : new Date().toISOString(),
+        amount: null, // Always null for solid food events
+        type: "solid" as const,
+        notes: notes || null,
+        user_id: currentUser.value!.id,
+        start_time: null,
+        end_time: null,
+        breast_used: null,
+        left_duration: 0,
+        right_duration: 0,
+        total_duration: 0,
+      };
+
+      const { data: feedingRecord, error: feedingError } = await supabase
+        .from("feedings")
+        .insert(feedingData)
+        .select()
+        .single();
+
+      if (feedingError) {
+        console.error("Error creating feeding record:", feedingError);
+        throw feedingError;
+      }
+
+      // Create solid food event records for each food
+      const solidFoodEventData = foodItemIds.map(foodItemId => ({
+        feeding_id: feedingRecord.id,
+        food_item_id: foodItemId,
+      }));
+
+      const { error: eventsError } = await supabase
+        .from("solid_food_events")
+        .insert(solidFoodEventData);
+
+      if (eventsError) {
+        console.error("Error creating solid food events:", eventsError);
+        // Rollback: delete the feeding record
+        await supabase.from("feedings").delete().eq("id", feedingRecord.id);
+        throw eventsError;
+      }
+
+      // Update consumption counts for all selected foods
+      const currentTimestamp = timestamp ? timestamp.toISOString() : new Date().toISOString();
+      
+      // Update local consumption counts for food items
+      for (const foodItem of foodItems) {
+        const itemIndex = userFoodItems.value.findIndex(item => item.id === foodItem.id);
+        if (itemIndex !== -1) {
+          userFoodItems.value[itemIndex] = {
+            ...userFoodItems.value[itemIndex],
+            times_consumed: userFoodItems.value[itemIndex].times_consumed + 1,
+            last_tried_date: currentTimestamp,
+            first_tried_date: userFoodItems.value[itemIndex].first_tried_date || currentTimestamp,
+            updated_at: new Date().toISOString(),
+          };
+        }
+      }
+
+      // Update local state
+      feedings.value.unshift(feedingRecord);
+
+      // Update local user food items state
+      userFoodItems.value = userFoodItems.value.map(item => {
+        const updatedItem = foodItems.find(f => f.id === item.id);
+        if (updatedItem) {
+          return {
+            ...item,
+            times_consumed: item.times_consumed + 1,
+            last_tried_date: currentTimestamp,
+            first_tried_date: item.first_tried_date || currentTimestamp,
+            updated_at: new Date().toISOString(),
+          };
+        }
+        return item;
+      });
+
+      // Add solid food events to local state
+      const newSolidFoodEvents = solidFoodEventData.map((data, index) => ({
+        id: `temp-${Date.now()}-${index}`, // Temporary ID, will be replaced on next load
+        feeding_id: feedingRecord.id,
+        food_item_id: data.food_item_id,
+        created_at: new Date().toISOString(),
+      }));
+      solidFoodEvents.value.unshift(...newSolidFoodEvents);
+
+      // Check if solid food events affect the schedule for this baby
+      const affectsSchedule = doesFeedingAffectSchedule(babyId, "solid");
+      if (affectsSchedule) {
+        console.log(`Solid food event affects schedule for baby ${babyId}, schedule calculations will be updated`);
+      } else {
+        console.log(`Solid food event does not affect schedule for baby ${babyId}, schedule remains unchanged`);
+      }
+
+      return feedingRecord;
+    } catch (error) {
+      console.error("Error in createSolidFoodEvent:", error);
+      throw error;
+    }
+  }
+
+  // Update a solid food event
+  async function updateSolidFoodEvent(
+    feedingId: string,
+    foodItemIds: string[],
+    updates: {
+      timestamp?: Date;
+      notes?: string;
+      _reaction?: "liked" | "disliked" | "neutral" | "allergic_reaction" | null;
+    } = {}
+  ) {
+    try {
+      await ensureValidSession();
+
+      // Validate input
+      if (!foodItemIds || foodItemIds.length === 0) {
+        throw new Error("At least one food item must be selected");
+      }
+
+      // Get the existing feeding record
+      const existingFeeding = feedings.value.find(f => f.id === feedingId);
+      if (!existingFeeding || existingFeeding.type !== "solid") {
+        throw new Error("Solid food event not found");
+      }
+
+      // Get existing solid food events for this feeding
+      const { data: existingSolidFoodEvents, error: existingEventsError } = await supabase
+        .from("solid_food_events")
+        .select("*")
+        .eq("feeding_id", feedingId);
+
+      if (existingEventsError) {
+        console.error("Error fetching existing solid food events:", existingEventsError);
+        throw existingEventsError;
+      }
+
+      const existingFoodItemIds = existingSolidFoodEvents?.map(e => e.food_item_id) || [];
+
+      // Verify all new food items belong to the current user
+      const { data: foodItems, error: foodError } = await supabase
+        .from("user_food_items")
+        .select("*")
+        .in("id", foodItemIds)
+        .eq("user_id", currentUser.value!.id);
+
+      if (foodError) {
+        console.error("Error verifying food items:", foodError);
+        throw foodError;
+      }
+
+      if (!foodItems || foodItems.length !== foodItemIds.length) {
+        throw new Error("Some food items not found or don't belong to user");
+      }
+
+      // Update the feeding record if needed
+      const feedingUpdates: any = {};
+      if (updates.timestamp) {
+        feedingUpdates.timestamp = updates.timestamp.toISOString();
+      }
+      if (updates.notes !== undefined) {
+        feedingUpdates.notes = updates.notes;
+      }
+
+      if (Object.keys(feedingUpdates).length > 0) {
+        const { data: updatedFeeding, error: feedingUpdateError } = await supabase
+          .from("feedings")
+          .update(feedingUpdates)
+          .eq("id", feedingId)
+          .eq("user_id", currentUser.value!.id)
+          .select()
+          .single();
+
+        if (feedingUpdateError) {
+          console.error("Error updating feeding record:", feedingUpdateError);
+          throw feedingUpdateError;
+        }
+
+        // Update local state
+        const feedingIndex = feedings.value.findIndex(f => f.id === feedingId);
+        if (feedingIndex !== -1) {
+          feedings.value[feedingIndex] = updatedFeeding;
+        }
+      }
+
+      // Determine which foods to add and remove
+      const foodsToAdd = foodItemIds.filter(id => !existingFoodItemIds.includes(id));
+      const foodsToRemove = existingFoodItemIds.filter(id => !foodItemIds.includes(id));
+
+      // Remove solid food events for foods no longer in the event
+      if (foodsToRemove.length > 0) {
+        const { error: removeError } = await supabase
+          .from("solid_food_events")
+          .delete()
+          .eq("feeding_id", feedingId)
+          .in("food_item_id", foodsToRemove);
+
+        if (removeError) {
+          console.error("Error removing solid food events:", removeError);
+          throw removeError;
+        }
+
+        // Recalculate consumption counts for removed foods
+        for (const foodItemId of foodsToRemove) {
+          const { error: recalculateError } = await supabase.rpc('recalculate_food_consumption', {
+            food_item_id: foodItemId
+          });
+
+          if (recalculateError) {
+            console.error(`Error recalculating consumption for food ${foodItemId}:`, recalculateError);
+            // Continue with other foods rather than failing completely
+          }
+        }
+      }
+
+      // Add solid food events for new foods
+      if (foodsToAdd.length > 0) {
+        const newSolidFoodEventData = foodsToAdd.map(foodItemId => ({
+          feeding_id: feedingId,
+          food_item_id: foodItemId,
+        }));
+
+        const { error: addError } = await supabase
+          .from("solid_food_events")
+          .insert(newSolidFoodEventData);
+
+        if (addError) {
+          console.error("Error adding solid food events:", addError);
+          throw addError;
+        }
+
+        // Increment consumption counts for added foods
+        const eventTimestamp = updates.timestamp ? updates.timestamp.toISOString() : existingFeeding.timestamp;
+        
+        for (const foodItemId of foodsToAdd) {
+          const { error: recalculateError } = await supabase.rpc('recalculate_food_consumption', {
+            food_item_id: foodItemId
+          });
+
+          if (recalculateError) {
+            console.error(`Error recalculating consumption for food ${foodItemId}:`, recalculateError);
+            // Continue with other foods rather than failing completely
+          }
+        }
+      }
+
+      // Update local user food items state
+      userFoodItems.value = userFoodItems.value.map(item => {
+        if (foodsToAdd.includes(item.id)) {
+          const eventTimestamp = updates.timestamp ? updates.timestamp.toISOString() : existingFeeding.timestamp;
+          return {
+            ...item,
+            times_consumed: item.times_consumed + 1,
+            last_tried_date: eventTimestamp,
+            first_tried_date: item.first_tried_date || eventTimestamp,
+            updated_at: new Date().toISOString(),
+          };
+        } else if (foodsToRemove.includes(item.id)) {
+          return {
+            ...item,
+            times_consumed: Math.max(0, item.times_consumed - 1),
+            updated_at: new Date().toISOString(),
+          };
+        }
+        return item;
+      });
+
+      // Update local solid food events state
+      solidFoodEvents.value = solidFoodEvents.value.filter(e => 
+        e.feeding_id !== feedingId || !foodsToRemove.includes(e.food_item_id)
+      );
+
+      // Add new solid food events to local state
+      if (foodsToAdd.length > 0) {
+        const newLocalEvents = foodsToAdd.map((foodItemId, index) => ({
+          id: `temp-${Date.now()}-${index}`,
+          feeding_id: feedingId,
+          food_item_id: foodItemId,
+          created_at: new Date().toISOString(),
+        }));
+        solidFoodEvents.value.unshift(...newLocalEvents);
+      }
+
+      return feedings.value.find(f => f.id === feedingId);
+    } catch (error) {
+      console.error("Error in updateSolidFoodEvent:", error);
+      throw error;
+    }
+  }
+
+  // Delete a solid food event
+  async function deleteSolidFoodEvent(feedingId: string) {
+    try {
+      await ensureValidSession();
+
+      // Get the existing feeding record
+      const existingFeeding = feedings.value.find(f => f.id === feedingId);
+      if (!existingFeeding || existingFeeding.type !== "solid") {
+        throw new Error("Solid food event not found");
+      }
+
+      // Get all solid food events for this feeding to decrement consumption counts
+      const { data: solidFoodEventsToDelete, error: eventsError } = await supabase
+        .from("solid_food_events")
+        .select("*")
+        .eq("feeding_id", feedingId);
+
+      if (eventsError) {
+        console.error("Error fetching solid food events for deletion:", eventsError);
+        throw eventsError;
+      }
+
+      // Recalculate consumption counts for all foods in this event
+      if (solidFoodEventsToDelete && solidFoodEventsToDelete.length > 0) {
+        for (const event of solidFoodEventsToDelete) {
+          const { error: recalculateError } = await supabase.rpc('recalculate_food_consumption', {
+            food_item_id: event.food_item_id
+          });
+
+          if (recalculateError) {
+            console.error(`Error recalculating consumption for food ${event.food_item_id}:`, recalculateError);
+            // Continue with other foods rather than failing completely
+          }
+        }
+      }
+
+      // Delete all solid food events for this feeding
+      const { error: deleteEventsError } = await supabase
+        .from("solid_food_events")
+        .delete()
+        .eq("feeding_id", feedingId);
+
+      if (deleteEventsError) {
+        console.error("Error deleting solid food events:", deleteEventsError);
+        throw deleteEventsError;
+      }
+
+      // Delete the feeding record
+      const { error: deleteFeedingError } = await supabase
+        .from("feedings")
+        .delete()
+        .eq("id", feedingId)
+        .eq("user_id", currentUser.value!.id);
+
+      if (deleteFeedingError) {
+        console.error("Error deleting feeding record:", deleteFeedingError);
+        throw deleteFeedingError;
+      }
+
+      // Update local state - remove feeding
+      const feedingIndex = feedings.value.findIndex(f => f.id === feedingId);
+      if (feedingIndex !== -1) {
+        feedings.value.splice(feedingIndex, 1);
+      }
+
+      // Update local state - remove solid food events
+      solidFoodEvents.value = solidFoodEvents.value.filter(e => e.feeding_id !== feedingId);
+
+      // Update local user food items state - decrement consumption counts
+      if (solidFoodEventsToDelete && solidFoodEventsToDelete.length > 0) {
+        const foodItemIds = solidFoodEventsToDelete.map(e => e.food_item_id);
+        userFoodItems.value = userFoodItems.value.map(item => {
+          if (foodItemIds.includes(item.id)) {
+            return {
+              ...item,
+              times_consumed: Math.max(0, item.times_consumed - 1),
+              updated_at: new Date().toISOString(),
+            };
+          }
+          return item;
+        });
+      }
+
+      // Check if the deleted solid food event affected the schedule for this baby
+      const affectedSchedule = doesFeedingAffectSchedule(existingFeeding.baby_id, "solid");
+      if (affectedSchedule) {
+        console.log(`Deleted solid food event affected schedule for baby ${existingFeeding.baby_id}, schedule calculations will be updated`);
+      } else {
+        console.log(`Deleted solid food event did not affect schedule for baby ${existingFeeding.baby_id}, schedule remains unchanged`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in deleteSolidFoodEvent:", error);
+      throw error;
+    }
   }
 
   // Delete a diaper change
@@ -3027,6 +3551,673 @@ export const useBabyStore = defineStore("baby", () => {
     }
   }
 
+  // ===== USER FOOD ITEM CRUD OPERATIONS =====
+
+  /**
+   * Add a new user food item with duplicate checking
+   */
+  async function addUserFoodItem(name: string): Promise<UserFoodItem> {
+    try {
+      await ensureValidSession();
+
+      // Validate the food name
+      const validation = validateFoodItem(name);
+      if (!validation.is_valid) {
+        throw new Error(`Invalid food name: ${validation.errors.map(e => e.message).join(', ')}`);
+      }
+
+      const trimmedName = name.trim();
+
+      // Check for duplicates (case-insensitive)
+      const existingFood = userFoodItems.value.find(
+        food => food.name.toLowerCase() === trimmedName.toLowerCase()
+      );
+
+      if (existingFood) {
+        throw new Error(`Food item "${trimmedName}" already exists in your list`);
+      }
+
+      const { data, error } = await supabase
+        .from("user_food_items")
+        .insert({
+          user_id: currentUser.value!.id,
+          name: trimmedName,
+          times_consumed: 0,
+          first_tried_date: null,
+          last_tried_date: null
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error adding user food item:", error);
+        throw error;
+      }
+
+      // Add to local state
+      userFoodItems.value.push(data);
+      
+      // Sort by name to maintain order
+      userFoodItems.value.sort((a, b) => a.name.localeCompare(b.name));
+
+      console.log(`Added new food item: ${data.name}`);
+      return data;
+    } catch (error) {
+      console.error("Error in addUserFoodItem:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user food items with sorting and filtering
+   */
+  function getUserFoodItems(options?: {
+    sortBy?: 'name' | 'times_consumed' | 'first_tried_date' | 'last_tried_date';
+    sortOrder?: 'asc' | 'desc';
+    filter?: string;
+  }): UserFoodItem[] {
+    let items = [...userFoodItems.value];
+
+    // Apply filter if provided
+    if (options?.filter) {
+      const filterLower = options.filter.toLowerCase();
+      items = items.filter(item => 
+        item.name.toLowerCase().includes(filterLower)
+      );
+    }
+
+    // Apply sorting
+    const sortBy = options?.sortBy || 'name';
+    const sortOrder = options?.sortOrder || 'asc';
+
+    items.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'times_consumed':
+          aValue = a.times_consumed;
+          bValue = b.times_consumed;
+          break;
+        case 'first_tried_date':
+          aValue = a.first_tried_date ? new Date(a.first_tried_date).getTime() : 0;
+          bValue = b.first_tried_date ? new Date(b.first_tried_date).getTime() : 0;
+          break;
+        case 'last_tried_date':
+          aValue = a.last_tried_date ? new Date(a.last_tried_date).getTime() : 0;
+          bValue = b.last_tried_date ? new Date(b.last_tried_date).getTime() : 0;
+          break;
+        default:
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+      }
+
+      if (sortOrder === 'desc') {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+      } else {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+      }
+    });
+
+    return items;
+  }
+
+  /**
+   * Update a user food item with validation
+   */
+  async function updateUserFoodItem(
+    id: string, 
+    updates: UpdateUserFoodItemData
+  ): Promise<UserFoodItem> {
+    try {
+      await ensureValidSession();
+
+      // Find the existing food item
+      const existingFood = userFoodItems.value.find(food => food.id === id);
+      if (!existingFood) {
+        throw new Error("Food item not found");
+      }
+
+      // Validate name if being updated
+      if (updates.name !== undefined) {
+        const validation = validateFoodItem(updates.name);
+        if (!validation.is_valid) {
+          throw new Error(`Invalid food name: ${validation.errors.map(e => e.message).join(', ')}`);
+        }
+
+        const trimmedName = updates.name.trim();
+        
+        // Check for duplicates (case-insensitive), excluding current item
+        const duplicateFood = userFoodItems.value.find(
+          food => food.id !== id && food.name.toLowerCase() === trimmedName.toLowerCase()
+        );
+
+        if (duplicateFood) {
+          throw new Error(`Food item "${trimmedName}" already exists in your list`);
+        }
+
+        updates.name = trimmedName;
+      }
+
+      const { data, error } = await supabase
+        .from("user_food_items")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id)
+        .eq("user_id", currentUser.value!.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating user food item:", error);
+        throw error;
+      }
+
+      // Update local state
+      const index = userFoodItems.value.findIndex(food => food.id === id);
+      if (index !== -1) {
+        userFoodItems.value[index] = data;
+        
+        // Re-sort if name was updated
+        if (updates.name !== undefined) {
+          userFoodItems.value.sort((a, b) => a.name.localeCompare(b.name));
+        }
+      }
+
+      console.log(`Updated food item: ${data.name}`);
+      return data;
+    } catch (error) {
+      console.error("Error in updateUserFoodItem:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a user food item with usage checking
+   */
+  async function deleteUserFoodItem(id: string): Promise<{ deleted: boolean; usageCount: number }> {
+    try {
+      await ensureValidSession();
+
+      // Find the food item
+      const foodItem = userFoodItems.value.find(food => food.id === id);
+      if (!foodItem) {
+        throw new Error("Food item not found");
+      }
+
+      // Check if the food item is used in any solid food events
+      const usageCount = solidFoodEvents.value.filter(
+        event => event.food_item_id === id
+      ).length;
+
+      if (usageCount > 0) {
+        // Return usage information without deleting
+        return {
+          deleted: false,
+          usageCount
+        };
+      }
+
+      const { error } = await supabase
+        .from("user_food_items")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", currentUser.value!.id);
+
+      if (error) {
+        console.error("Error deleting user food item:", error);
+        throw error;
+      }
+
+      // Remove from local state
+      const index = userFoodItems.value.findIndex(food => food.id === id);
+      if (index !== -1) {
+        userFoodItems.value.splice(index, 1);
+      }
+
+      console.log(`Deleted food item: ${foodItem.name}`);
+      return {
+        deleted: true,
+        usageCount: 0
+      };
+    } catch (error) {
+      console.error("Error in deleteUserFoodItem:", error);
+      throw error;
+    }
+  }
+
+  // ===== FOOD SEARCH AND AUTOCOMPLETE =====
+
+  /**
+   * Search food items with fuzzy matching and ranking
+   */
+  function searchFoodItems(query: string, limit: number = 10): FoodSearchResult[] {
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+
+    const searchTerm = query.toLowerCase().trim();
+    const results: FoodSearchResult[] = [];
+
+    userFoodItems.value.forEach(food => {
+      const foodName = food.name.toLowerCase();
+      let relevanceScore = 0;
+
+      // Exact match gets highest score
+      if (foodName === searchTerm) {
+        relevanceScore = 100;
+      }
+      // Starts with query gets high score
+      else if (foodName.startsWith(searchTerm)) {
+        relevanceScore = 80;
+      }
+      // Contains query gets medium score
+      else if (foodName.includes(searchTerm)) {
+        relevanceScore = 60;
+      }
+      // Fuzzy match for partial words
+      else {
+        const words = foodName.split(' ');
+        const queryWords = searchTerm.split(' ');
+        
+        let matchingWords = 0;
+        queryWords.forEach(queryWord => {
+          words.forEach(word => {
+            if (word.startsWith(queryWord) || word.includes(queryWord)) {
+              matchingWords++;
+            }
+          });
+        });
+        
+        if (matchingWords > 0) {
+          relevanceScore = Math.min(50, (matchingWords / queryWords.length) * 40);
+        }
+      }
+
+      // Boost score based on consumption frequency
+      if (relevanceScore > 0) {
+        const consumptionBoost = Math.min(20, food.times_consumed * 2);
+        relevanceScore += consumptionBoost;
+
+        results.push({
+          id: food.id,
+          name: food.name,
+          times_consumed: food.times_consumed,
+          last_tried_date: food.last_tried_date,
+          relevance_score: relevanceScore
+        });
+      }
+    });
+
+    // Sort by relevance score (highest first) and limit results
+    return results
+      .sort((a, b) => b.relevance_score - a.relevance_score)
+      .slice(0, limit);
+  }
+
+  /**
+   * Get autocomplete suggestions for food names
+   */
+  function getFoodAutocomplete(query: string, limit: number = 5): string[] {
+    if (!query || query.trim().length === 0) {
+      // Return most frequently consumed foods when no query
+      return userFoodItems.value
+        .sort((a, b) => b.times_consumed - a.times_consumed)
+        .slice(0, limit)
+        .map(food => food.name);
+    }
+
+    const searchResults = searchFoodItems(query, limit);
+    return searchResults.map(result => result.name);
+  }
+
+  /**
+   * Get food suggestions ranked by consumption frequency
+   */
+  function getFoodSuggestions(limit: number = 10): UserFoodItem[] {
+    return [...userFoodItems.value]
+      .sort((a, b) => {
+        // Primary sort: consumption count (descending)
+        if (b.times_consumed !== a.times_consumed) {
+          return b.times_consumed - a.times_consumed;
+        }
+        
+        // Secondary sort: last tried date (most recent first)
+        if (a.last_tried_date && b.last_tried_date) {
+          return new Date(b.last_tried_date).getTime() - new Date(a.last_tried_date).getTime();
+        } else if (a.last_tried_date) {
+          return -1;
+        } else if (b.last_tried_date) {
+          return 1;
+        }
+        
+        // Tertiary sort: name (alphabetical)
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, limit);
+  }
+
+  /**
+   * Check if a food name already exists (case-insensitive)
+   */
+  function foodNameExists(name: string, excludeId?: string): boolean {
+    const trimmedName = name.trim().toLowerCase();
+    return userFoodItems.value.some(food => 
+      food.name.toLowerCase() === trimmedName && 
+      (!excludeId || food.id !== excludeId)
+    );
+  }
+
+  /**
+   * Get recently added food items
+   */
+  function getRecentlyAddedFoods(days: number = 7, limit: number = 10): UserFoodItem[] {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    return userFoodItems.value
+      .filter(food => new Date(food.created_at) >= cutoffDate)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, limit);
+  }
+
+  // ===== CONSUMPTION TRACKING =====
+
+  /**
+   * Increment consumption count for a food item
+   */
+  async function incrementFoodConsumption(
+    foodItemId: string, 
+    timestamp?: Date
+  ): Promise<UserFoodItem> {
+    try {
+      await ensureValidSession();
+
+      const food = userFoodItems.value.find(f => f.id === foodItemId);
+      if (!food) {
+        throw new Error("Food item not found");
+      }
+
+      const now = timestamp ? timestamp.toISOString() : new Date().toISOString();
+      const updates: UpdateUserFoodItemData = {
+        times_consumed: food.times_consumed + 1,
+        last_tried_date: now
+      };
+
+      // Set first_tried_date if this is the first time
+      if (!food.first_tried_date) {
+        updates.first_tried_date = now;
+      }
+
+      return await updateUserFoodItem(foodItemId, updates);
+    } catch (error) {
+      console.error("Error incrementing food consumption:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Decrement consumption count for a food item
+   */
+  async function decrementFoodConsumption(foodItemId: string): Promise<UserFoodItem> {
+    try {
+      await ensureValidSession();
+
+      const food = userFoodItems.value.find(f => f.id === foodItemId);
+      if (!food) {
+        throw new Error("Food item not found");
+      }
+
+      if (food.times_consumed <= 0) {
+        throw new Error("Cannot decrement consumption count below zero");
+      }
+
+      const updates: UpdateUserFoodItemData = {
+        times_consumed: food.times_consumed - 1
+      };
+
+      // If this was the only consumption, clear the first_tried_date
+      if (food.times_consumed === 1) {
+        updates.first_tried_date = null;
+        updates.last_tried_date = null;
+      } else {
+        // Find the most recent solid food event for this food to update last_tried_date
+        const recentEvents = solidFoodEvents.value
+          .filter(event => event.food_item_id === foodItemId)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        if (recentEvents.length > 1) {
+          // Get the second most recent event's timestamp
+          const secondMostRecent = recentEvents[1];
+          const feeding = feedings.value.find(f => f.id === secondMostRecent.feeding_id);
+          if (feeding) {
+            updates.last_tried_date = feeding.timestamp;
+          }
+        }
+      }
+
+      return await updateUserFoodItem(foodItemId, updates);
+    } catch (error) {
+      console.error("Error decrementing food consumption:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update consumption counts for multiple foods (batch operation)
+   */
+  async function updateMultipleFoodConsumption(
+    foodItemIds: string[], 
+    increment: boolean = true,
+    timestamp?: Date
+  ): Promise<UserFoodItem[]> {
+    try {
+      await ensureValidSession();
+
+      const results: UserFoodItem[] = [];
+      
+      // Process each food item
+      for (const foodItemId of foodItemIds) {
+        try {
+          if (increment) {
+            const result = await incrementFoodConsumption(foodItemId, timestamp);
+            results.push(result);
+          } else {
+            const result = await decrementFoodConsumption(foodItemId);
+            results.push(result);
+          }
+        } catch (error) {
+          console.error(`Error updating consumption for food ${foodItemId}:`, error);
+          // Continue with other foods even if one fails
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error("Error in batch consumption update:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Recalculate consumption counts for a food item based on solid food events
+   */
+  async function recalculateFoodConsumption(foodItemId: string): Promise<UserFoodItem> {
+    try {
+      await ensureValidSession();
+
+      const food = userFoodItems.value.find(f => f.id === foodItemId);
+      if (!food) {
+        throw new Error("Food item not found");
+      }
+
+      // Get all solid food events for this food item
+      const foodEvents = solidFoodEvents.value.filter(
+        event => event.food_item_id === foodItemId
+      );
+
+      const actualCount = foodEvents.length;
+      
+      // Get timestamps for first and last tried dates
+      let firstTriedDate: string | null = null;
+      let lastTriedDate: string | null = null;
+
+      if (foodEvents.length > 0) {
+        // Sort events by feeding timestamp
+        const sortedEvents = foodEvents
+          .map(event => {
+            const feeding = feedings.value.find(f => f.id === event.feeding_id);
+            return { event, feeding };
+          })
+          .filter(item => item.feeding !== undefined)
+          .sort((a, b) => new Date(a.feeding!.timestamp).getTime() - new Date(b.feeding!.timestamp).getTime());
+
+        if (sortedEvents.length > 0) {
+          firstTriedDate = sortedEvents[0].feeding!.timestamp;
+          lastTriedDate = sortedEvents[sortedEvents.length - 1].feeding!.timestamp;
+        }
+      }
+
+      const updates: UpdateUserFoodItemData = {
+        times_consumed: actualCount,
+        first_tried_date: firstTriedDate,
+        last_tried_date: lastTriedDate
+      };
+
+      return await updateUserFoodItem(foodItemId, updates);
+    } catch (error) {
+      console.error("Error recalculating food consumption:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get consumption statistics for all foods
+   */
+  function getFoodConsumptionStats(): {
+    totalFoods: number;
+    totalConsumptions: number;
+    averageConsumptionsPerFood: number;
+    mostConsumedFood: UserFoodItem | null;
+    leastConsumedFood: UserFoodItem | null;
+    recentlyTriedFoods: UserFoodItem[];
+  } {
+    const foods = userFoodItems.value;
+    const totalFoods = foods.length;
+    const totalConsumptions = foods.reduce((sum, food) => sum + food.times_consumed, 0);
+    const averageConsumptionsPerFood = totalFoods > 0 ? totalConsumptions / totalFoods : 0;
+
+    // Find most and least consumed foods (excluding zero consumption)
+    const consumedFoods = foods.filter(food => food.times_consumed > 0);
+    const mostConsumedFood = consumedFoods.length > 0 
+      ? consumedFoods.reduce((max, food) => food.times_consumed > max.times_consumed ? food : max)
+      : null;
+    
+    const leastConsumedFood = consumedFoods.length > 0
+      ? consumedFoods.reduce((min, food) => food.times_consumed < min.times_consumed ? food : min)
+      : null;
+
+    // Get recently tried foods (within last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const recentlyTriedFoods = foods
+      .filter(food => food.last_tried_date && new Date(food.last_tried_date) >= sevenDaysAgo)
+      .sort((a, b) => new Date(b.last_tried_date!).getTime() - new Date(a.last_tried_date!).getTime())
+      .slice(0, 10);
+
+    return {
+      totalFoods,
+      totalConsumptions,
+      averageConsumptionsPerFood: Math.round(averageConsumptionsPerFood * 100) / 100,
+      mostConsumedFood,
+      leastConsumedFood,
+      recentlyTriedFoods
+    };
+  }
+
+  /**
+   * Get solid food events for a baby with populated food data
+   */
+  async function getBabySolidFoodEventsWithFoods(babyId: string) {
+    try {
+      // Get solid food feeding events for this baby
+      const solidFeedings = feedings.value.filter(f => f.baby_id === babyId && f.type === 'solid');
+      
+      // For each solid feeding, get the associated food items
+      const solidFoodEventsWithFoods = await Promise.all(
+        solidFeedings.map(async (feeding) => {
+          // Get solid food events for this feeding
+          const { data: solidFoodEvents, error } = await supabase
+            .from('solid_food_events')
+            .select(`
+              id,
+              food_item_id,
+              user_food_items (
+                id,
+                name,
+                times_consumed,
+                first_tried_date,
+                last_tried_date
+              )
+            `)
+            .eq('feeding_id', feeding.id);
+
+          if (error) {
+            console.error('Error fetching solid food events:', error);
+            return {
+              ...feeding,
+              foods: []
+            };
+          }
+
+          // Extract food items from the joined data
+          const foods = solidFoodEvents?.map(event => event.user_food_items).filter(Boolean) || [];
+
+          return {
+            ...feeding,
+            foods
+          };
+        })
+      );
+
+      return solidFoodEventsWithFoods;
+    } catch (error) {
+      console.error('Error getting solid food events with foods:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get solid food events for a baby (synchronous version using local state)
+   */
+  function getBabySolidFoodEvents(babyId: string) {
+    // Get solid food feeding events for this baby
+    const solidFeedings = feedings.value.filter(f => f.baby_id === babyId && f.type === 'solid');
+    
+    // For each solid feeding, get the associated food items from local state
+    return solidFeedings.map(feeding => {
+      // Get solid food events for this feeding from local state
+      const feedingSolidFoodEvents = solidFoodEvents.value.filter(e => e.feeding_id === feeding.id);
+      
+      // Get the food items for these events
+      const foods = feedingSolidFoodEvents
+        .map(event => userFoodItems.value.find(item => item.id === event.food_item_id))
+        .filter(Boolean);
+
+      return {
+        ...feeding,
+        foods
+      };
+    });
+  }
+
   return {
     // State
     babies,
@@ -3036,6 +4227,8 @@ export const useBabyStore = defineStore("baby", () => {
     babySettings,
     solidFoods,
     pumpingSessions,
+    userFoodItems,
+    solidFoodEvents,
     isLoading,
     currentUser,
     measurementUnit,
@@ -3127,5 +4320,32 @@ export const useBabyStore = defineStore("baby", () => {
     
     // Measurement Unit
     updateMeasurementUnit,
+
+    // User Food Items (New Solid Food System)
+    addUserFoodItem,
+    getUserFoodItems,
+    updateUserFoodItem,
+    deleteUserFoodItem,
+    
+    // Food Search and Autocomplete
+    searchFoodItems,
+    getFoodAutocomplete,
+    getFoodSuggestions,
+    foodNameExists,
+    getRecentlyAddedFoods,
+    
+    // Consumption Tracking
+    incrementFoodConsumption,
+    decrementFoodConsumption,
+    updateMultipleFoodConsumption,
+    recalculateFoodConsumption,
+    getFoodConsumptionStats,
+    
+    // Solid Food Event Management
+    createSolidFoodEvent,
+    updateSolidFoodEvent,
+    deleteSolidFoodEvent,
+    getBabySolidFoodEvents,
+    getBabySolidFoodEventsWithFoods,
   };
 });

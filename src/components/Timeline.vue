@@ -44,8 +44,9 @@
           v-for="solidFood in solidFoodEvents"
           :key="solidFood.id"
           class="solid-food-marker"
+          :class="{ 'multiple-foods': (solidFood.foods && solidFood.foods.length > 1) }"
           :style="{ left: `calc(${getEventPosition(solidFood)}% - 8px)` }"
-          :title="`${solidFood.food_name} at ${formatEventTooltip(solidFood)}`"
+          :title="formatSolidFoodTooltip(solidFood)"
           @click="showSolidFoodDetails(solidFood)"
         ></div>
         <div
@@ -115,7 +116,8 @@ interface DiaperEvent {
 interface SolidFoodEvent {
   id: string | number
   timestamp: string
-  food_name: string
+  food_name?: string // Legacy field for backward compatibility
+  foods?: Array<{ name: string }> // New field for multiple foods
   reaction?: string | null
 }
 
@@ -253,6 +255,31 @@ function formatPumpingTooltip(pumping: PumpingEvent) {
   return `Pumping: ${durationMinutes}min, ${amountString} at ${timeString}`
 }
 
+function formatSolidFoodTooltip(solidFood: SolidFoodEvent) {
+  const date = new Date(solidFood.timestamp)
+  const timeString = date.toLocaleString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  
+  // Handle both legacy single food and new multiple foods format
+  let foodDisplay = ''
+  if (solidFood.foods && solidFood.foods.length > 0) {
+    if (solidFood.foods.length === 1) {
+      foodDisplay = solidFood.foods[0].name
+    } else {
+      foodDisplay = `${solidFood.foods.length} foods: ${solidFood.foods.map(f => f.name).join(', ')}`
+    }
+  } else if (solidFood.food_name) {
+    // Legacy format
+    foodDisplay = solidFood.food_name
+  } else {
+    foodDisplay = 'Unknown foods'
+  }
+  
+  return `Solid Food: ${foodDisplay} at ${timeString}`
+}
+
 function getHourForIndex(i: number) {
   const { start } = getTimelineWindow();
   return (start.getHours() + i) % 24;
@@ -350,9 +377,26 @@ function showSolidFoodDetails(solidFood: SolidFoodEvent) {
     minute: '2-digit'
   })
   
+  // Handle both legacy single food and new multiple foods format
+  let foodDisplay = ''
+  if (solidFood.foods && solidFood.foods.length > 0) {
+    if (solidFood.foods.length === 1) {
+      foodDisplay = solidFood.foods[0].name
+    } else if (solidFood.foods.length <= 3) {
+      foodDisplay = solidFood.foods.map(f => f.name).join(', ')
+    } else {
+      foodDisplay = `${solidFood.foods.slice(0, 2).map(f => f.name).join(', ')} +${solidFood.foods.length - 2} more`
+    }
+  } else if (solidFood.food_name) {
+    // Legacy format
+    foodDisplay = solidFood.food_name
+  } else {
+    foodDisplay = 'Unknown foods'
+  }
+  
   snackbar.show = true
   snackbar.type = 'solid'
-  snackbar.title = `Solid Food: ${solidFood.food_name}`
+  snackbar.title = `Solid Food: ${foodDisplay}`
   snackbar.time = timeString
   snackbar.details = solidFood.reaction ? `Reaction: ${solidFood.reaction}` : 'No reaction recorded'
   snackbar.icon = spoonIcon
@@ -507,6 +551,11 @@ function hideSnackbar() {
 }
 .solid-food-marker {
   background: var(--color-feeding-solid);
+}
+
+.solid-food-marker.multiple-foods {
+  background: linear-gradient(45deg, var(--color-feeding-solid) 50%, var(--color-feeding-formula) 50%);
+  border: 2px solid var(--color-feeding-solid);
 }
 .pumping-marker {
   background: var(--color-feeding-pump);

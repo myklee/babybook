@@ -103,4 +103,3 @@ const labelClasses = computed(() => [
   color: var(--color-focus);
 }
 </style>
-</template>

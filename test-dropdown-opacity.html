@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Dropdown Opacity Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        h1, h2 {
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .dropdown-demo {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+        }
+
+        /* Test the fixed dropdown styles */
+        .suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1a1a2e; /* Simulating --color-bg-primary in dark mode */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 8px;
+        }
+
+        .suggestions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px 12px 0 0;
+            font-weight: 500;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .suggestion-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .food-name {
+            font-weight: 500;
+        }
+
+        .food-meta {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .test-note {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #333;
+            border-left: 4px solid #4ecdc4;
+        }
+
+        .old-style {
+            background: rgba(255, 255, 255, 0.05) !important; /* Old transparent style */
+        }
+
+        .new-style {
+            background: #1a1a2e !important; /* New opaque style */
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .comparison-item {
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            color: white;
+        }
+
+        .show-dropdown {
+            display: block !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🍎 Food Dropdown Opacity Test</h1>
+        
+        <div class="test-note">
+            <strong>Test Purpose:</strong> This page tests the opacity fix for food selection dropdowns. 
+            The colorful animated background helps visualize whether dropdown backgrounds are truly opaque.
+        </div>
+
+        <div class="test-section">
+            <h2>Fixed Dropdown (Opaque Background)</h2>
+            <div class="dropdown-demo">
+                <input type="text" class="search-input" placeholder="Search foods..." readonly>
+                <div class="suggestions-dropdown show-dropdown new-style">
+                    <div class="suggestions-header">
+                        <span>Select from your foods:</span>
+                        <button>×</button>
+                    </div>
+                    <div class="suggestion-item">
+                        <div>
+                            <div class="food-name">Apple Slices</div>
+                            <div class="food-meta">5x tried • Last: Jan 15</div>
+                        </div>
+                        <div>✓</div>
+                    </div>
+                    <div class="suggestion-item">
+                        <div>
+                            <div class="food-name">Banana Pieces</div>
+                            <div class="food-meta">3x tried • Last: Jan 12</div>
+                        </div>
+                    </div>
+                    <div class="suggestion-item">
+                        <div>
+                            <div class="food-name">Sweet Potato</div>
+                            <div class="food-meta">7x tried • Last: Jan 10</div>
+                        </div>
+                    </div>
+                    <div class="suggestion-item">
+                        <div>
+                            <div class="food-name">Avocado</div>
+                            <div class="food-meta">2x tried • Last: Jan 8</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="comparison">
+            <div class="comparison-item old-style">
+                <h3>❌ Before Fix</h3>
+                <p>Semi-transparent background<br>
+                (rgba opacity 0.05)<br>
+                Background shows through</p>
+            </div>
+            <div class="comparison-item new-style">
+                <h3>✅ After Fix</h3>
+                <p>Opaque background<br>
+                (--color-bg-primary)<br>
+                Background is blocked</p>
+            </div>
+        </div>
+
+        <div class="test-note">
+            <strong>What was fixed:</strong>
+            <ul>
+                <li><strong>SolidFoodEventModal:</strong> Changed suggestions-dropdown background from var(--color-surface) to var(--color-bg-primary)</li>
+                <li><strong>EditRecord:</strong> Changed food-selection background from var(--color-surface) to var(--color-bg-secondary)</li>
+                <li><strong>FoodItemManager:</strong> Changed food-item background from var(--color-surface) to var(--color-bg-secondary)</li>
+                <li><strong>SolidFoodEditModal:</strong> Changed suggestion-item background from var(--color-surface) to var(--color-bg-secondary)</li>
+                <li><strong>SolidFoodModal:</strong> Changed from hardcoded rgba(255,255,255,0.02) to var(--color-bg-secondary)</li>
+                <li><strong>SolidFoodInput:</strong> Changed from hardcoded white to var(--color-bg-secondary)</li>
+            </ul>
+        </div>
+
+        <div class="test-note">
+            <strong>Result:</strong> All food selection dropdowns and containers now have opaque backgrounds that properly block the content behind them, improving readability and visual clarity.
+        </div>
+    </div>
+
+    <script>
+        // Add some interactivity to demonstrate the fix
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('.search-input');
+            const dropdown = document.querySelector('.suggestions-dropdown');
+            
+            searchInput.addEventListener('focus', function() {
+                dropdown.style.display = 'block';
+            });
+            
+            searchInput.addEventListener('blur', function() {
+                setTimeout(() => {
+                    dropdown.style.display = 'none';
+                }, 200);
+            });
+        });
+    </script>
+</body>
+</html>

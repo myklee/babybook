@@ -11,6 +11,7 @@ import {
   getInputStep,
   getUnitLabel,
 } from "../lib/measurements";
+import type { UserFoodItem } from "../types/solidFood";
 
 const props = defineProps<{
   record: any;
@@ -46,6 +47,13 @@ const topupAmount = ref(0);
 const isSaving = ref(false);
 const amountInput = ref<HTMLInputElement | null>(null);
 const topupAmountInput = ref<HTMLInputElement | null>(null);
+
+// Solid food specific state
+const selectedFoodIds = ref<string[]>([]);
+const availableFoods = ref<UserFoodItem[]>([]);
+const reaction = ref<'liked' | 'disliked' | 'neutral' | 'allergic_reaction' | ''>('');
+const newFoodName = ref('');
+const showAddFood = ref(false);
 
 // UI state
 const showMoreOptions = ref(false);
@@ -92,13 +100,25 @@ onMounted(() => {
   if (props.type === "feeding" || props.type === "diaper") {
     if (props.type === "feeding") {
       const feeding = props.record;
-      amount.value = getDisplayValue(feeding.amount, store.measurementUnit);
       feedingType.value = feeding.type;
       notes.value = feeding.notes || "";
-      topupAmount.value = getDisplayValue(
-        feeding.topup_amount || 0,
-        store.measurementUnit
-      );
+      
+      if (feeding.type === "solid") {
+        // Handle solid food event
+        availableFoods.value = store.getUserFoodItems();
+        if (feeding.foods && feeding.foods.length > 0) {
+          selectedFoodIds.value = feeding.foods.map((f: UserFoodItem) => f.id);
+        }
+        // Extract reaction from notes or use a separate field if available
+        reaction.value = (feeding.reaction as 'liked' | 'disliked' | 'neutral' | 'allergic_reaction') || '';
+      } else {
+        // Handle regular feeding
+        amount.value = getDisplayValue(feeding.amount, store.measurementUnit);
+        topupAmount.value = getDisplayValue(
+          feeding.topup_amount || 0,
+          store.measurementUnit
+        );
+      }
     } else {
       // Diaper
       const diaperChange = props.record;
@@ -136,6 +156,35 @@ function selectTopupAmountText() {
   }
 }
 
+// Solid food functions
+function toggleFoodSelection(foodId: string) {
+  const index = selectedFoodIds.value.indexOf(foodId);
+  if (index > -1) {
+    selectedFoodIds.value.splice(index, 1);
+  } else {
+    selectedFoodIds.value.push(foodId);
+  }
+}
+
+function isFoodSelected(foodId: string) {
+  return selectedFoodIds.value.includes(foodId);
+}
+
+async function addNewFood() {
+  if (!newFoodName.value.trim()) return;
+  
+  try {
+    const newFood = await store.addUserFoodItem(newFoodName.value.trim());
+    availableFoods.value.push(newFood);
+    selectedFoodIds.value.push(newFood.id);
+    newFoodName.value = '';
+    showAddFood.value = false;
+  } catch (error) {
+    console.error('Error adding new food:', error);
+    alert('Failed to add new food. Please try again.');
+  }
+}
+
 function getSelectedDateTime(
   dateStr: string,
   timeObj: { hour: string; minute: string; ampm: "AM" | "PM" }
@@ -155,13 +204,27 @@ async function handleSubmit() {
     if (!startTimestamp) throw new Error("Invalid start time");
 
     if (props.type === "feeding") {
-      await store.updateFeeding(props.record.id, {
-        amount: getStorageValue(amount.value, store.measurementUnit),
-        type: feedingType.value,
-        notes: notes.value,
-        timestamp: startTimestamp.toISOString(),
-        topup_amount: getStorageValue(topupAmount.value, store.measurementUnit),
-      } as any);
+      if (feedingType.value === "solid") {
+        // Handle solid food event update
+        if (selectedFoodIds.value.length === 0) {
+          throw new Error("Please select at least one food item");
+        }
+        
+        await store.updateSolidFoodEvent(props.record.id, selectedFoodIds.value, {
+          timestamp: startTimestamp,
+          notes: notes.value,
+          reaction: reaction.value || null,
+        });
+      } else {
+        // Handle regular feeding update
+        await store.updateFeeding(props.record.id, {
+          amount: getStorageValue(amount.value, store.measurementUnit),
+          type: feedingType.value,
+          notes: notes.value,
+          timestamp: startTimestamp.toISOString(),
+          topup_amount: getStorageValue(topupAmount.value, store.measurementUnit),
+        } as any);
+      }
     } else if (props.type === "diaper") {
       await store.updateDiaperChange(props.record.id, {
         type: diaperType.value,
@@ -195,7 +258,11 @@ async function handleDelete() {
     isSaving.value = true;
     try {
       if (props.type === "feeding") {
-        await store.deleteFeeding(props.record.id);
+        if (props.record.type === "solid") {
+          await store.deleteSolidFoodEvent(props.record.id);
+        } else {
+          await store.deleteFeeding(props.record.id);
+        }
       } else if (props.type === "diaper") {
         await store.deleteDiaperChange(props.record.id);
       } else if (props.type === "sleep") {
@@ -251,7 +318,7 @@ async function handleDelete() {
         <label for="sleep-end-time">End Time (Optional)</label>
         <TimePicker v-model="endTime" />
       </div>
-      <div v-if="type === 'feeding'" class="form-group">
+      <div v-if="type === 'feeding' && feedingType !== 'solid'" class="form-group">
         <label>Amount ({{ unitLabel }})</label>
         <input
           type="number"
@@ -267,6 +334,53 @@ async function handleDelete() {
           placeholder="Enter amount"
           autocomplete="off"
         />
+      </div>
+      
+      <!-- Solid Food Selection -->
+      <div v-if="type === 'feeding' && feedingType === 'solid'" class="form-group">
+        <label>Foods</label>
+        <div class="food-selection">
+          <div class="selected-foods" v-if="selectedFoodIds.length > 0">
+            <div v-for="foodId in selectedFoodIds" :key="foodId" class="selected-food">
+              <span>{{ availableFoods.find(f => f.id === foodId)?.name || 'Unknown' }}</span>
+              <button type="button" @click="toggleFoodSelection(foodId)" class="remove-food">×</button>
+            </div>
+          </div>
+          <div class="available-foods">
+            <div class="food-search">
+              <input 
+                type="text" 
+                v-model="newFoodName" 
+                placeholder="Search or add new food..."
+                @keydown.enter.prevent="addNewFood"
+              />
+              <button type="button" @click="addNewFood" v-if="newFoodName.trim()" class="add-food-btn">Add</button>
+            </div>
+            <div class="food-list">
+              <button 
+                v-for="food in availableFoods.filter(f => !isFoodSelected(f.id))" 
+                :key="food.id"
+                type="button"
+                @click="toggleFoodSelection(food.id)"
+                class="food-option"
+              >
+                {{ food.name }} ({{ food.times_consumed }}x)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Solid Food Reaction -->
+      <div v-if="type === 'feeding' && feedingType === 'solid'" class="form-group">
+        <label>Reaction</label>
+        <select v-model="reaction">
+          <option value="">No reaction recorded</option>
+          <option value="liked">Liked</option>
+          <option value="disliked">Disliked</option>
+          <option value="neutral">Neutral</option>
+          <option value="allergic_reaction">Allergic Reaction</option>
+        </select>
       </div>
       <div
         v-if="type === 'feeding' && feedingType === 'breast'"
@@ -406,6 +520,107 @@ async function handleDelete() {
 .more-options {
   padding-top: 1rem;
   margin-top: 1rem;
+}
+
+/* Solid Food Selection Styles */
+.food-selection {
+  border: 1px solid var(--color-surface-border);
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: #0d1b1e;
+}
+
+[data-theme="light"] .food-selection {
+  background-color: #f8fafc;
+}
+
+.selected-foods {
+  margin-bottom: 1rem;
+}
+
+.selected-food {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-lavendar);
+  color: var(--color-midnight);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.remove-food {
+  background: none;
+  border: none;
+  color: var(--color-midnight);
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.remove-food:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.food-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.food-search input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--color-surface-border);
+  border-radius: 4px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.add-food-btn {
+  padding: 0.5rem 1rem;
+  background: var(--color-lavendar);
+  color: var(--color-midnight);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.add-food-btn:hover {
+  background: var(--color-periwinkle);
+}
+
+.food-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.food-option {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-primary);
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.food-option:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-lavendar);
 }
 
 /* Mobile responsiveness handled by shared button styles */

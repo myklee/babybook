@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useBabyStore } from '../stores/babyStore'
 import FeedingModal from '../components/FeedingModal.vue'
 import DiaperModal from '../components/DiaperModal.vue'
-import SolidFoodModal from '../components/SolidFoodModal.vue'
+import SolidFoodEventModal from '../components/SolidFoodEventModal.vue'
 import BabySettingsModal from '../components/BabySettingsModal.vue'
 import HistoryList from '../components/HistoryList.vue'
 import IconButton from '../components/IconButton.vue'
@@ -30,7 +30,7 @@ const showFeedingModal = ref(false)
 const showDiaperModal = ref(false)
 const showNursingTimerModal = ref(false)
 const showPumpingTimerModal = ref(false)
-const showSolidFoodModal = ref(false)
+const showSolidFoodEventModal = ref(false)
 const showBabySettingsModal = ref(false)
 const feedingType = ref<'breast' | 'formula'>('breast')
 const diaperType = ref<'pee' | 'poop' | 'both'>('pee')
@@ -92,10 +92,10 @@ function openFeedingModal(type: 'breast' | 'formula') {
   showFeedingModal.value = true
 }
 
-// Open solid food modal
-function openSolidFoodModal() {
+// Open solid food event modal
+function openSolidFoodEventModal() {
   if (!selectedBaby.value) return
-  showSolidFoodModal.value = true
+  showSolidFoodEventModal.value = true
 }
 
 // Open baby settings modal
@@ -455,7 +455,7 @@ function handleSleepClick() {
           <img src="../assets/icons/flask-conical.svg" class="icon" alt="Formula" />
           <span>Formula</span>
         </button>
-        <button class="action-btn solid" @click="openSolidFoodModal()">
+        <button class="action-btn solid" @click="openSolidFoodEventModal()">
           <img src="../assets/icons/spoon.svg" class="icon" alt="Solid Food" />
           <span>Solid</span>
         </button>
@@ -570,8 +570,8 @@ function handleSleepClick() {
       @save="handlePumpingSave"
     />
 
-    <SolidFoodModal v-if="showSolidFoodModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
-      @close="showSolidFoodModal = false" @saved="showSolidFoodModal = false" />
+    <SolidFoodEventModal v-if="showSolidFoodEventModal && selectedBaby" :babyId="selectedBaby.id" :babyName="selectedBaby.name"
+      @close="showSolidFoodEventModal = false" @saved="showSolidFoodEventModal = false" />
 
     <BabySettingsModal 
       v-if="showBabySettingsModal && selectedBaby"

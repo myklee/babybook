@@ -385,21 +385,21 @@ onMounted(() => {
 
 .suggestion-item {
     padding: 10px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-surface-border);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
-    background: white;
+    background: var(--color-bg-secondary);
 }
 
 .suggestion-item:hover {
-    border-color: #4caf50;
-    background: #f8fff8;
+    border-color: var(--color-success);
+    background: var(--color-bg-primary);
 }
 
 .suggestion-item.already-tried {
-    background: #f0f8ff;
-    border-color: #2196f3;
+    background: var(--color-primary-bg);
+    border-color: var(--color-primary);
 }
 
 .food-name {

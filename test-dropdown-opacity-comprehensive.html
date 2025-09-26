@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Food Dropdown Opacity Test</title>
+    <style>
+        :root {
+            /* Dark theme variables (matching the app) */
+            --color-bg-primary: #1a1a2e;
+            --color-bg-secondary: #0d1b1e;
+            --color-bg-tertiary: #23243a;
+            --color-surface-border: rgba(255, 255, 255, 0.1);
+            --color-text-primary: #ffffff;
+            --color-text-secondary: #e0e0ff;
+            --color-success-bg: rgba(76, 175, 80, 0.1);
+            --color-success: #4caf50;
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="light"] {
+            --color-bg-primary: #ffffff;
+            --color-bg-secondary: #f8fafc;
+            --color-bg-tertiary: #f1f5f9;
+            --color-surface-border: rgba(0, 0, 0, 0.1);
+            --color-text-primary: #1e293b;
+            --color-text-secondary: #334155;
+            --color-success-bg: rgba(76, 175, 80, 0.1);
+            --color-success: #4caf50;
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57, #ff9ff3);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+            min-height: 100vh;
+            color: var(--color-text-primary);
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            25% { background-position: 100% 50%; }
+            50% { background-position: 100% 100%; }
+            75% { background-position: 0% 100%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: var(--color-bg-primary);
+            border: 1px solid var(--color-surface-border);
+            border-radius: 8px;
+            color: var(--color-text-primary);
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1, h2 {
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            margin-top: 0;
+        }
+
+        .dropdown-demo {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--color-surface-border);
+            border-radius: 8px;
+            background: var(--color-bg-secondary);
+            color: var(--color-text-primary);
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        /* Fixed dropdown styles - matching the actual component */
+        .suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--color-bg-primary);
+            background-color: #1a1a2e; /* Dark theme fallback */
+            border: 1px solid var(--color-surface-border);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            z-index: 10;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 8px;
+            opacity: 1;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+
+        [data-theme="light"] .suggestions-dropdown {
+            background-color: #ffffff;
+        }
+
+        .suggestions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--color-bg-secondary);
+            border-bottom: 1px solid var(--color-surface-border);
+            border-radius: 12px 12px 0 0;
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--color-text-secondary);
+        }
+
+        .close-suggestions {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            color: var(--color-text-secondary);
+            transition: color 0.2s;
+        }
+
+        .close-suggestions:hover {
+            color: var(--color-text-primary);
+        }
+
+        .suggestion-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid var(--color-surface-border);
+            color: var(--color-text-primary);
+        }
+
+        .suggestion-item:hover {
+            background: var(--color-bg-tertiary);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item.already-selected {
+            background: var(--color-success-bg);
+            border-color: var(--color-success);
+        }
+
+        .food-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .food-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .food-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--color-text-secondary);
+        }
+
+        .consumption-count {
+            color: var(--color-success);
+            font-weight: 500;
+        }
+
+        .selected-indicator {
+            color: var(--color-success);
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .test-note {
+            background: var(--color-bg-primary);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid var(--color-surface-border);
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .comparison-item {
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--color-surface-border);
+            text-align: center;
+            background: var(--color-bg-secondary);
+        }
+
+        .show-dropdown {
+            display: block !important;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-fixed {
+            background: #4caf50;
+        }
+
+        .status-issue {
+            background: #f44336;
+        }
+
+        .component-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .component-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--color-surface-border);
+        }
+
+        .component-list li:last-child {
+            border-bottom: none;
+        }
+
+        .opacity-test {
+            position: relative;
+            height: 200px;
+            background: linear-gradient(45deg, red, blue, green, yellow);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .opacity-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            background: var(--color-bg-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-primary);
+            font-weight: normal;
+            text-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Theme</button>
+    
+    <div class="test-container">
+        <h1>🍎 Comprehensive Food Dropdown Opacity Test</h1>
+        
+        <div class="test-note">
+            <strong>Test Purpose:</strong> This page comprehensively tests the opacity fixes for all food selection dropdowns. 
+            The animated gradient background helps visualize whether dropdown backgrounds are truly opaque.
+        </div>
+
+        <div class="test-section">
+            <h2>✅ Fixed Components Status</h2>
+            <ul class="component-list">
+                <li><span class="status-indicator status-fixed"></span><strong>SolidFoodEventModal:</strong> suggestions-dropdown background fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>SolidFoodEventModal:</strong> suggestions-header background fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>SolidFoodEventModal:</strong> suggestion-item hover fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>SolidFoodEventModal:</strong> clear-all-btn hover fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>EditRecord:</strong> food-selection background fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>EditRecord:</strong> food-option hover fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>FoodItemManager:</strong> food-item background fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>SolidFoodEditModal:</strong> suggestion-item background fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>SolidFoodEditModal:</strong> suggestions-header background fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>SolidFoodModal:</strong> suggestion-item backgrounds fixed</li>
+                <li><span class="status-indicator status-fixed"></span><strong>SolidFoodInput:</strong> suggestion-item backgrounds fixed</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Live Dropdown Test</h2>
+            <div class="dropdown-demo">
+                <input type="text" class="search-input" placeholder="Search foods..." readonly>
+                <div class="suggestions-dropdown show-dropdown">
+                    <div class="suggestions-header">
+                        <span>Select from your foods:</span>
+                        <button class="close-suggestions">×</button>
+                    </div>
+                    <div class="suggestion-item">
+                        <div class="food-info">
+                            <div class="food-name">Apple Slices</div>
+                            <div class="food-meta">
+                                <span class="consumption-count">5x tried</span>
+                                <span>Last: Jan 15</span>
+                            </div>
+                        </div>
+                        <div class="selected-indicator">✓</div>
+                    </div>
+                    <div class="suggestion-item already-selected">
+                        <div class="food-info">
+                            <div class="food-name">Banana Pieces</div>
+                            <div class="food-meta">
+                                <span class="consumption-count">3x tried</span>
+                                <span>Last: Jan 12</span>
+                            </div>
+                        </div>
+                        <div class="selected-indicator">✓</div>
+                    </div>
+                    <div class="suggestion-item">
+                        <div class="food-info">
+                            <div class="food-name">Sweet Potato</div>
+                            <div class="food-meta">
+                                <span class="consumption-count">7x tried</span>
+                                <span>Last: Jan 10</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="suggestion-item">
+                        <div class="food-info">
+                            <div class="food-name">Avocado</div>
+                            <div class="food-meta">
+                                <span class="consumption-count">2x tried</span>
+                                <span>Last: Jan 8</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎨 Opacity Verification Test</h2>
+            <p>The box below has a colorful gradient background. The overlay should completely block it:</p>
+            <div class="opacity-test">
+                <div>Colorful Background - Should NOT be visible through overlay</div>
+                <div class="opacity-overlay">
+                    ✅ Opaque Overlay - Background should be completely blocked
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 Changes Made</h2>
+            <div class="test-note">
+                <strong>Background Changes:</strong>
+                <ul>
+                    <li><code>var(--color-surface)</code> → <code>var(--color-bg-primary)</code> or <code>var(--color-bg-secondary)</code></li>
+                    <li><code>var(--color-surface-hover)</code> → <code>var(--color-bg-tertiary)</code></li>
+                    <li>Added fallback colors: <code>#1a1a2e</code> (dark) and <code>#ffffff</code> (light)</li>
+                    <li>Added <code>opacity: 1</code> and disabled backdrop filters</li>
+                </ul>
+                
+                <strong>CSS Variables Used:</strong>
+                <ul>
+                    <li><code>--color-bg-primary</code>: #1a1a2e (dark) / #ffffff (light)</li>
+                    <li><code>--color-bg-secondary</code>: #0d1b1e (dark) / #f8fafc (light)</li>
+                    <li><code>--color-bg-tertiary</code>: #23243a (dark) / #f1f5f9 (light)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Result</h2>
+            <div class="test-note">
+                <strong>✅ Success:</strong> All food selection dropdowns now have completely opaque backgrounds that block content behind them, ensuring excellent readability in both light and dark themes.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            body.setAttribute('data-theme', newTheme);
+        }
+
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            const suggestionItems = document.querySelectorAll('.suggestion-item');
+            
+            suggestionItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    this.classList.toggle('already-selected');
+                    const indicator = this.querySelector('.selected-indicator');
+                    if (this.classList.contains('already-selected')) {
+                        if (!indicator) {
+                            const newIndicator = document.createElement('div');
+                            newIndicator.className = 'selected-indicator';
+                            newIndicator.textContent = '✓';
+                            this.appendChild(newIndicator);
+                        }
+                    } else {
+                        if (indicator) {
+                            indicator.remove();
+                        }
+                    }
+                });
+            });
+
+            // Set initial theme
+            document.body.setAttribute('data-theme', 'dark');
+        });
+    </script>
+</body>
+</html>

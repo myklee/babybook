@@ -330,6 +330,58 @@ export interface Database {
           updated_at?: string;
         };
       };
+      user_food_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          times_consumed: number;
+          first_tried_date: string | null;
+          last_tried_date: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          times_consumed?: number;
+          first_tried_date?: string | null;
+          last_tried_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          times_consumed?: number;
+          first_tried_date?: string | null;
+          last_tried_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      solid_food_events: {
+        Row: {
+          id: string;
+          feeding_id: string;
+          food_item_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          feeding_id: string;
+          food_item_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          feeding_id?: string;
+          food_item_id?: string;
+          created_at?: string;
+        };
+      };
     };
   };
 }

@@ -461,7 +461,7 @@ async function handleSave() {
   background: rgba(255, 255, 255, 0.05);
   margin-top: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 10;
+  z-index: 1010;
   max-height: 300px;
   overflow-y: auto;
 }
@@ -520,22 +520,22 @@ async function handleSave() {
 
 .suggestion-item {
   padding: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-surface-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-secondary);
 }
 
 .suggestion-item:hover {
-  border-color: #9c27b0;
-  background: rgba(156, 39, 176, 0.1);
+  border-color: var(--color-primary);
+  background: var(--color-bg-primary);
   transform: translateY(-1px);
 }
 
 .suggestion-item.already-tried {
-  background: rgba(0, 123, 255, 0.1);
-  border-color: rgba(0, 123, 255, 0.3);
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
 }
 
 .suggestion-category.previously-tried {

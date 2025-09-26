@@ -1,10 +1,11 @@
 // Feeding schedule configuration types and interfaces
+import type { FeedingType } from "./feeding";
 
 // Feeding types that are relevant for schedule calculations by default
 export type ScheduleRelevantFeedingType = "breast" | "formula" | "nursing";
 
-// All feeding types including solids
-export type AllFeedingType = ScheduleRelevantFeedingType | "solid";
+// All feeding types including solids (using the main FeedingType)
+export type AllFeedingType = FeedingType;
 
 // Feeding schedule calculation options
 export interface FeedingScheduleOptions {

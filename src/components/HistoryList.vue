@@ -34,6 +34,11 @@ const solidFoods = computed(() => {
   return store.getBabySolidFoods(props.babyId)
 })
 
+// Get solid food events (new format) - feeding events with type "solid" and populated food data
+const solidFoodEvents = computed(() => {
+  return store.getBabySolidFoodEvents(props.babyId)
+})
+
 const pumpingSessions = computed(() => {
   // Show all pumping sessions since they're account-level
   return store.getAllPumpingSessions()
@@ -41,23 +46,36 @@ const pumpingSessions = computed(() => {
 
 // Combined feedings that includes both regular feedings and solid foods
 const combinedFeedings = computed(() => {
-  const regularFeedings = feedings.value.map(f => ({
-    ...f,
-    event_type: 'feeding' as const,
-    sort_time: new Date(f.timestamp).getTime()
+  const regularFeedings = feedings.value
+    .filter(f => f.type !== 'solid') // Exclude solid food events as they're handled separately
+    .map(f => ({
+      ...f,
+      event_type: 'feeding' as const,
+      sort_time: new Date(f.timestamp).getTime()
+    }))
+  
+  // New solid food events (feeding events with populated food data)
+  const newSolidFeedingEvents = solidFoodEvents.value.map(sf => ({
+    ...sf,
+    event_type: 'solid' as const,
+    sort_time: new Date(sf.timestamp).getTime()
   }))
   
-  const solidFeedingEvents = solidFoods.value.map(sf => ({
+  // Legacy solid foods (for backward compatibility)
+  const legacySolidFeedingEvents = solidFoods.value.map(sf => ({
     ...sf,
     id: sf.id,
-    event_type: 'solid' as const,
+    event_type: 'solid_legacy' as const,
     timestamp: sf.last_tried_date,
     type: 'solid' as const,
-    sort_time: new Date(sf.last_tried_date).getTime()
+    sort_time: new Date(sf.last_tried_date).getTime(),
+    // Legacy format
+    food_name: sf.food_name,
+    foods: undefined
   }))
   
   // Combine and sort by most recent
-  const combined = [...regularFeedings, ...solidFeedingEvents]
+  const combined = [...regularFeedings, ...newSolidFeedingEvents, ...legacySolidFeedingEvents]
   return combined.sort((a, b) => b.sort_time - a.sort_time)
 })
 
@@ -289,7 +307,7 @@ function getRelativeDate(dateString: string): string {
       </div>
       <ul v-else class="history-list">
         <li v-for="item in combinedFeedings.slice(0, 8)" :key="`${item.event_type}-${item.id}`" class="history-item"
-          @click="item.event_type === 'feeding' ? openEditModal(item, 'feeding') : item.event_type === 'solid' ? openSolidFoodEditModal(item) : null">
+          @click="item.event_type === 'feeding' ? openEditModal(item, 'feeding') : (item.event_type === 'solid' || item.event_type === 'solid_legacy') ? openSolidFoodEditModal(item) : null">
           <div class="time">
             <span v-if="item.event_type === 'feeding' && item.type === 'nursing' && (item as any).start_time && (item as any).end_time && isSameDay((item as any).start_time, (item as any).end_time)">
               {{ getRelativeDate((item as any).start_time) }}, {{ format(new Date((item as any).start_time), 'h:mm a') }} - {{ format(new Date((item as any).end_time), 'h:mm a') }}
@@ -322,15 +340,31 @@ function getRelativeDate(dateString: string): string {
             <span v-else-if="item.event_type === 'feeding' && (item as any).amount" class="amount">{{ formatAmount((item as any).amount, store.measurementUnit) }}</span>
             
             <!-- Solid food display -->
-            <span v-else-if="item.event_type === 'solid'" class="type">{{ (item as any).food_name }}</span>
+            <span v-else-if="item.event_type === 'solid'" class="type">
+              <span v-if="(item as any).foods && (item as any).foods.length > 0">
+                <span v-if="(item as any).foods.length === 1">{{ (item as any).foods[0].name }}</span>
+                <span v-else-if="(item as any).foods.length <= 3">{{ (item as any).foods.map((f: any) => f.name).join(', ') }}</span>
+                <span v-else>{{ (item as any).foods.slice(0, 2).map((f: any) => f.name).join(', ') }} +{{ (item as any).foods.length - 2 }} more</span>
+              </span>
+              <span v-else>Unknown foods</span>
+            </span>
+            <!-- Legacy solid food display -->
+            <span v-else-if="item.event_type === 'solid_legacy'" class="type">{{ (item as any).food_name }}</span>
             
             <span v-if="item.event_type === 'feeding' && (item as any).topup_amount && (item as any).topup_amount > 0" class="topup-amount">+{{ formatAmount((item as any).topup_amount, store.measurementUnit) }}</span>
-            <span v-if="item.event_type === 'solid' && (item as any).times_tried > 1" class="amount">{{ (item as any).times_tried }}x</span>
+            <span v-if="item.event_type === 'solid' && (item as any).foods && (item as any).foods.length > 1" class="amount">{{ (item as any).foods.length }} foods</span>
+            <span v-if="item.event_type === 'solid_legacy' && (item as any).times_tried > 1" class="amount">{{ (item as any).times_tried }}x</span>
           </div>
           
           <!-- Solid food additional info -->
-          <div v-if="item.event_type === 'solid'" class="solid-food-info">
+          <div v-if="item.event_type === 'solid' || item.event_type === 'solid_legacy'" class="solid-food-info">
             <span v-if="(item as any).reaction" class="food-reaction" :class="(item as any).reaction">{{ (item as any).reaction }}</span>
+            <!-- Show consumption counts for new solid food events -->
+            <div v-if="item.event_type === 'solid' && (item as any).foods && (item as any).foods.length > 0" class="food-consumption">
+              <span v-for="food in (item as any).foods" :key="food.id" class="food-count">
+                {{ food.name }}: {{ food.times_consumed }}x
+              </span>
+            </div>
           </div>
           
           <div v-if="item.notes" class="notes">{{ item.notes }}</div>
@@ -688,6 +722,21 @@ function getRelativeDate(dateString: string): string {
   background: rgba(239, 68, 68, 0.3);
   color: #dc2626;
   font-weight: 700;
+}
+
+.food-consumption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.food-count {
+  font-size: 0.7rem;
+  padding: 0.125rem 0.25rem;
+  background: rgba(156, 163, 175, 0.1);
+  color: var(--color-text-accent);
+  border-radius: 0.25rem;
 }
 
 .pumping-item {

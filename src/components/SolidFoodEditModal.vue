@@ -9,13 +9,16 @@ import type { SuggestedFood, FoodCategory } from "../lib/suggestedFoods"
 
 interface SolidFoodEvent {
   id: string
-  food_name: string
-  food_category: FoodCategory
+  food_name?: string | null
+  food_category?: FoodCategory | null
   reaction?: string | null
   notes?: string | null
-  times_tried: number
-  first_tried_date: string
-  last_tried_date: string
+  times_tried?: number | null
+  first_tried_date?: string | null
+  last_tried_date?: string | null
+  event_type?: 'solid' | 'solid_legacy' | string
+  type?: string
+  timestamp?: string
 }
 
 interface Props {
@@ -36,11 +39,11 @@ const store = useBabyStore()
 
 // Form data
 const selectedFood = ref<SuggestedFood | null>(null)
-const customFoodName = ref(props.solidFood.food_name)
+const customFoodName = ref(props.solidFood.food_name || '')
 
 const reaction = ref<'liked' | 'disliked' | 'neutral' | 'allergic_reaction' | ''>((props.solidFood.reaction as 'liked' | 'disliked' | 'neutral' | 'allergic_reaction') || '')
 const notes = ref(props.solidFood.notes || '')
-const timesTried = ref(props.solidFood.times_tried)
+const timesTried = ref(props.solidFood.times_tried || 1)
 const customDate = ref('')
 const time = ref<{ hour: string; minute: string; ampm: 'AM' | 'PM' }>({
   hour: '',
@@ -52,7 +55,7 @@ const isDeleting = ref(false)
 const showAdvanced = ref(false)
 
 // Search functionality
-const searchQuery = ref(props.solidFood.food_name)
+const searchQuery = ref(props.solidFood.food_name || '')
 const showSuggestions = ref(false)
 const filteredSuggestions = ref<Record<FoodCategory, SuggestedFood[]>>({
   western_traditional: [],
@@ -70,13 +73,14 @@ const visibleCategories = computed(() => {
 })
 
 const canSave = computed(() => {
-  return (selectedFood.value || customFoodName.value.trim() || searchQuery.value.trim()) && !isSaving.value && !isDeleting.value
+  return (selectedFood.value || (customFoodName.value && customFoodName.value.trim()) || (searchQuery.value && searchQuery.value.trim())) && !isSaving.value && !isDeleting.value
 })
 
 const finalFoodName = computed(() => {
   if (selectedFood.value) return selectedFood.value.name
-  if (customFoodName.value.trim()) return customFoodName.value.trim()
-  return searchQuery.value.trim()
+  if (customFoodName.value && customFoodName.value.trim()) return customFoodName.value.trim()
+  if (searchQuery.value && searchQuery.value.trim()) return searchQuery.value.trim()
+  return ''
 })
 
 // Dynamic modal title
@@ -88,20 +92,39 @@ const modalTitle = computed(() => `Edit Solid Food for ${props.babyName}`)
 onMounted(() => {
   // ResponsiveModal handles body scroll locking
   
-  // Set date and time from last_tried_date
-  const lastTriedDate = new Date(props.solidFood.last_tried_date)
-  const year = lastTriedDate.getFullYear()
-  const month = String(lastTriedDate.getMonth() + 1).padStart(2, '0')
-  const day = String(lastTriedDate.getDate()).padStart(2, '0')
-  customDate.value = `${year}-${month}-${day}`
+  // Set date and time from last_tried_date or use current date
+  const dateString = props.solidFood.last_tried_date || new Date().toISOString()
+  const lastTriedDate = new Date(dateString)
   
-  // Set time
-  let hour = lastTriedDate.getHours()
-  time.value.ampm = hour >= 12 ? 'PM' : 'AM'
-  let hour12 = hour % 12
-  if (hour12 === 0) hour12 = 12
-  time.value.hour = String(hour12)
-  time.value.minute = String(lastTriedDate.getMinutes()).padStart(2, '0')
+  // Check if date is valid
+  if (isNaN(lastTriedDate.getTime())) {
+    // Use current date if invalid
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    customDate.value = `${year}-${month}-${day}`
+    
+    let hour = now.getHours()
+    time.value.ampm = hour >= 12 ? 'PM' : 'AM'
+    let hour12 = hour % 12
+    if (hour12 === 0) hour12 = 12
+    time.value.hour = String(hour12)
+    time.value.minute = String(now.getMinutes()).padStart(2, '0')
+  } else {
+    // Use the provided date
+    const year = lastTriedDate.getFullYear()
+    const month = String(lastTriedDate.getMonth() + 1).padStart(2, '0')
+    const day = String(lastTriedDate.getDate()).padStart(2, '0')
+    customDate.value = `${year}-${month}-${day}`
+    
+    let hour = lastTriedDate.getHours()
+    time.value.ampm = hour >= 12 ? 'PM' : 'AM'
+    let hour12 = hour % 12
+    if (hour12 === 0) hour12 = 12
+    time.value.hour = String(hour12)
+    time.value.minute = String(lastTriedDate.getMinutes()).padStart(2, '0')
+  }
 })
 
 onUnmounted(() => {
@@ -110,7 +133,7 @@ onUnmounted(() => {
 
 // Functions
 function filterSuggestions() {
-  if (!searchQuery.value || searchQuery.value.length < 2) {
+  if (!searchQuery.value || typeof searchQuery.value !== 'string' || searchQuery.value.length < 2) {
     showSuggestions.value = false
     return
   }
@@ -143,7 +166,7 @@ function selectFood(food: SuggestedFood) {
 
 function clearSelection() {
   selectedFood.value = null
-  searchQuery.value = customFoodName.value
+  searchQuery.value = customFoodName.value || ''
   showSuggestions.value = false
 }
 
@@ -164,12 +187,24 @@ async function handleSave() {
   try {
     const timestamp = getSelectedDateTime()
     
-    await store.updateSolidFood(props.solidFood.id, {
-      notes: notes.value || null,
-      reaction: reaction.value || null,
-      times_tried: timesTried.value,
-      last_tried_date: timestamp.toISOString()
-    })
+    // Check if this is a new solid food event or legacy solid food record
+    const isNewSolidFoodEvent = (props.solidFood as any).event_type === 'solid'
+    
+    if (isNewSolidFoodEvent) {
+      // For new solid food events, we need to update the feeding record
+      await store.updateFeeding(props.solidFood.id, {
+        timestamp: timestamp.toISOString(),
+        notes: notes.value || null
+      })
+    } else {
+      // Update legacy solid food record
+      await store.updateSolidFood(props.solidFood.id, {
+        notes: notes.value || null,
+        reaction: reaction.value || null,
+        times_tried: timesTried.value,
+        last_tried_date: timestamp.toISOString()
+      })
+    }
 
     emit('saved')
     emit('close')
@@ -182,14 +217,26 @@ async function handleSave() {
 }
 
 async function handleDelete() {
-  if (!confirm(`Are you sure you want to delete "${props.solidFood.food_name}"? This action cannot be undone.`)) {
+  const foodName = props.solidFood.food_name || 'this solid food'
+  if (!confirm(`Are you sure you want to delete "${foodName}"? This action cannot be undone.`)) {
     return
   }
 
   isDeleting.value = true
   
   try {
-    await store.deleteSolidFood(props.solidFood.id)
+    // Check if this is a new solid food event or legacy solid food record
+    // New solid food events have event_type property, legacy ones don't
+    const isNewSolidFoodEvent = (props.solidFood as any).event_type === 'solid'
+    
+    if (isNewSolidFoodEvent) {
+      // Delete new solid food event (feeding event with type "solid")
+      await store.deleteSolidFoodEvent(props.solidFood.id)
+    } else {
+      // Delete legacy solid food record
+      await store.deleteSolidFood(props.solidFood.id)
+    }
+    
     emit('deleted')
     emit('close')
   } catch (error) {
@@ -203,6 +250,7 @@ async function handleDelete() {
 
 <template>
   <ResponsiveModal
+    v-if="props.solidFood && props.solidFood.id"
     :is-open="true"
     :title="modalTitle"
     :close-on-backdrop="true"
@@ -487,7 +535,7 @@ async function handleDelete() {
   background: var(--color-surface);
   margin-top: 0.5rem;
   box-shadow: var(--shadow-lg);
-  z-index: 10;
+  z-index: 1010;
   max-height: 300px;
   overflow-y: auto;
 }
@@ -497,7 +545,7 @@ async function handleDelete() {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: var(--color-surface-hover);
+  background: var(--color-bg-secondary);
   border-bottom: 1px solid var(--color-surface-border);
   border-radius: 12px 12px 0 0;
   font-weight: 500;
@@ -550,7 +598,7 @@ async function handleDelete() {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  background: var(--color-surface);
+  background: var(--color-bg-secondary);
 }
 
 .suggestion-item:hover {
