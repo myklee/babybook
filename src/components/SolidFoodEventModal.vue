@@ -38,6 +38,9 @@ const isSaving = ref(false)
 const showAdvanced = ref(false)
 const saveSuccess = ref(false)
 
+// Template refs
+const timePicker = ref<{ focusHour: () => void } | null>(null)
+
 // Food management
 const isAddingNewFood = ref(false)
 const newFoodName = ref('')
@@ -126,6 +129,11 @@ onMounted(() => {
   if (hour12 === 0) hour12 = 12
   time.value.hour = String(hour12)
   time.value.minute = String(now.getMinutes()).padStart(2, '0')
+  
+  // Auto-focus on the hour field
+  nextTick(() => {
+    timePicker.value?.focusHour()
+  })
 })
 
 // Food selection functions (removed unused toggleFoodSelection)
@@ -257,7 +265,7 @@ async function handleSave() {
       
       <div class="form-group">
         <FormLabel html-for="food-time" required>Time</FormLabel>
-        <TimePicker v-model="time" />
+        <TimePicker ref="timePicker" v-model="time" />
       </div>
 
       <!-- Validation Errors -->

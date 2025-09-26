@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useBabyStore } from '../stores/babyStore'
 import DatePicker from './DatePicker.vue'
 import TimePicker from './TimePicker.vue'
@@ -24,6 +24,9 @@ const notes = ref('')
 const customDate = ref('')
 const time = ref<{ hour: string; minute: string; ampm: 'AM' | 'PM' }>({ hour: '', minute: '', ampm: 'AM' })
 const isSaving = ref(false)
+
+// Template refs
+const timePicker = ref<{ focusHour: () => void } | null>(null)
 
 // UI state
 const showAdvanced = ref(false)
@@ -57,6 +60,11 @@ onMounted(() => {
   if (hour12 === 0) hour12 = 12
   time.value.hour = String(hour12)
   time.value.minute = String(now.getMinutes()).padStart(2, '0')
+  
+  // Auto-focus on the hour field
+  nextTick(() => {
+    timePicker.value?.focusHour()
+  })
 })
 
 onUnmounted(() => {
@@ -110,7 +118,7 @@ async function handleSubmit() {
         </div>
         <div class="form-group">
           <label for="diaper-time">Time</label>
-          <TimePicker v-model="time" />
+          <TimePicker ref="timePicker" v-model="time" />
         </div>
 
         <div class="form-group">

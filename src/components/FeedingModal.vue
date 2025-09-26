@@ -50,6 +50,10 @@ const time = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
 const isSaving = ref(false);
 const amountInput = ref<HTMLInputElement | null>(null);
 
+// Template refs for TimePicker components
+const timePicker = ref<{ focusHour: () => void } | null>(null);
+const nursingStartTimePicker = ref<{ focusHour: () => void } | null>(null);
+
 // Nursing session data
 const nursingStartTime = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
     hour: "",
@@ -125,8 +129,13 @@ onMounted(() => {
         displayAmount.value = getDefaultAmount(store.measurementUnit, 'formula');
     }
 
+    // Auto-focus on the hour field of the time picker
     nextTick(() => {
-        amountInput.value?.focus();
+        if (feedingTypeRef.value === 'nursing') {
+            nursingStartTimePicker.value?.focusHour();
+        } else {
+            timePicker.value?.focusHour();
+        }
     });
 });
 
@@ -296,7 +305,7 @@ async function handleSubmit() {
                     <!-- Nursing session times -->
                     <div class="form-group">
                         <label>Start Time</label>
-                        <TimePicker v-model="nursingStartTime" />
+                        <TimePicker ref="nursingStartTimePicker" v-model="nursingStartTime" />
                     </div>
                     <div class="form-group">
                         <label>End Time</label>
@@ -307,7 +316,7 @@ async function handleSubmit() {
                 <!-- For other feeding types, show single time -->
                 <div v-else class="form-group">
                     <label for="feeding-time">Time</label>
-                    <TimePicker v-model="time" />
+                    <TimePicker ref="timePicker" v-model="time" />
                 </div>
 
                 <div v-if="feedingTypeRef !== 'nursing'" class="form-group">

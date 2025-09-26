@@ -2,6 +2,7 @@
     <div class="time-picker">
         <div class="time-inputs-container">
             <input
+                ref="hourInput"
                 type="text"
                 :value="displayHour"
                 inputmode="numeric"
@@ -55,6 +56,9 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+
+// Template refs
+const hourInput = ref<HTMLInputElement>();
 
 const props = defineProps<{
     modelValue: { hour: string; minute: string; ampm: "AM" | "PM" };
@@ -254,6 +258,19 @@ function setAMPM(ampm: "AM" | "PM") {
         ampm,
     });
 }
+
+// Expose focus method for parent components
+function focusHour() {
+    if (hourInput.value) {
+        hourInput.value.focus();
+        hourInput.value.select();
+    }
+}
+
+// Expose the focus method
+defineExpose({
+    focusHour
+});
 </script>
 
 <style scoped>
