@@ -2288,8 +2288,6 @@ export const useBabyStore = defineStore("baby", () => {
         }
 
         // Increment consumption counts for added foods
-        const eventTimestamp = updates.timestamp ? updates.timestamp.toISOString() : existingFeeding.timestamp;
-        
         for (const foodItemId of foodsToAdd) {
           const { error: recalculateError } = await supabase.rpc('recalculate_food_consumption', {
             food_item_id: foodItemId

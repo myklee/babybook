@@ -281,7 +281,7 @@ const newFoodInput = ref<HTMLInputElement | null>(null);
 // Computed properties
 const filteredFoods = computed(() => {
   let foods = babyStore.getUserFoodItems({
-    searchQuery: searchQuery.value,
+    filter: searchQuery.value,
     sortBy: sortBy.value,
     sortOrder: sortOrder.value
   });

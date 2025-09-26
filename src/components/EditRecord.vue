@@ -213,7 +213,7 @@ async function handleSubmit() {
         await store.updateSolidFoodEvent(props.record.id, selectedFoodIds.value, {
           timestamp: startTimestamp,
           notes: notes.value,
-          reaction: reaction.value || null,
+          _reaction: reaction.value || null,
         });
       } else {
         // Handle regular feeding update

@@ -128,15 +128,7 @@ onMounted(() => {
   time.value.minute = String(now.getMinutes()).padStart(2, '0')
 })
 
-// Food selection functions
-function toggleFoodSelection(foodId: string) {
-  const index = selectedFoodIds.value.indexOf(foodId)
-  if (index > -1) {
-    selectedFoodIds.value.splice(index, 1)
-  } else {
-    selectedFoodIds.value.push(foodId)
-  }
-}
+// Food selection functions (removed unused toggleFoodSelection)
 
 function removeFoodSelection(foodId: string) {
   const index = selectedFoodIds.value.indexOf(foodId)
