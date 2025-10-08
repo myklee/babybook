@@ -39,7 +39,18 @@ const store = useBabyStore()
 
 // Form data
 const selectedFood = ref<SuggestedFood | null>(null)
-const customFoodName = ref(props.solidFood.food_name || '')
+
+// Handle both new solid food events and legacy solid food records
+const getFoodName = () => {
+  // For new solid food events, get the first food name from foods array
+  if ((props.solidFood as any).foods && (props.solidFood as any).foods.length > 0) {
+    return (props.solidFood as any).foods[0].name
+  }
+  // For legacy solid food records, use food_name
+  return props.solidFood.food_name || ''
+}
+
+const customFoodName = ref(getFoodName())
 
 const reaction = ref<'liked' | 'disliked' | 'neutral' | 'allergic_reaction' | ''>((props.solidFood.reaction as 'liked' | 'disliked' | 'neutral' | 'allergic_reaction') || '')
 const notes = ref(props.solidFood.notes || '')
@@ -55,7 +66,7 @@ const isDeleting = ref(false)
 const showAdvanced = ref(false)
 
 // Search functionality
-const searchQuery = ref(props.solidFood.food_name || '')
+const searchQuery = ref(getFoodName())
 const showSuggestions = ref(false)
 const filteredSuggestions = ref<Record<FoodCategory, SuggestedFood[]>>({
   western_traditional: [],
@@ -73,6 +84,11 @@ const visibleCategories = computed(() => {
 })
 
 const canSave = computed(() => {
+  // For new solid food events, check if there are foods in the editable list
+  if (isNewSolidFoodEvent.value) {
+    return editableFoods.value.length > 0 && !isSaving.value && !isDeleting.value
+  }
+  // For legacy solid food records, check the food name fields
   return (selectedFood.value || (customFoodName.value && customFoodName.value.trim()) || (searchQuery.value && searchQuery.value.trim())) && !isSaving.value && !isDeleting.value
 })
 
@@ -86,18 +102,32 @@ const finalFoodName = computed(() => {
 // Dynamic modal title
 const modalTitle = computed(() => `Edit Solid Food for ${props.babyName}`)
 
+// Debug: Check event type and data structure
+const isNewSolidFoodEvent = computed(() => (props.solidFood as any).event_type === 'solid')
+const eventFoods = computed(() => (props.solidFood as any).foods || [])
+
+// Editable foods list for new solid food events
+const editableFoods = ref<any[]>([])
+
+// Initialize editable foods from the event
+function initializeEditableFoods() {
+  if (isNewSolidFoodEvent.value && eventFoods.value.length > 0) {
+    editableFoods.value = [...eventFoods.value]
+  }
+}
+
 
 
 // Lifecycle
 onMounted(() => {
   // ResponsiveModal handles body scroll locking
   
-  // Set date and time from last_tried_date or use current date
-  const dateString = props.solidFood.last_tried_date || new Date().toISOString()
-  const lastTriedDate = new Date(dateString)
+  // Set date and time from timestamp (new events) or last_tried_date (legacy) or use current date
+  const dateString = props.solidFood.timestamp || props.solidFood.last_tried_date || new Date().toISOString()
+  const eventDate = new Date(dateString)
   
   // Check if date is valid
-  if (isNaN(lastTriedDate.getTime())) {
+  if (isNaN(eventDate.getTime())) {
     // Use current date if invalid
     const now = new Date()
     const year = now.getFullYear()
@@ -113,18 +143,21 @@ onMounted(() => {
     time.value.minute = String(now.getMinutes()).padStart(2, '0')
   } else {
     // Use the provided date
-    const year = lastTriedDate.getFullYear()
-    const month = String(lastTriedDate.getMonth() + 1).padStart(2, '0')
-    const day = String(lastTriedDate.getDate()).padStart(2, '0')
+    const year = eventDate.getFullYear()
+    const month = String(eventDate.getMonth() + 1).padStart(2, '0')
+    const day = String(eventDate.getDate()).padStart(2, '0')
     customDate.value = `${year}-${month}-${day}`
     
-    let hour = lastTriedDate.getHours()
+    let hour = eventDate.getHours()
     time.value.ampm = hour >= 12 ? 'PM' : 'AM'
     let hour12 = hour % 12
     if (hour12 === 0) hour12 = 12
     time.value.hour = String(hour12)
-    time.value.minute = String(lastTriedDate.getMinutes()).padStart(2, '0')
+    time.value.minute = String(eventDate.getMinutes()).padStart(2, '0')
   }
+  
+  // Initialize editable foods
+  initializeEditableFoods()
 })
 
 onUnmounted(() => {
@@ -170,6 +203,18 @@ function clearSelection() {
   showSuggestions.value = false
 }
 
+function removeFoodFromEvent(foodId: string) {
+  if (!isNewSolidFoodEvent.value) return
+  
+  const foodIndex = editableFoods.value.findIndex(food => food.id === foodId)
+  if (foodIndex > -1) {
+    const foodName = editableFoods.value[foodIndex].name
+    if (confirm(`Remove "${foodName}" from this solid food event?`)) {
+      editableFoods.value.splice(foodIndex, 1)
+    }
+  }
+}
+
 function getSelectedDateTime() {
   if (!customDate.value) return new Date()
   const [year, month, day] = customDate.value.split('-').map(Number)
@@ -191,10 +236,19 @@ async function handleSave() {
     const isNewSolidFoodEvent = (props.solidFood as any).event_type === 'solid'
     
     if (isNewSolidFoodEvent) {
-      // For new solid food events, we need to update the feeding record
-      await store.updateFeeding(props.solidFood.id, {
-        timestamp: timestamp.toISOString(),
-        notes: notes.value || null
+      // For new solid food events, use the editable foods list
+      const foodItemIds = editableFoods.value.map((food: any) => food.id)
+      
+      // Check if there are any foods left
+      if (foodItemIds.length === 0) {
+        alert('Cannot save: At least one food item must remain in the event.')
+        return
+      }
+      
+      await store.updateSolidFoodEvent(props.solidFood.id, foodItemIds, {
+        timestamp: timestamp,
+        notes: notes.value || null,
+        _reaction: reaction.value || null
       })
     } else {
       // Update legacy solid food record
@@ -320,6 +374,31 @@ async function handleDelete() {
               Clear
             </button>
           </div>
+        </div>
+
+        <!-- Current Foods Display (for new solid food events) -->
+        <div v-if="isNewSolidFoodEvent && editableFoods.length > 0" class="current-foods-section">
+          <div class="current-foods-header">
+            <h4>Foods in this Event:</h4>
+          </div>
+          <div class="current-foods-list">
+            <div v-for="food in editableFoods" :key="food.id" class="current-food-item">
+              <div class="food-info">
+                <span class="food-name">{{ food.name }}</span>
+                <span class="food-consumption">{{ food.times_consumed }}x consumed</span>
+              </div>
+              <button 
+                type="button" 
+                @click="removeFoodFromEvent(food.id)"
+                class="remove-food-btn"
+                :disabled="editableFoods.length <= 1"
+                :title="editableFoods.length <= 1 ? 'Cannot remove the last food item' : `Remove ${food.name}`"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <p v-if="editableFoods.length <= 1" class="edit-note">Note: At least one food item must remain in the event.</p>
         </div>
 
         <!-- Times Tried -->
@@ -744,6 +823,98 @@ async function handleDelete() {
   padding-top: 1rem;
   margin-top: 1rem;
   border-top: 1px solid var(--color-surface-border);
+}
+
+/* Current Foods Section */
+.current-foods-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
+  border-radius: 12px;
+}
+
+.current-foods-header h4 {
+  margin: 0 0 0.75rem 0;
+  color: var(--color-info);
+  font-size: 1rem;
+}
+
+.current-foods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.current-food-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--color-surface-border);
+  transition: all 0.2s ease;
+}
+
+.current-food-item:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-surface-border-hover);
+}
+
+.food-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.food-name {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+}
+
+.food-consumption {
+  font-size: 0.8rem;
+  color: var(--color-text-accent);
+}
+
+.remove-food-btn {
+  background: var(--btn-danger-bg);
+  color: var(--btn-danger-text);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.remove-food-btn:hover:not(:disabled) {
+  background: var(--btn-danger-bg-hover);
+  transform: scale(1.1);
+}
+
+.remove-food-btn:disabled {
+  background: var(--color-surface);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.edit-note {
+  font-size: 0.875rem;
+  color: var(--color-text-accent);
+  font-style: italic;
+  margin: 0;
 }
 
 /* Mobile Responsiveness */

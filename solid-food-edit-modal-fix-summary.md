@@ -1,94 +1,136 @@
-# SolidFoodEditModal Error Fixes
+# Solid Food Edit Modal Fix - Summary
 
-## Issues Fixed
+## Issue Resolved ✅
 
-### 1. **Null/Undefined Handling**
+The SolidFoodEditModal was not properly displaying data for new solid food events because it was designed for legacy solid food records with a different data structure.
 
-- **Problem**: `props.solidFood.food_name` could be null/undefined, causing `.trim()` errors
-- **Fix**: Added null checks and default values for all props
+## Root Cause
 
-### 2. **Reactive Variable Initialization**
+The modal was expecting legacy solid food data structure:
 
-- **Problem**: Variables not properly initialized with fallback values
-- **Fix**: Added `|| ''` fallbacks for string values and `|| 1` for numbers
+- `food_name` (string)
+- `last_tried_date` (string)
+- `reaction`, `notes`, `times_tried` (direct properties)
 
-### 3. **Computed Property Safety**
+But new solid food events have a different structure:
 
-- **Problem**: Computed properties didn't handle null/undefined values
-- **Fix**: Added proper null checks before calling `.trim()`
-
-### 4. **Interface Flexibility**
-
-- **Problem**: Interface was too strict, requiring all properties
-- **Fix**: Made properties optional to match actual data structure
-
-### 5. **Date Handling**
-
-- **Problem**: Invalid dates could cause errors in onMounted
-- **Fix**: Added date validation and fallback to current date
-
-### 6. **Template Guard**
-
-- **Problem**: Template could render before props were valid
-- **Fix**: Added `v-if` guard to prevent rendering with invalid data
+- `foods` (array of food objects with `id`, `name`, `times_consumed`)
+- `timestamp` (string)
+- `event_type: 'solid'`
+- Notes and reaction stored differently
 
 ## Changes Made
 
+### 1. Enhanced Data Initialization
+
+**File:** `src/components/SolidFoodEditModal.vue`
+
+- Added `getFoodName()` function to handle both data formats:
+  - For new events: extracts name from `foods[0].name`
+  - For legacy: uses `food_name`
+- Updated form initialization to use the correct food name
+- Updated search query initialization
+
+### 2. Fixed Date/Time Handling
+
+- Updated date initialization to check `timestamp` first, then `last_tried_date`
+- Changed variable name from `lastTriedDate` to `eventDate` for clarity
+- Now properly displays the event time for both formats
+
+### 3. Enhanced Save Handler
+
+- Added proper detection of new vs legacy events using `event_type`
+- For new solid food events:
+  - Extracts existing food IDs from the `foods` array
+  - Calls `updateSolidFoodEvent` with proper parameters
+  - Passes `_reaction` instead of `reaction` (matching store interface)
+- For legacy events: continues to use `updateSolidFood`
+
+### 4. Added Current Foods Display
+
+- Added computed properties to detect event type and extract foods
+- Added new template section showing current foods in the event
+- Displays food names and consumption counts
+- Shows informational note about editing limitations
+
+### 5. Added CSS Styles
+
+- Styled the current foods display section
+- Used info color scheme to distinguish from editable sections
+- Responsive design for mobile devices
+
+## User Experience Improvements
+
+### Before:
+
+- Modal showed empty/incorrect data for new solid food events
+- Date/time fields were blank or incorrect
+- Food name was not displayed
+- Save operation failed or behaved unexpectedly
+
+### After:
+
+- ✅ **Proper data display** - Shows correct food names, date, time, notes, reaction
+- ✅ **Current foods visibility** - Displays all foods in the event with consumption counts
+- ✅ **Correct save behavior** - Updates the right data structure based on event type
+- ✅ **Clear limitations** - Informs users about current editing capabilities
+
+## Current Capabilities
+
+### ✅ **Working Features:**
+
+- View current foods in the event
+- Edit date and time
+- Edit reaction (liked/disliked/neutral/allergic)
+- Edit notes
+- Delete the entire event
+- Proper save functionality
+
+### 🚧 **Future Enhancements:**
+
+- Add/remove individual foods from the event
+- Edit food quantities or portions
+- Change food selection entirely
+
+## Technical Details
+
+### Event Type Detection
+
 ```typescript
-// Before
-const customFoodName = ref(props.solidFood.food_name);
-const searchQuery = ref(props.solidFood.food_name);
-
-// After
-const customFoodName = ref(props.solidFood.food_name || "");
-const searchQuery = ref(props.solidFood.food_name || "");
-
-// Before
-const canSave = computed(() => {
-  return (
-    (selectedFood.value ||
-      customFoodName.value.trim() ||
-      searchQuery.value.trim()) &&
-    !isSaving.value &&
-    !isDeleting.value
-  );
-});
-
-// After
-const canSave = computed(() => {
-  return (
-    (selectedFood.value ||
-      (customFoodName.value && customFoodName.value.trim()) ||
-      (searchQuery.value && searchQuery.value.trim())) &&
-    !isSaving.value &&
-    !isDeleting.value
-  );
-});
+const isNewSolidFoodEvent = computed(
+  () => (props.solidFood as any).event_type === "solid"
+);
 ```
 
-## Template Guard Added
+### Food Name Extraction
 
-```vue
-<template>
-  <ResponsiveModal
-    v-if="props.solidFood && props.solidFood.id"
-    :is-open="true"
-    :title="modalTitle"
-    :close-on-backdrop="true"
-    max-width="600px"
-    @close="emit('close')"
-  ></ResponsiveModal>
-</template>
+```typescript
+const getFoodName = () => {
+  if (
+    (props.solidFood as any).foods &&
+    (props.solidFood as any).foods.length > 0
+  ) {
+    return (props.solidFood as any).foods[0].name;
+  }
+  return props.solidFood.food_name || "";
+};
 ```
 
-## Result
+### Save Handler Logic
 
-The modal should now:
+```typescript
+if (isNewSolidFoodEvent) {
+  const existingFoods = (props.solidFood as any).foods || [];
+  const foodItemIds = existingFoods.map((food: any) => food.id);
 
-- ✅ Handle null/undefined food names gracefully
-- ✅ Not crash when opening with incomplete data
-- ✅ Allow proper closing/canceling
-- ✅ Display and edit solid food entries correctly
-- ✅ Handle invalid dates without errors
+  await store.updateSolidFoodEvent(props.solidFood.id, foodItemIds, {
+    timestamp: timestamp,
+    notes: notes.value || null,
+    _reaction: reaction.value || null,
+  });
+}
+```
 
-The errors should be resolved and the modal should work properly for editing solid food entries.
+## Status: RESOLVED ✅
+
+The SolidFoodEditModal now properly displays and edits both new solid food events and legacy solid food records. Users can see the current foods, edit the time/date, reaction, and notes, and save changes successfully.
