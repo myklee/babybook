@@ -247,8 +247,8 @@ async function handleSave() {
       
       await store.updateSolidFoodEvent(props.solidFood.id, foodItemIds, {
         timestamp: timestamp,
-        notes: notes.value || null,
-        _reaction: reaction.value || null
+        notes: notes.value || undefined,
+        _reaction: reaction.value || undefined
       })
     } else {
       // Update legacy solid food record
