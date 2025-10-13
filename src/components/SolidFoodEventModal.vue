@@ -6,7 +6,7 @@ import TimePicker from './TimePicker.vue'
 import ResponsiveModal from './ResponsiveModal.vue'
 import FormInput from './FormInput.vue'
 import FormLabel from './FormLabel.vue'
-import type { UserFoodItem } from '../types/solidFood'
+import type { FoodSearchResult } from '../types/solidFood'
 
 interface Props {
   babyId: string
@@ -145,11 +145,16 @@ function handleSearchInput() {
   // Search input handler - filtering is handled by computed property
 }
 
-function selectFoodFromSuggestion(food: UserFoodItem) {
+function selectFoodFromSuggestion(food: FoodSearchResult) {
   if (!selectedFoodIds.value.includes(food.id)) {
     selectedFoodIds.value.push(food.id)
   }
   searchQuery.value = ''
+}
+
+function formatLastTriedDate(dateString: string | null): string {
+  if (!dateString) return 'Never'
+  return new Date(dateString).toLocaleDateString()
 }
 
 // New food creation
@@ -302,7 +307,7 @@ async function handleSave() {
                 <div class="food-meta">
                   <span class="consumption-count">{{ food.baby_times_consumed ?? food.times_consumed }}x tried</span>
                   <span v-if="food.baby_last_tried_date || food.last_tried_date" class="last-tried">
-                    Last: {{ new Date(food.baby_last_tried_date || food.last_tried_date).toLocaleDateString() }}
+                    Last: {{ formatLastTriedDate(food.baby_last_tried_date || food.last_tried_date) }}
                   </span>
                 </div>
               </div>
