@@ -48,24 +48,15 @@ const newFoodName = ref('')
 // Get user's food items
 const userFoodItems = computed(() => store.userFoodItems || [])
 
-// Filter food items based on search query
+// Filter food items based on search query with baby-specific data
 const filteredFoodItems = computed(() => {
   if (!searchQuery.value.trim()) {
-    return userFoodItems.value.slice(0, 20) // Show first 20 items when no search
+    // Show most consumed foods for this baby when no search
+    return store.searchFoodItems('', 20, props.babyId)
   }
   
-  const query = searchQuery.value.toLowerCase().trim()
-  return userFoodItems.value
-    .filter(food => food.name.toLowerCase().includes(query))
-    .sort((a, b) => {
-      // Sort by relevance: exact matches first, then by consumption count
-      const aExact = a.name.toLowerCase() === query
-      const bExact = b.name.toLowerCase() === query
-      if (aExact && !bExact) return -1
-      if (!aExact && bExact) return 1
-      return b.times_consumed - a.times_consumed
-    })
-    .slice(0, 10) // Limit to 10 results for performance
+  // Use store's search function with baby-specific data
+  return store.searchFoodItems(searchQuery.value, 10, props.babyId)
 })
 
 // Get selected food items
@@ -309,9 +300,9 @@ async function handleSave() {
               <div class="food-info">
                 <div class="food-name">{{ food.name }}</div>
                 <div class="food-meta">
-                  <span class="consumption-count">{{ food.times_consumed }}x tried</span>
-                  <span v-if="food.last_tried_date" class="last-tried">
-                    Last: {{ new Date(food.last_tried_date).toLocaleDateString() }}
+                  <span class="consumption-count">{{ food.baby_times_consumed ?? food.times_consumed }}x tried</span>
+                  <span v-if="food.baby_last_tried_date || food.last_tried_date" class="last-tried">
+                    Last: {{ new Date(food.baby_last_tried_date || food.last_tried_date).toLocaleDateString() }}
                   </span>
                 </div>
               </div>

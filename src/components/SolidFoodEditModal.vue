@@ -164,6 +164,18 @@ onUnmounted(() => {
   // ResponsiveModal handles body scroll restoration
 })
 
+// Helper function to get baby-specific consumption count
+function getBabyFoodConsumption(foodItemId: string): number {
+  const babyId = (props.solidFood as any).baby_id;
+  if (!babyId) return 0;
+  
+  const babyConsumption = store.babyFoodConsumption.find(
+    bc => bc.baby_id === babyId && bc.food_item_id === foodItemId
+  );
+  
+  return babyConsumption?.times_consumed ?? 0;
+}
+
 // Functions
 function filterSuggestions() {
   if (!searchQuery.value || typeof searchQuery.value !== 'string' || searchQuery.value.length < 2) {
@@ -385,7 +397,7 @@ async function handleDelete() {
             <div v-for="food in editableFoods" :key="food.id" class="current-food-item">
               <div class="food-info">
                 <span class="food-name">{{ food.name }}</span>
-                <span class="food-consumption">{{ food.times_consumed }}x consumed</span>
+                <span class="food-consumption">{{ getBabyFoodConsumption(food.id) }}x consumed by {{ props.babyName }}</span>
               </div>
               <button 
                 type="button" 

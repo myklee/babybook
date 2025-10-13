@@ -11,7 +11,7 @@ import {
   getInputStep,
   getUnitLabel,
 } from "../lib/measurements";
-import type { UserFoodItem } from "../types/solidFood";
+import type { UserFoodItemWithBabyData } from "../types/solidFood";
 
 const props = defineProps<{
   record: any;
@@ -50,7 +50,7 @@ const topupAmountInput = ref<HTMLInputElement | null>(null);
 
 // Solid food specific state
 const selectedFoodIds = ref<string[]>([]);
-const availableFoods = ref<UserFoodItem[]>([]);
+const availableFoods = ref<UserFoodItemWithBabyData[]>([]);
 const reaction = ref<'liked' | 'disliked' | 'neutral' | 'allergic_reaction' | ''>('');
 const newFoodName = ref('');
 const showAddFood = ref(false);
@@ -105,9 +105,9 @@ onMounted(() => {
       
       if (feeding.type === "solid") {
         // Handle solid food event
-        availableFoods.value = store.getUserFoodItems();
+        availableFoods.value = store.getUserFoodItemsWithBabyData(props.record.baby_id);
         if (feeding.foods && feeding.foods.length > 0) {
-          selectedFoodIds.value = feeding.foods.map((f: UserFoodItem) => f.id);
+          selectedFoodIds.value = feeding.foods.map((f: UserFoodItemWithBabyData) => f.id);
         }
         // Extract reaction from notes or use a separate field if available
         reaction.value = (feeding.reaction as 'liked' | 'disliked' | 'neutral' | 'allergic_reaction') || '';
@@ -364,7 +364,7 @@ async function handleDelete() {
                 @click="toggleFoodSelection(food.id)"
                 class="food-option"
               >
-                {{ food.name }} ({{ food.times_consumed }}x)
+                {{ food.name }} ({{ food.baby_times_consumed ?? 0 }}x)
               </button>
             </div>
           </div>

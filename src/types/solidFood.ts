@@ -15,6 +15,13 @@ export interface UserFoodItem {
   updated_at: string;
 }
 
+// Enhanced user food item with baby-specific consumption data
+export interface UserFoodItemWithBabyData extends UserFoodItem {
+  baby_times_consumed?: number;
+  baby_first_tried_date?: string | null;
+  baby_last_tried_date?: string | null;
+}
+
 // Solid food event interface for linking foods to feeding events
 export interface SolidFoodEvent {
   id: string;
@@ -23,11 +30,24 @@ export interface SolidFoodEvent {
   created_at: string;
 }
 
+// Baby food consumption interface for per-baby tracking
+export interface BabyFoodConsumption {
+  id: string;
+  baby_id: string;
+  food_item_id: string;
+  times_consumed: number;
+  first_tried_date: string | null;
+  last_tried_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Solid feeding event interface extending base Feeding type
 export interface SolidFeedingEvent extends Feeding {
   type: "solid";
   amount: null; // Always null for solid food events
   foods: UserFoodItem[]; // Populated via joins with solid_food_events
+  babyFoodConsumption?: BabyFoodConsumption[]; // Per-baby consumption data
 }
 
 // Food statistics interface for consumption analytics
@@ -75,9 +95,11 @@ export interface UpdateSolidFoodEventData {
 export interface FoodSearchResult {
   id: string;
   name: string;
-  times_consumed: number;
+  times_consumed: number; // Global consumption count
   last_tried_date: string | null;
   relevance_score: number; // For ranking search results
+  baby_times_consumed?: number; // Per-baby consumption count (when baby context is available)
+  baby_last_tried_date?: string | null; // Per-baby last tried date
 }
 
 // Food consumption analytics data

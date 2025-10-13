@@ -92,6 +92,15 @@ const babyName = computed(() => {
   return baby?.name || ''
 })
 
+// Helper function to get baby-specific consumption count
+function getBabyFoodConsumption(foodItemId: string): number {
+  const babyConsumption = store.babyFoodConsumption.find(
+    bc => bc.baby_id === props.babyId && bc.food_item_id === foodItemId
+  );
+  
+  return babyConsumption?.times_consumed ?? 0;
+}
+
 function getIcon(item: any, category: 'feeding' | 'diaper' | 'sleep' | 'solid' | 'pumping') {
   if (category === 'feeding') {
     if (item.type === 'breast' || item.type === 'nursing') return breastIcon;
@@ -362,7 +371,7 @@ function getRelativeDate(dateString: string): string {
             <!-- Show consumption counts for new solid food events -->
             <div v-if="item.event_type === 'solid' && (item as any).foods && (item as any).foods.length > 0" class="food-consumption">
               <span v-for="food in (item as any).foods" :key="food.id" class="food-count">
-                {{ food.name }}: {{ food.times_consumed }}x
+                {{ food.name }}: {{ getBabyFoodConsumption(food.id) }}x
               </span>
             </div>
           </div>

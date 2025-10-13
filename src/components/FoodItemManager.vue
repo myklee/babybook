@@ -105,8 +105,22 @@
           <!-- Food statistics -->
           <div class="food-stats">
             <div class="stat-item">
-              <span class="stat-label">Times consumed:</span>
+              <span class="stat-label">Total consumed:</span>
               <span class="stat-value consumption-count">{{ food.times_consumed }}</span>
+            </div>
+            
+            <!-- Per-baby consumption breakdown -->
+            <div v-if="getBabyConsumptionForFood(food.id).length > 0" class="stat-item baby-breakdown">
+              <span class="stat-label">By baby:</span>
+              <div class="baby-consumption-list">
+                <span 
+                  v-for="babyConsumption in getBabyConsumptionForFood(food.id)" 
+                  :key="babyConsumption.baby_id"
+                  class="baby-consumption-item"
+                >
+                  {{ getBabyName(babyConsumption.baby_id) }}: {{ babyConsumption.times_consumed }}x
+                </span>
+              </div>
             </div>
             
             <div v-if="food.first_tried_date" class="stat-item">
@@ -310,6 +324,17 @@ function handleFilterChange() {
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return date.toLocaleDateString();
+}
+
+function getBabyConsumptionForFood(foodItemId: string) {
+  return babyStore.babyFoodConsumption.filter(consumption => 
+    consumption.food_item_id === foodItemId
+  );
+}
+
+function getBabyName(babyId: string): string {
+  const baby = babyStore.babies.find(b => b.id === babyId);
+  return baby?.name || 'Unknown Baby';
 }
 
 async function startEdit(food: UserFoodItem) {
@@ -636,6 +661,27 @@ onMounted(() => {
   padding: 0.25rem 0.5rem;
   border-radius: 0.375rem;
   font-weight: 600;
+}
+
+.baby-breakdown {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.baby-consumption-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.baby-consumption-item {
+  background: var(--color-surface-secondary);
+  color: var(--color-text-primary);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .food-actions {

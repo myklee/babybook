@@ -362,6 +362,38 @@ export interface Database {
           updated_at?: string;
         };
       };
+      baby_food_consumption: {
+        Row: {
+          id: string;
+          baby_id: string;
+          food_item_id: string;
+          times_consumed: number;
+          first_tried_date: string | null;
+          last_tried_date: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          baby_id: string;
+          food_item_id: string;
+          times_consumed?: number;
+          first_tried_date?: string | null;
+          last_tried_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          baby_id?: string;
+          food_item_id?: string;
+          times_consumed?: number;
+          first_tried_date?: string | null;
+          last_tried_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       solid_food_events: {
         Row: {
           id: string;

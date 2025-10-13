@@ -38,7 +38,9 @@ import {
 import type { MeasurementUnit } from "../lib/measurements";
 import type { 
   UserFoodItem, 
+  UserFoodItemWithBabyData,
   SolidFoodEvent, 
+  BabyFoodConsumption,
   UpdateUserFoodItemData,
   FoodSearchResult
 } from "../types/solidFood";
@@ -65,6 +67,7 @@ export const useBabyStore = defineStore("baby", () => {
   // New solid food improvement state
   const userFoodItems = ref<UserFoodItem[]>([]);
   const solidFoodEvents = ref<SolidFoodEvent[]>([]);
+  const babyFoodConsumption = ref<BabyFoodConsumption[]>([]);
   const isLoading = ref(false);
   const currentUser = ref<any>(null);
   const isDataLoading = ref(false); // Guard to prevent multiple simultaneous loads
@@ -135,6 +138,7 @@ export const useBabyStore = defineStore("baby", () => {
         pumpingSessions.value = [];
         userFoodItems.value = [];
         solidFoodEvents.value = [];
+        babyFoodConsumption.value = [];
         
         // Clear active sessions if no user
         sessionPersistence.clearAllData();
@@ -232,6 +236,7 @@ export const useBabyStore = defineStore("baby", () => {
             pumpingSessions.value = [];
             userFoodItems.value = [];
             solidFoodEvents.value = [];
+            babyFoodConsumption.value = [];
             measurementUnit.value = 'metric'; // Reset to default
             // Clear active sessions on sign out
             sessionPersistence.clearAllData();
@@ -647,6 +652,49 @@ export const useBabyStore = defineStore("baby", () => {
       } catch (solidFoodEventsTableError) {
         console.error("Solid food events table error:", solidFoodEventsTableError);
         solidFoodEvents.value = [];
+      }
+
+      // Load baby food consumption (non-blocking)
+      console.log("Loading baby food consumption...");
+      try {
+        const babyFoodConsumptionPromise = supabase
+          .from("baby_food_consumption")
+          .select("*")
+          .in(
+            "baby_id",
+            babies.value.map((b) => b.id),
+          )
+          .order("times_consumed", { ascending: false });
+
+        const babyFoodConsumptionResult = (await Promise.race([
+          babyFoodConsumptionPromise,
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Baby food consumption loading timeout")),
+              10000,
+            ),
+          ),
+        ])) as any;
+
+        if (babyFoodConsumptionResult.error) {
+          console.error("Error loading baby food consumption:", babyFoodConsumptionResult.error);
+          if (
+            babyFoodConsumptionResult.error.message.includes(
+              'relation "baby_food_consumption" does not exist',
+            )
+          ) {
+            console.log("Baby food consumption table does not exist, skipping...");
+            babyFoodConsumption.value = [];
+          } else {
+            throw babyFoodConsumptionResult.error;
+          }
+        } else {
+          babyFoodConsumption.value = babyFoodConsumptionResult.data || [];
+          console.log("Loaded baby food consumption:", babyFoodConsumption.value.length);
+        }
+      } catch (babyFoodConsumptionTableError) {
+        console.error("Baby food consumption table error:", babyFoodConsumptionTableError);
+        babyFoodConsumption.value = [];
       }
 
       console.log("Data loading complete");
@@ -3607,12 +3655,92 @@ export const useBabyStore = defineStore("baby", () => {
   }
 
   /**
-   * Get user food items with sorting and filtering
+   * Get baby food consumption data for a specific baby
+   */
+  function getBabyFoodConsumption(babyId: string): BabyFoodConsumption[] {
+    return babyFoodConsumption.value.filter(consumption => consumption.baby_id === babyId);
+  }
+
+  /**
+   * Get user food items enhanced with baby-specific consumption data
+   */
+  function getUserFoodItemsWithBabyData(babyId: string, options?: {
+    sortBy?: 'name' | 'times_consumed' | 'first_tried_date' | 'last_tried_date';
+    sortOrder?: 'asc' | 'desc';
+    filter?: string;
+  }): UserFoodItemWithBabyData[] {
+    let items = [...userFoodItems.value];
+
+    // Apply filter if provided
+    if (options?.filter) {
+      const filterLower = options.filter.toLowerCase();
+      items = items.filter(item => 
+        item.name.toLowerCase().includes(filterLower)
+      );
+    }
+
+    // Enhance with baby-specific data
+    const enhancedItems: UserFoodItemWithBabyData[] = items.map(item => {
+      const babyConsumption = babyFoodConsumption.value.find(
+        bc => bc.baby_id === babyId && bc.food_item_id === item.id
+      );
+
+      return {
+        ...item,
+        baby_times_consumed: babyConsumption?.times_consumed,
+        baby_first_tried_date: babyConsumption?.first_tried_date,
+        baby_last_tried_date: babyConsumption?.last_tried_date
+      };
+    });
+
+    // Apply sorting (using baby-specific data when available)
+    const sortBy = options?.sortBy || 'name';
+    const sortOrder = options?.sortOrder || 'asc';
+
+    enhancedItems.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'times_consumed':
+          aValue = a.baby_times_consumed ?? 0;
+          bValue = b.baby_times_consumed ?? 0;
+          break;
+        case 'first_tried_date':
+          aValue = a.baby_first_tried_date ? new Date(a.baby_first_tried_date).getTime() : 0;
+          bValue = b.baby_first_tried_date ? new Date(b.baby_first_tried_date).getTime() : 0;
+          break;
+        case 'last_tried_date':
+          aValue = a.baby_last_tried_date ? new Date(a.baby_last_tried_date).getTime() : 0;
+          bValue = b.baby_last_tried_date ? new Date(b.baby_last_tried_date).getTime() : 0;
+          break;
+        default:
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+      }
+
+      if (sortOrder === 'desc') {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+      } else {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+      }
+    });
+
+    return enhancedItems;
+  }
+
+  /**
+   * Get user food items with sorting and filtering, optionally enhanced with baby-specific data
    */
   function getUserFoodItems(options?: {
     sortBy?: 'name' | 'times_consumed' | 'first_tried_date' | 'last_tried_date';
     sortOrder?: 'asc' | 'desc';
     filter?: string;
+    babyId?: string; // If provided, will enhance results with baby-specific consumption data
   }): UserFoodItem[] {
     let items = [...userFoodItems.value];
 
@@ -3793,9 +3921,9 @@ export const useBabyStore = defineStore("baby", () => {
   // ===== FOOD SEARCH AND AUTOCOMPLETE =====
 
   /**
-   * Search food items with fuzzy matching and ranking
+   * Search food items with fuzzy matching and ranking, optionally with baby-specific data
    */
-  function searchFoodItems(query: string, limit: number = 10): FoodSearchResult[] {
+  function searchFoodItems(query: string, limit: number = 10, babyId?: string): FoodSearchResult[] {
     if (!query || query.trim().length === 0) {
       return [];
     }
@@ -3843,12 +3971,19 @@ export const useBabyStore = defineStore("baby", () => {
         const consumptionBoost = Math.min(20, food.times_consumed * 2);
         relevanceScore += consumptionBoost;
 
+        // Get baby-specific consumption data if babyId is provided
+        const babyConsumption = babyId ? 
+          babyFoodConsumption.value.find(bc => bc.baby_id === babyId && bc.food_item_id === food.id) : 
+          undefined;
+
         results.push({
           id: food.id,
           name: food.name,
           times_consumed: food.times_consumed,
           last_tried_date: food.last_tried_date,
-          relevance_score: relevanceScore
+          relevance_score: relevanceScore,
+          baby_times_consumed: babyConsumption?.times_consumed,
+          baby_last_tried_date: babyConsumption?.last_tried_date
         });
       }
     });
@@ -4324,6 +4459,11 @@ export const useBabyStore = defineStore("baby", () => {
     getUserFoodItems,
     updateUserFoodItem,
     deleteUserFoodItem,
+    
+    // Baby Food Consumption (Per-Baby Tracking)
+    getBabyFoodConsumption,
+    getUserFoodItemsWithBabyData,
+    babyFoodConsumption,
     
     // Food Search and Autocomplete
     searchFoodItems,
