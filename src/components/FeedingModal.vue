@@ -10,7 +10,6 @@ import type { BreastType } from "../types/nursing";
 import {
   getDisplayValue,
   getStorageValue,
-  getInputStep,
   getUnitLabel,
   getFeedingPresets,
   getDefaultAmount
@@ -35,7 +34,6 @@ const feedingTypeRef = ref<"breast" | "formula" | "nursing">("breast");
 
 // Computed properties for unit handling
 const unitLabel = computed(() => getUnitLabel(store.measurementUnit));
-const inputStep = computed(() => getInputStep(store.measurementUnit));
 const presetButtons = computed(() => {
     // Only show presets for breast and formula types
     if (feedingTypeRef.value === 'nursing') return [];

@@ -27,7 +27,6 @@ const BODY_H = 120    // draggable fill lives here
 const SVG_H = CAP_H + NECK_H + SHOULDER_H + BODY_H
 
 const BODY_TOP = CAP_H + NECK_H + SHOULDER_H   // y where body starts
-const BODY_BOTTOM = BODY_TOP + BODY_H           // y where body ends
 
 // Neck x bounds
 const NECK_X1 = 20

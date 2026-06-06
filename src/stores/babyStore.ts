@@ -36,6 +36,12 @@ import {
   type SessionRecoveryData
 } from "../composables/useNursingSessionPersistence";
 import type { MeasurementUnit } from "../lib/measurements";
+import type {
+  FeedingSchedule,
+  CreateFeedingScheduleData,
+  UpdateFeedingScheduleData,
+  ScheduleTriggerResult,
+} from "../types/feedingScheduleAutomation";
 import type { 
   UserFoodItem, 
   UserFoodItemWithBabyData,
@@ -64,6 +70,9 @@ export const useBabyStore = defineStore("baby", () => {
   const solidFoods = ref<SolidFood[]>([]);
   const pumpingSessions = ref<PumpingSession[]>([]);
   
+  // Feeding schedules (automation feature, in-development)
+  const feedingSchedules = ref<FeedingSchedule[]>([]);
+
   // New solid food improvement state
   const userFoodItems = ref<UserFoodItem[]>([]);
   const solidFoodEvents = ref<SolidFoodEvent[]>([]);
@@ -4351,6 +4360,92 @@ export const useBabyStore = defineStore("baby", () => {
     });
   }
 
+  // ─── Feeding Schedule Automation ──────────────────────────────────────────
+  // Note: backing Supabase table not yet created; uses in-memory state for now.
+
+  function getBabyFeedingSchedules(babyId: string): FeedingSchedule[] {
+    return feedingSchedules.value.filter((s) => s.baby_id === babyId);
+  }
+
+  function getActiveFeedingSchedules(babyId: string): FeedingSchedule[] {
+    return feedingSchedules.value.filter(
+      (s) => s.baby_id === babyId && s.is_active,
+    );
+  }
+
+  async function addFeedingSchedule(
+    data: CreateFeedingScheduleData,
+  ): Promise<FeedingSchedule> {
+    if (!currentUser.value) throw new Error("Not authenticated");
+    const now = new Date().toISOString();
+    const newSchedule: FeedingSchedule = {
+      id: crypto.randomUUID(),
+      user_id: currentUser.value.id,
+      baby_id: data.baby_id,
+      name: data.name,
+      feeding_type: data.feeding_type,
+      default_amount: data.default_amount,
+      is_active: data.is_active ?? true,
+      created_at: now,
+      updated_at: now,
+      usage_count: 0,
+    };
+    feedingSchedules.value.push(newSchedule);
+    return newSchedule;
+  }
+
+  async function updateFeedingSchedule(
+    id: string,
+    updates: UpdateFeedingScheduleData,
+  ): Promise<FeedingSchedule> {
+    const idx = feedingSchedules.value.findIndex((s) => s.id === id);
+    if (idx === -1) throw new Error("Schedule not found");
+    const updated = {
+      ...feedingSchedules.value[idx],
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    feedingSchedules.value[idx] = updated;
+    return updated;
+  }
+
+  async function deleteFeedingSchedule(id: string): Promise<void> {
+    const idx = feedingSchedules.value.findIndex((s) => s.id === id);
+    if (idx !== -1) {
+      feedingSchedules.value.splice(idx, 1);
+    }
+  }
+
+  async function triggerFeedingSchedule(
+    scheduleId: string,
+  ): Promise<ScheduleTriggerResult> {
+    const schedule = feedingSchedules.value.find((s) => s.id === scheduleId);
+    if (!schedule) {
+      return { success: false, error: "Schedule not found", schedule_id: scheduleId };
+    }
+    if (!schedule.is_active) {
+      return { success: false, error: "Schedule is inactive", schedule_id: scheduleId };
+    }
+    try {
+      const feedingType = schedule.feeding_type === "solid" ? "breast" : schedule.feeding_type;
+      const amount = schedule.default_amount ?? 0;
+      const feeding = await addFeeding(schedule.baby_id, amount, feedingType as any);
+      // Update usage stats
+      const idx = feedingSchedules.value.findIndex((s) => s.id === scheduleId);
+      if (idx !== -1) {
+        feedingSchedules.value[idx] = {
+          ...feedingSchedules.value[idx],
+          usage_count: feedingSchedules.value[idx].usage_count + 1,
+          last_used_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      return { success: true, feeding_id: feeding.id, schedule_id: scheduleId };
+    } catch (err: any) {
+      return { success: false, error: err?.message ?? "Unknown error", schedule_id: scheduleId };
+    }
+  }
+
   return {
     // State
     babies,
@@ -4485,5 +4580,14 @@ export const useBabyStore = defineStore("baby", () => {
     deleteSolidFoodEvent,
     getBabySolidFoodEvents,
     getBabySolidFoodEventsWithFoods,
+
+    // Feeding Schedule Automation
+    feedingSchedules,
+    getBabyFeedingSchedules,
+    getActiveFeedingSchedules,
+    addFeedingSchedule,
+    updateFeedingSchedule,
+    deleteFeedingSchedule,
+    triggerFeedingSchedule,
   };
 });
