@@ -276,7 +276,8 @@ defineExpose({
 <style scoped>
 .time-picker {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 0.5rem;
 }
 
@@ -325,7 +326,6 @@ defineExpose({
 .ampm-group {
     display: flex;
     gap: 0.25rem;
-    margin-left: 0.5rem;
 }
 
 .ampm-group button {
