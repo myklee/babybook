@@ -5,12 +5,13 @@ import TimePicker from "./TimePicker.vue";
 import DatePicker from "./DatePicker.vue";
 import BreastSelector from "./BreastSelector.vue";
 import ResponsiveModal from "./ResponsiveModal.vue";
+import BottleAmountInput from "./BottleAmountInput.vue";
 import type { BreastType } from "../types/nursing";
-import { 
-  getDisplayValue, 
-  getStorageValue, 
-  getInputStep, 
-  getUnitLabel, 
+import {
+  getDisplayValue,
+  getStorageValue,
+  getInputStep,
+  getUnitLabel,
   getFeedingPresets,
   getDefaultAmount
 } from "../lib/measurements";
@@ -40,6 +41,7 @@ const presetButtons = computed(() => {
     if (feedingTypeRef.value === 'nursing') return [];
     return getFeedingPresets(store.measurementUnit, feedingTypeRef.value);
 });
+const bottleMax = computed(() => store.measurementUnit === 'imperial' ? 12 : 300);
 const notes = ref("");
 const customDate = ref("");
 const time = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
@@ -48,7 +50,6 @@ const time = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
     ampm: "AM",
 });
 const isSaving = ref(false);
-const amountInput = ref<HTMLInputElement | null>(null);
 
 // Template refs for TimePicker components
 const timePicker = ref<{ focusHour: () => void } | null>(null);
@@ -165,14 +166,6 @@ watch(feedingTypeRef, (newType) => {
         displayAmount.value = 0;
     }
 });
-
-// Function to select all text when focusing amount field
-function selectAmountText() {
-    if (amountInput.value) {
-        amountInput.value.select();
-    }
-}
-
 
 function getSelectedDateTime() {
     if (!customDate.value) return new Date();
@@ -322,19 +315,10 @@ async function handleSubmit() {
                 <div v-if="feedingTypeRef !== 'nursing'" class="form-group">
                     <label>Amount ({{ unitLabel }})</label>
                     <div class="amount-form">
-                        <input
-                            ref="amountInput"
-                            type="number"
+                        <BottleAmountInput
                             v-model="displayAmount"
-                            required
-                            min="0"
-                            :step="inputStep"
-                            inputmode="decimal"
-                            pattern="[0-9]*"
-                            @focus="selectAmountText"
-                            @click="selectAmountText"
-                            placeholder="Enter amount"
-                            autocomplete="off"
+                            :unit="store.measurementUnit"
+                            :max="bottleMax"
                         />
                         <div class="preset-buttons">
                             <button
