@@ -279,21 +279,16 @@ async function handleSubmit() {
     >
         <!-- Form Content -->
         <form @submit.prevent="handleSubmit">
-                <div class="form-group">
-                    <label for="feeding-date">Date</label>
-                    <DatePicker v-model="customDate" id="feeding-date" />
-                </div>
-                
-                <!-- Nursing-specific options -->
+                <!-- Nursing: date at top + breast selector + start/end times -->
                 <div v-if="feedingTypeRef === 'nursing'" class="nursing-options">
-                    <!-- Nursing Mode Selection -->
-                    <!-- Breast Selection -->
+                    <div class="form-group">
+                        <label for="feeding-date">Date</label>
+                        <DatePicker v-model="customDate" id="feeding-date" />
+                    </div>
                     <div class="form-group">
                         <label>Breast Used</label>
                         <BreastSelector v-model="breastUsed" />
                     </div>
-
-                    <!-- Nursing session times -->
                     <div class="form-group">
                         <label>Start Time</label>
                         <TimePicker ref="nursingStartTimePicker" v-model="nursingStartTime" />
@@ -303,32 +298,37 @@ async function handleSubmit() {
                         <TimePicker v-model="nursingEndTime" />
                     </div>
                 </div>
-                
-                <!-- For other feeding types, show single time -->
-                <div v-else class="form-group">
-                    <label for="feeding-time">Time</label>
-                    <TimePicker ref="timePicker" v-model="time" />
-                </div>
 
-                <div v-if="feedingTypeRef !== 'nursing'" class="form-group">
-                    <label>Amount ({{ unitLabel }})</label>
-                    <div class="amount-form">
+                <!-- Breast/formula: amount label above, then big bottle + compact date & time beside it -->
+                <div v-else class="amount-section">
+                    <div class="amount-label">Amount ({{ unitLabel }})</div>
+                    <div class="amount-layout">
                         <BottleAmountInput
                             v-model="displayAmount"
                             :unit="store.measurementUnit"
                             :max="bottleMax"
                         />
-                        <div class="preset-buttons">
-                            <button
-                                v-for="preset in presetButtons"
-                                :key="preset.label"
-                                type="button"
-                                class="preset-btn"
-                                @click="displayAmount = preset.display"
-                                :class="{ active: displayAmount === preset.display }"
-                            >
-                                {{ preset.label }}
-                            </button>
+                        <div class="datetime-side">
+                            <div class="compact-field">
+                                <span class="compact-label">Date</span>
+                                <DatePicker v-model="customDate" id="feeding-date" />
+                            </div>
+                            <div class="compact-field">
+                                <span class="compact-label">Time</span>
+                                <TimePicker ref="timePicker" v-model="time" />
+                            </div>
+                            <div v-if="presetButtons.length > 0" class="preset-buttons">
+                                <button
+                                    v-for="preset in presetButtons"
+                                    :key="preset.label"
+                                    type="button"
+                                    class="preset-btn"
+                                    @click="displayAmount = preset.display"
+                                    :class="{ active: displayAmount === preset.display }"
+                                >
+                                    {{ preset.label }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -399,16 +399,55 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.amount-form {
+/* Amount section: label above, bottle + datetime side by side */
+.amount-section {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
 }
+
+.amount-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.amount-layout {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    min-height: 280px;
+}
+
+.datetime-side {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    flex-shrink: 0;
+    flex: 1;
+}
+
+.compact-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.compact-label {
+    font-size: 0.68rem;
+    color: var(--color-text-quaternary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
 .preset-buttons {
     display: flex;
-    gap: 8px;
-    flex-wrap: nowrap;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
 }
 
 .preset-btn {

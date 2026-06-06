@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useBabyStore } from "../stores/babyStore";
 import { format } from "date-fns";
 import DatePicker from "./DatePicker.vue";
 import TimePicker from "./TimePicker.vue";
 import ResponsiveModal from "./ResponsiveModal.vue";
+import BottleAmountInput from "./BottleAmountInput.vue";
 import {
   getDisplayValue,
   getStorageValue,
@@ -45,7 +46,6 @@ const endTime = ref<{ hour: string; minute: string; ampm: "AM" | "PM" }>({
 });
 const topupAmount = ref(0);
 const isSaving = ref(false);
-const amountInput = ref<HTMLInputElement | null>(null);
 const topupAmountInput = ref<HTMLInputElement | null>(null);
 
 // Solid food specific state
@@ -61,6 +61,7 @@ const showMoreOptions = ref(false);
 // Computed properties for unit handling
 const unitLabel = computed(() => getUnitLabel(store.measurementUnit));
 const inputStep = computed(() => getInputStep(store.measurementUnit));
+const bottleMax = computed(() => store.measurementUnit === 'imperial' ? 12 : 300);
 
 // Computed title for the modal
 const modalTitle = computed(() => {
@@ -135,20 +136,7 @@ onMounted(() => {
     }
   }
 
-  // Focus on amount input for feeding records
-  if (props.type === "feeding") {
-    nextTick(() => {
-      amountInput.value?.focus();
-    });
-  }
 });
-
-// Function to select all text when focusing amount fields
-function selectAmountText() {
-  if (amountInput.value) {
-    amountInput.value.select();
-  }
-}
 
 function selectTopupAmountText() {
   if (topupAmountInput.value) {
@@ -289,14 +277,40 @@ async function handleDelete() {
   >
     <!-- Form Content -->
     <form @submit.prevent="handleSubmit">
-      <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
-        <label for="edit-date">Date</label>
-        <DatePicker v-model="customDate" id="edit-date" />
+      <!-- Date/time standalone for diaper, solid food, or nursing -->
+      <template v-if="type === 'diaper' || (type === 'feeding' && (feedingType === 'solid' || feedingType === 'nursing'))">
+        <div class="form-group">
+          <label for="edit-date">Date</label>
+          <DatePicker v-model="customDate" id="edit-date" />
+        </div>
+        <div class="form-group">
+          <label for="edit-time">Time</label>
+          <TimePicker v-model="time" />
+        </div>
+      </template>
+
+      <!-- Bottle + compact date/time for breast or formula feeding -->
+      <div v-if="type === 'feeding' && feedingType !== 'solid' && feedingType !== 'nursing'" class="amount-section">
+        <div class="amount-label">Amount ({{ unitLabel }})</div>
+        <div class="amount-layout">
+          <BottleAmountInput
+            v-model="amount"
+            :unit="store.measurementUnit"
+            :max="bottleMax"
+          />
+          <div class="datetime-side">
+            <div class="compact-field">
+              <span class="compact-label">Date</span>
+              <DatePicker v-model="customDate" id="edit-date" />
+            </div>
+            <div class="compact-field">
+              <span class="compact-label">Time</span>
+              <TimePicker v-model="time" />
+            </div>
+          </div>
+        </div>
       </div>
-      <div v-if="type === 'feeding' || type === 'diaper'" class="form-group">
-        <label for="edit-time">Time</label>
-        <TimePicker v-model="time" />
-      </div>
+
       <div v-if="type === 'sleep'" class="form-group">
         <label for="sleep-start-date">Start Date</label>
         <DatePicker v-model="customDate" id="sleep-start-date" />
@@ -318,24 +332,6 @@ async function handleDelete() {
         <label for="sleep-end-time">End Time (Optional)</label>
         <TimePicker v-model="endTime" />
       </div>
-      <div v-if="type === 'feeding' && feedingType !== 'solid'" class="form-group">
-        <label>Amount ({{ unitLabel }})</label>
-        <input
-          type="number"
-          v-model="amount"
-          required
-          min="0"
-          :step="inputStep"
-          ref="amountInput"
-          inputmode="decimal"
-          pattern="[0-9]*"
-          @focus="selectAmountText"
-          @click="selectAmountText"
-          placeholder="Enter amount"
-          autocomplete="off"
-        />
-      </div>
-      
       <!-- Solid Food Selection -->
       <div v-if="type === 'feeding' && feedingType === 'solid'" class="form-group">
         <label>Foods</label>
@@ -483,6 +479,50 @@ async function handleDelete() {
 </style>
 
 <style scoped>
+/* Amount section: label above, bottle + datetime side by side */
+.amount-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.amount-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.amount-layout {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  min-height: 280px;
+}
+
+.datetime-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  flex-shrink: 0;
+  flex: 1;
+}
+
+.compact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.compact-label {
+  font-size: 0.68rem;
+  color: var(--color-text-quaternary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 
 .more-options-toggle {
   margin: 1rem 0;

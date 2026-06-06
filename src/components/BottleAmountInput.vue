@@ -157,11 +157,10 @@ function onKeyDown(e: KeyboardEvent) {
 
 <template>
   <div class="bottle-amount-input" :class="{ 'bottle-amount-input--disabled': disabled }">
+    <span class="bottle-label" aria-hidden="true">{{ amountLabel }}</span>
     <svg
       class="bottle-svg"
       :class="{ 'bottle-svg--dragging': isDragging }"
-      :width="SVG_W"
-      :height="SVG_H"
       :viewBox="`0 0 ${SVG_W} ${SVG_H}`"
       role="slider"
       tabindex="0"
@@ -268,8 +267,6 @@ function onKeyDown(e: KeyboardEvent) {
         class="bottle-cap"
       />
     </svg>
-
-    <span class="bottle-label" aria-hidden="true">{{ amountLabel }}</span>
   </div>
 </template>
 
@@ -281,6 +278,9 @@ function onKeyDown(e: KeyboardEvent) {
   gap: 8px;
   user-select: none;
   -webkit-user-select: none;
+  /* Fill the available height offered by the parent */
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .bottle-amount-input--disabled {
@@ -294,6 +294,11 @@ function onKeyDown(e: KeyboardEvent) {
   outline: none;
   overflow: visible; /* allow ticks to extend beyond viewBox */
   border-radius: 4px;
+  /* Let CSS drive the rendered size — fill available height, cap width */
+  width: auto;
+  height: 100%;
+  min-height: 200px;
+  max-width: 120px;
 }
 
 .bottle-svg:focus-visible {
